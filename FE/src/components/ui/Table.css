@@ -1,0 +1,129 @@
+.table-container {
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-color);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th, .data-table td {
+  padding: 16px 24px;
+  text-align: left;
+}
+
+.data-table th {
+  background-color: var(--background-color);
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 0.85rem;
+  border-bottom: 1px solid var(--border-color);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.data-table td {
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tr:hover td {
+  background-color: #f8fafc;
+}
+
+.file-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.file-name {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.file-date {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.client-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.unlock-key-input {
+  flex: 1;
+  min-width: 240px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  outline: none;
+  background-color: var(--surface-color);
+  color: var(--text-main);
+}
+
+.unlock-key-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.unlock-btn {
+  padding: 8px 12px;
+}
+
+.pay-btn {
+  padding: 8px 16px;
+  font-size: 0.85rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px !important;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.checkout-modal {
+  width: 100%;
+  max-width: 480px;
+  background: var(--surface-color);
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+}
+
+.bank-details-box {
+  background: var(--background-color);
+  padding: 16px;
+  border-radius: var(--radius-md);
+  margin-top: 12px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.95rem;
+  border: 1px dashed var(--border-color);
+}
+
+.bank-details-box p {
+  margin-bottom: 4px;
+  color: var(--text-main);
+  font-weight: 600;
+}
