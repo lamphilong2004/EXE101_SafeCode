@@ -1,0 +1,71 @@
+.dashboard-wrapper {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 4px;
+}
+
+.page-subtitle {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.dashboard-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.mb-6 { margin-bottom: 24px; }
+.mb-4 { margin-bottom: 16px; }
+.mt-4 { margin-top: 16px; }
+.py-1 { padding-top: 4px; padding-bottom: 4px; }
+.text-sm { font-size: 0.85rem; }
+.text-muted { color: var(--text-muted); }
+
+/* Unlock Widget */
+.unlock-widget {
+  background: linear-gradient(135deg, var(--surface-color) 0%, var(--primary-light) 100%);
+  border-color: var(--primary-light);
+}
+
+.unlock-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.key-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  outline: none;
+  background-color: var(--surface-color);
+}
+
+.key-input:focus {
+  border-color: var(--primary-color);
+}

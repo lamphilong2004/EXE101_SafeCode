@@ -1,0 +1,153 @@
+.upload-page {
+  animation: fadeIn 0.3s ease;
+}
+
+.upload-content {
+  max-width: 600px;
+}
+
+.upload-card {
+  padding: 32px;
+}
+
+.dropzone {
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 48px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background-color: var(--background-color);
+  transition: all 0.2s ease;
+  margin-bottom: 24px;
+}
+
+.dropzone:hover {
+  border-color: var(--primary-color);
+  background-color: var(--primary-light);
+}
+
+.dropzone-icon {
+  color: var(--primary-color);
+  margin-bottom: 16px;
+}
+
+.dropzone h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 8px;
+}
+
+.dropzone p {
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.file-hints {
+  font-size: 0.8rem;
+  margin-top: 16px;
+  margin-bottom: 0 !important;
+}
+
+.browse-btn {
+  cursor: pointer;
+}
+
+.selected-file {
+  border-top: 1px solid var(--border-color);
+  padding-top: 24px;
+}
+
+.file-info-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background-color: var(--background-color);
+  padding: 16px;
+  border-radius: var(--radius-md);
+  margin-bottom: 24px;
+}
+
+.file-details {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.file-details .name {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.file-details .size {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.remove-btn {
+  color: var(--text-muted);
+  padding: 4px;
+  border-radius: var(--radius-sm);
+}
+
+.remove-btn:hover {
+  color: var(--warning-color);
+  background-color: var(--warning-light);
+}
+
+.upload-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  background-color: var(--surface-color);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus {
+  border-color: var(--primary-color);
+}
+
+textarea.form-input {
+  resize: vertical;
+}
+
+.w-full { width: 100%; }
+.mt-4 { margin-top: 16px; }
+
+.success-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 32px 0;
+}
+
+.success-icon {
+  color: var(--success-color);
+  margin-bottom: 24px;
+}
+
+.success-state h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 12px;
+}
+
+.success-state p {
+  color: var(--text-muted);
+  margin-bottom: 32px;
+  max-width: 400px;
+}
