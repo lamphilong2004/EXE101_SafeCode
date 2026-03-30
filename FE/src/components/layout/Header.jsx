@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, User, Search } from 'lucide-react';
+import { Bell, User, Search, Database } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import './Header.css';
 
@@ -30,6 +30,12 @@ const Header = ({ notifications = [] }) => {
       </div>
 
       <div className="header-actions">
+        {userRole === 'freelancer' && (
+          <div className="header-credits flex items-center gap-2 px-3 py-1 bg-orange-50 border border-orange-100 rounded-full text-orange-700 font-bold text-sm">
+            <Database size={14} />
+            <span>{user?.credits?.toFixed(1) || 0} Credits</span>
+          </div>
+        )}
         <div className="notifications" ref={bellRef}>
         <button className="icon-btn" onClick={() => setOpen((v) => !v)} aria-label="Notifications">
           <Bell size={20} />

@@ -122,21 +122,77 @@ const Settings = ({ userRole }) => {
 
           {activeTab === 'payout' && userRole === 'freelancer' && (
             <Card className="settings-card">
-              <h2 className="section-title mb-4">Bank Account Details</h2>
-              <p className="text-muted mb-4">Provide your bank details so clients can transfer manual escrow payments directly to you.</p>
+              <h2 className="section-title mb-4">Bank Account & QR Payment</h2>
+              <p className="text-muted mb-4">Provide your bank details and payment QR link so clients can transfer manual escrow payments directly to you.</p>
+              
               <div className="form-group">
                 <label>Bank Name</label>
-                <input type="text" defaultValue="Vietcombank (VCB)" className="form-input" />
+                <input 
+                  type="text" 
+                  defaultValue={user?.payoutSettings?.bankName} 
+                  className="form-input" 
+                  id="bankName"
+                />
               </div>
               <div className="form-group mt-4">
                 <label>Account Number</label>
-                <input type="text" defaultValue="0123456789" className="form-input" />
+                <input 
+                  type="text" 
+                  defaultValue={user?.payoutSettings?.accountNumber} 
+                  className="form-input" 
+                  id="accountNumber"
+                />
               </div>
               <div className="form-group mt-4">
                 <label>Account Holder Name</label>
-                <input type="text" defaultValue="ALEX FREELANCE" className="form-input" />
+                <input 
+                  type="text" 
+                  defaultValue={user?.payoutSettings?.accountName} 
+                  className="form-input" 
+                  id="accountName"
+                />
               </div>
-              <Button variant="primary" className="mt-6">Save Payout Details</Button>
+
+              <div className="form-group mt-4">
+                <label>QR Code Image URL</label>
+                <input 
+                  type="text" 
+                  defaultValue={user?.payoutSettings?.qrCodeUrl} 
+                  placeholder="https://img.vietqr.io/image/..."
+                  className="form-input"
+                  id="qrCodeUrl"
+                />
+                <p className="text-xs text-muted mt-1">Dùng link từ VietQR hoặc link ảnh QR của bạn.</p>
+              </div>
+
+              {user?.payoutSettings?.qrCodeUrl && (
+                <div className="qr-preview mt-4">
+                  <p className="text-sm font-medium mb-2">Xem trước QR:</p>
+                  <img src={user.payoutSettings.qrCodeUrl} alt="QR Preview" style={{ maxWidth: '150px', borderRadius: '8px', border: '1px solid var(--border-color)' }} />
+                </div>
+              )}
+
+              <Button 
+                variant="primary" 
+                className="mt-6"
+                onClick={async () => {
+                  try {
+                    const data = {
+                      bankName: document.getElementById('bankName').value,
+                      accountNumber: document.getElementById('accountNumber').value,
+                      accountName: document.getElementById('accountName').value,
+                      qrCodeUrl: document.getElementById('qrCodeUrl').value,
+                    };
+                    await api.post('/auth/payout-settings', data);
+                    toast.success('Đã cập nhật thông tin thanh toán!');
+                    // Refresh user data if possible, or just let it be
+                  } catch (err) {
+                    toast.error('Cập nhật thất bại');
+                  }
+                }}
+              >
+                Save Payout Details
+              </Button>
             </Card>
           )}
 

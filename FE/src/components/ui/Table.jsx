@@ -1,7 +1,7 @@
 import React from 'react';
 import Badge from './Badge';
 import Button from './Button';
-import { Download, Key, Unlock, Lock, Clock, ExternalLink, Box, CheckCircle, ShieldAlert, ImagePlus } from 'lucide-react';
+import { Download, Unlock, Lock, Clock, ExternalLink, Box, CheckCircle, ShieldAlert, ImagePlus } from 'lucide-react';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
 import './Table.css';
@@ -44,33 +44,6 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
   const [checkoutFile, setCheckoutFile] = React.useState(null);
   const [receiptPreview, setReceiptPreview] = React.useState(null);
   const [receiptFile, setReceiptFile] = React.useState(null);
-  const [unlockKeys, setUnlockKeys] = React.useState({});
-
-  const setUnlockKeyForFile = (fileId, value) => {
-    setUnlockKeys((prev) => ({ ...prev, [fileId]: value }));
-  };
-
-  const parseKeyToBytes = (keyTextRaw) => {
-    const keyText = String(keyTextRaw || "").trim().replace(/\s+/g, "");
-    if (!keyText) return null;
-
-    // Hex (64 chars)
-    if (/^[0-9a-fA-F]{64}$/.test(keyText)) {
-      const bytes = new Uint8Array(32);
-      for (let i = 0; i < 32; i++) {
-        bytes[i] = parseInt(keyText.slice(i * 2, i * 2 + 2), 16);
-      }
-      return bytes;
-    }
-
-    // Base64
-    const b64 = keyText.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = b64 + "===".slice((b64.length + 3) % 4);
-    const raw = atob(padded);
-    const bytes = new Uint8Array(raw.length);
-    for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-    return bytes;
-  };
 
   const handlePay = async (id) => {
     const file = data.find(f => f.id === id);
@@ -138,10 +111,8 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
         const newStatus = action === 'confirm' ? 'Paid' : 'Disputed';
         updateFileStatus(id, newStatus);
         toast.success(action === 'confirm' ? "Đã xác nhận thanh toán!" : "Đã báo cáo Tranh chấp!");
-
-        const unlockKeyB64 = res.data?.unlockKeyB64;
-        if (action === 'confirm' && unlockKeyB64) {
-          window.prompt('Copy key (base64) và gửi cho Client:', unlockKeyB64);
+        if (action === 'confirm') {
+          toast.info('Hệ thống đã sẵn sàng cung cấp key cho Client sau khi thanh toán được xác nhận.');
         }
       } catch (err) {
         console.error(err);
@@ -167,28 +138,28 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
     try {
       if (userRole !== 'client') return;
 
-      const keyText = unlockKeys[fileId];
-      let rawKey;
-      try {
-        rawKey = parseKeyToBytes(keyText);
-      } catch {
-        rawKey = null;
-      }
+      // Preferred flow: system provides key to the intended client after payment is confirmed.
+      toast.info('Đang lấy key giải mã từ hệ thống...');
 
-      if (!rawKey) {
-        toast.error('Vui lòng nhập key do Freelancer gửi (base64/hex).');
+      let keyB64;
+      let ivB64;
+      let authTagB64;
+
+      const keyRes = await api.get(`/files/${fileId}/key`);
+      keyB64 = keyRes.data?.keyB64;
+      ivB64 = keyRes.data?.ivB64;
+      authTagB64 = keyRes.data?.authTagB64;
+
+      if (!keyB64 || !ivB64 || !authTagB64) {
+        toast.error('Không lấy được key/metadata để giải mã.');
         return;
       }
+
+      const rawKey = Uint8Array.from(atob(keyB64), (c) => c.charCodeAt(0));
       if (rawKey.length !== 32) {
         toast.error('Key không hợp lệ (cần 32 bytes).');
         return;
       }
-
-      toast.info('Đang lấy metadata mã hoá...');
-
-      // Step 1: Get non-secret encryption metadata from server
-      const metaRes = await api.get(`/files/${fileId}/encryption-meta`);
-      const { ivB64, authTagB64 } = metaRes.data;
 
       toast.info('Đang tải file mã hoá...');
 
@@ -234,6 +205,8 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
       console.error('Decrypt error:', err);
       if (err.response?.status === 402) {
         toast.error('Thanh toán chưa được xác nhận.');
+      } else if (err.response?.status === 403) {
+        toast.error('Bạn không có quyền nhận key của file này.');
       } else {
         toast.error('Giải mã thất bại! Vui lòng thử lại.');
       }
@@ -252,6 +225,13 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
               <p>Số tài khoản: {checkoutFile.payoutSettings?.accountNumber || '0123456789'}</p>
               <p>Chủ tài khoản: {checkoutFile.payoutSettings?.accountName || checkoutFile.freelancer.toUpperCase()}</p>
             </div>
+
+            {checkoutFile.payoutSettings?.qrCodeUrl && (
+              <div className="qr-payment-display" style={{ marginTop: '16px', textAlign: 'center' }}>
+                <p style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px' }}>Quét mã QR để thanh toán:</p>
+                <img src={checkoutFile.payoutSettings.qrCodeUrl} alt="Freelancer QR Code" style={{ maxWidth: '200px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', border: '1px solid var(--border-color)' }} />
+              </div>
+            )}
 
             <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Ảnh Bill Chuyển Khoản</label>
@@ -361,17 +341,10 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
                   )}
                   {row.status === 'Paid' && (
                     <div className="client-actions">
-                      <input
-                        className="unlock-key-input"
-                        value={unlockKeys[row.id] || ''}
-                        onChange={(e) => setUnlockKeyForFile(row.id, e.target.value)}
-                        placeholder="Nhập key do Freelancer gửi (base64/hex)"
-                      />
                       <Button
                         variant="primary"
                         className="unlock-btn"
                         onClick={() => handleDecrypt(row.id, row.fileName)}
-                        disabled={!unlockKeys[row.id]}
                       >
                         <Unlock size={16}/> Unlock & Download
                       </Button>

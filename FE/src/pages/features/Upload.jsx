@@ -10,10 +10,32 @@ const Upload = ({ onAddFile }) => {
   const [file, setFile] = useState(null);
   const [clientEmail, setClientEmail] = useState('');
   const [amount, setAmount] = useState('');
+  const [projectType, setProjectType] = useState('code');
   const [demoType, setDemoType] = useState('none');
   const [demoUrl, setDemoUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [estimatedCost, setEstimatedCost] = useState(null);
+
+  // Real-time credit estimation
+  React.useEffect(() => {
+    const estimate = async () => {
+      if (!file) {
+        setEstimatedCost(null);
+        return;
+      }
+      try {
+        const res = await api.post('/credits/estimate', {
+          projectType,
+          sizeBytes: file.size
+        });
+        setEstimatedCost(res.data.estimatedCredits);
+      } catch (err) {
+        console.error("Estimation failed", err);
+      }
+    };
+    estimate();
+  }, [file, projectType]);
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -57,9 +79,10 @@ const Upload = ({ onAddFile }) => {
       const createRes = await api.post('/files', { 
         title: file.name, 
         description: "Source code upload", 
-        price: { amount: parseFloat(amount) || 0, currency: 'usd' }, 
+        price: { amount: parseFloat(amount) || 0, currency: 'vnd' }, 
         intendedClientEmail: clientEmail, 
-        demo: { type: demoType, url: demoUrl } 
+        demo: { type: demoType, url: demoUrl },
+        projectType
       });
       
       const fileId = createRes.data.fileId;
@@ -141,32 +164,32 @@ const Upload = ({ onAddFile }) => {
                       <input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} placeholder="client@example.com" className="form-input" />
                     </div>
                     <div className="input-group">
-                      <label>Amount (USD)</label>
-                      <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="500.00" className="form-input" />
+                      <label>Amount (VND)</label>
+                      <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="5000000" className="form-input" />
+                    </div>
+                    <div className="input-group">
+                      <label>Project Type</label>
+                      <select className="form-input" value={projectType} onChange={(e) => setProjectType(e.target.value)}>
+                        <option value="code">Pure Code (0 Extra Credits)</option>
+                        <option value="web">Web Project (+2 Extra Credits)</option>
+                        <option value="app">Mobile App (+5 Extra Credits)</option>
+                      </select>
                     </div>
                     <div className="input-group">
                       <label>Description (Optional)</label>
                       <textarea placeholder="e.g. Frontend React Files" className="form-input" rows={2}></textarea>
                     </div>
 
-                    <div className="input-group" style={{ marginTop: '8px', padding: '16px', backgroundColor: 'var(--background-color)', borderRadius: 'var(--radius-md)' }}>
-                      <label style={{ color: 'var(--primary-color)' }}>Secure Testing Environment (For Client Demo)</label>
-                      <select className="form-input" value={demoType} onChange={(e) => setDemoType(e.target.value)}>
-                        <option value="none">No Demo (Direct Code Sale)</option>
-                        <option value="url">Provide Hosted Live Sandbox URL</option>
-                        <option value="build">Provide Time-bombed Executable Build (.exe/.apk)</option>
-                      </select>
-                      
-                      {demoType === 'url' && (
-                        <input type="url" value={demoUrl} onChange={(e) => setDemoUrl(e.target.value)} placeholder="https://my-demo-app.vercel.app" className="form-input" style={{ marginTop: '12px' }} />
-                      )}
-                      {demoType === 'build' && (
-                         <div className="dropzone" style={{ padding: '24px 12px', marginTop: '12px' }}>
-                           <p className="file-hints">Upload .exe/.apk file here.</p>
-                           <p className="file-hints">SafeCode will automatically wrap it with a 1-Minute Trial Lock.</p>
-                         </div>
-                      )}
-                    </div>
+                    {estimatedCost !== null && (
+                      <div className="credit-estimate mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md">
+                        <p className="text-sm font-medium text-blue-800">
+                          Estimated Cost: <span className="font-bold">{estimatedCost} Credits</span>
+                        </p>
+                        <p className="text-xs text-blue-600 mt-1">
+                          Calculated based on {projectType.toUpperCase()} type and {(file.size / (1024 * 1024)).toFixed(1)}MB size.
+                        </p>
+                      </div>
+                    )}
 
                     <Button 
                       variant="primary" 
@@ -174,7 +197,7 @@ const Upload = ({ onAddFile }) => {
                       disabled={isUploading}
                       className="w-full mt-4"
                     >
-                      {isUploading ? 'Encrypting & Sending...' : 'Encrypt & Send'}
+                      {isUploading ? 'Encrypting & Sending...' : `Encrypt & Send (${estimatedCost || 0} Credits)`}
                     </Button>
                   </div>
                 </div>

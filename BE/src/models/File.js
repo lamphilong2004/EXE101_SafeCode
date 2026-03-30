@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
 
-const FILE_STATUS = ["Draft", "Uploaded", "Testing Phase", "Locked", "Verifying Payment", "Paid", "Disputed", "Delivered", "Canceled", "Closed"];
+const FILE_STATUS = ["Draft", "Uploaded", "Testing Phase", "Locked", "Verifying Payment", "Paid", "Disputed", "AwaitingEvidence", "Delivered", "Canceled", "Closed"];
 const DEMO_TYPES = ["none", "url", "build"];
+const PROJECT_TYPES = ["web", "app", "code"];
 
 const FileSchema = new mongoose.Schema(
   {
@@ -11,6 +12,8 @@ const FileSchema = new mongoose.Schema(
 
     title: { type: String, required: true, trim: true },
     description: { type: String, default: "" },
+
+    projectType: { type: String, enum: PROJECT_TYPES, default: "code", index: true },
 
     price: {
       amount: { type: Number, required: true, min: 1 },
@@ -68,10 +71,14 @@ const FileSchema = new mongoose.Schema(
     },
 
     trialEndsAt: { type: Date, default: null },
+    keyDownloadedAt: { type: Date, default: null },
 
     uploadedAt: { type: Date, default: null },
     paidAt: { type: Date, default: null },
     adminNote: { type: String, default: null },
+
+    // Dispute management
+    disputeDeadline: { type: Date, default: null },
   },
   { timestamps: true }
 );

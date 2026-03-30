@@ -14,7 +14,10 @@ function sanitizeUser(user) {
       status: user.subscription?.status || "inactive",
       currentPeriodEnd: user.subscription?.currentPeriodEnd || null,
     },
-    payoutSettings: user.payoutSettings || null,
+    payoutSettings: {
+      ...user.payoutSettings,
+      qrCodeUrl: user.payoutSettings?.qrCodeUrl || "",
+    } || null,
   };
 }
 
@@ -80,11 +83,12 @@ export async function updatePayoutSettings(req, res, next) {
     const user = await User.findById(req.user.id);
     if (!user) throw httpError(404, "User not found");
 
-    const { bankName, accountNumber, accountName } = req.body;
+    const { bankName, accountNumber, accountName, qrCodeUrl } = req.body;
     user.payoutSettings = {
       bankName: String(bankName || "").trim(),
       accountNumber: String(accountNumber || "").trim(),
       accountName: String(accountName || "").trim(),
+      qrCodeUrl: String(qrCodeUrl || "").trim(),
     };
 
     await user.save();

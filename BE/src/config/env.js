@@ -21,12 +21,21 @@ export const env = {
   AWS_REGION: required("AWS_REGION"),
   AWS_ACCESS_KEY_ID: required("AWS_ACCESS_KEY_ID"),
   AWS_SECRET_ACCESS_KEY: required("AWS_SECRET_ACCESS_KEY"),
-  S3_BUCKET_ENCRYPTED: required("S3_BUCKET_ENCRYPTED"),
-  S3_BUCKET_BUILDS: required("S3_BUCKET_BUILDS"),
+  S3_BUCKET_ENCRYPTED: process.env.S3_BUCKET_ENCRYPTED,
+  S3_BUCKET_PUBLIC: process.env.S3_BUCKET_PUBLIC,
+
+  // SMTP for Notifications
+  SMTP_HOST: process.env.SMTP_HOST || "smtp.gmail.com",
+  SMTP_PORT: process.env.SMTP_PORT || 587,
+  SMTP_USER: process.env.SMTP_USER,
+  SMTP_PASS: process.env.SMTP_PASS,
+  SMTP_FROM: process.env.SMTP_FROM || '"SafeCode" <no-reply@safecode.app>',
 
   MASTER_KEY_B64: required("MASTER_KEY_B64"),
 
   STRIPE_SECRET_KEY: required("STRIPE_SECRET_KEY"),
   STRIPE_WEBHOOK_SECRET: required("STRIPE_WEBHOOK_SECRET"),
   APP_BASE_URL: process.env.APP_BASE_URL || "http://localhost:5173",
+
+  TRIAL_DURATION_HOURS: Number(process.env.TRIAL_DURATION_HOURS) || 24,
 };

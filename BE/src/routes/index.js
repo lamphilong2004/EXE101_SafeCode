@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authRoutes } from "./auth.routes.js";
 import { billingRoutes } from "./billing.routes.js";
+import { creditRoutes } from "./credit.routes.js";
 import { filesRoutes } from "./files.routes.js";
 import { paymentsRoutes } from "./payments.routes.js";
 import { proxyRoutes } from "./proxy.routes.js";
@@ -11,6 +12,7 @@ export const routes = Router();
 
 routes.use("/auth", authRoutes);
 routes.use("/billing", billingRoutes);
+routes.use("/credits", creditRoutes);
 routes.use("/files", filesRoutes);
 routes.use("/payments", paymentsRoutes);
 routes.use("/proxy", proxyRoutes);
