@@ -14,9 +14,26 @@ export function createApp() {
   app.set("trust proxy", 1);
 
   app.use(helmet());
+
+  const allowedOrigins = String(env.CORS_ORIGIN || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const isDevLocalOrigin = (origin) => {
+    if (!origin) return true;
+    if (env.NODE_ENV === "production") return false;
+    return /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(String(origin));
+  };
+
   app.use(
     cors({
-      origin: env.CORS_ORIGIN,
+      origin(origin, cb) {
+        if (isDevLocalOrigin(origin)) return cb(null, true);
+        if (!origin) return cb(null, true);
+        if (allowedOrigins.includes(origin)) return cb(null, true);
+        return cb(new Error("Not allowed by CORS"));
+      },
       credentials: true,
     })
   );

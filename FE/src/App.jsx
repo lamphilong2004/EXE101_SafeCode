@@ -19,6 +19,9 @@ function App() {
   
   // Global file state
   const [files, setFiles] = useState([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalFiles, setTotalFiles] = useState(0);
 
   useEffect(() => {
     // REAL DATA FETCHING API
@@ -27,7 +30,9 @@ function App() {
       if (user.role === 'admin') return; // Admin has no file list
       try {
         const endpoint = user.role === 'freelancer' ? '/files/mine' : '/files/assigned';
-        const res = await api.get(endpoint);
+        const res = await api.get(`${endpoint}?page=${page}&limit=10`);
+        setTotalPages(res.data.totalPages);
+        setTotalFiles(res.data.totalFiles);
         // Map BE schema to FE UI fields if needed
         const mappedFiles = res.data.files.map(f => ({
           id: f._id,
@@ -49,7 +54,7 @@ function App() {
       }
     };
     fetchFiles();
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, page]);
 
   const handleLogout = () => {
     logout();
@@ -85,8 +90,20 @@ function App() {
 
   const getDashboard = () => {
     if (user.role === 'admin') return <AdminDashboard />;
-    if (user.role === 'freelancer') return <FreelancerDashboard files={files} updateFileStatus={updateFileStatus} />;
-    return <ClientDashboard files={files} updateFileStatus={updateFileStatus} />;
+    if (user.role === 'freelancer') return (
+      <FreelancerDashboard 
+        files={files} 
+        updateFileStatus={updateFileStatus} 
+        pagination={{ page, totalPages, setPage, totalFiles }}
+      />
+    );
+    return (
+      <ClientDashboard 
+        files={files} 
+        updateFileStatus={updateFileStatus} 
+        pagination={{ page, totalPages, setPage, totalFiles }}
+      />
+    );
   };
 
   return (
@@ -95,7 +112,7 @@ function App() {
         <Routes>
           <Route path="/" element={getDashboard()} />
           <Route path="/upload" element={user.role === 'freelancer' ? <Upload onAddFile={addFile} /> : <Navigate to="/" />} />
-          <Route path="/files" element={<Files userRole={user.role} files={files} updateFileStatus={updateFileStatus} />} />
+          <Route path="/files" element={<Files userRole={user.role} files={files} updateFileStatus={updateFileStatus} pagination={{ page, totalPages, setPage }} />} />
           <Route path="/credits" element={<Credits />} />
           <Route path="/settings" element={<Settings userRole={user.role} />} />
           <Route path="/admin" element={user.role === 'admin' ? <AdminDashboard /> : <Navigate to="/" />} />

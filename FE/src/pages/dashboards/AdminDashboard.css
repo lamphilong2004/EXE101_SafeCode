@@ -19,6 +19,39 @@
   margin-top: 4px;
 }
 
+/* Stats Grid */
+.admin-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--card-background);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stat-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
 .admin-tabs {
   display: flex;
   gap: 8px;
@@ -152,6 +185,22 @@
   color: #dc2626;
 }
 
+.btn-resolve.info {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+/* Pagination */
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+  padding: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
 /* Dispute Detail Modal */
 .dispute-detail-modal {
   background: var(--card-background);
@@ -225,6 +274,35 @@
   flex-wrap: wrap;
 }
 
+/* Credit Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.credit-modal {
+  background: var(--card-background);
+  border-radius: 16px;
+  padding: 24px;
+  width: 400px;
+  max-width: 90vw;
+}
+
+.credit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+}
+
 /* Users Table */
 .users-search {
   margin-bottom: 16px;
@@ -273,3 +351,14 @@
 .role-freelancer { background: #dbeafe; color: #1d4ed8; }
 .role-client { background: #dcfce7; color: #166534; }
 .role-admin { background: #fef3c7; color: #92400e; }
+
+/* Status Badges */
+.status-badge {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.status-awaiting { background: #ffedd5; color: #9a3412; }
+.status-disputed { background: #fee2e2; color: #991b1b; }

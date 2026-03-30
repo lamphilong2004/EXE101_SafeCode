@@ -25,6 +25,7 @@ const UserSchema = new mongoose.Schema(
       bankName: { type: String, default: "" },
       accountNumber: { type: String, default: "" },
       accountName: { type: String, default: "" },
+      qrCodeUrl: { type: String, default: "" },
     },
 
     subscription: {

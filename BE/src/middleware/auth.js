@@ -30,6 +30,8 @@ export async function requireAuth(req, res, next) {
 
     next();
   } catch (err) {
+    if (err.name === "TokenExpiredError") return next(httpError(401, "Token expired"));
+    if (err.name === "JsonWebTokenError") return next(httpError(401, "Invalid token"));
     next(httpError(401, "Unauthorized"));
   }
 }

@@ -6,6 +6,7 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { env } from "../config/env.js";
 import { File } from "../models/File.js";
 import { User } from "../models/User.js";
+import { Transaction } from "../models/Transaction.js";
 import { httpError } from "../middleware/error.js";
 import {
   createAes256GcmCipherStream,
@@ -18,6 +19,8 @@ import {
 import { createPresignedGetUrl, s3, uploadStreamToS3 } from "../services/s3.service.js";
 import { validatePublicDemoUrl } from "../utils/validateUrl.js";
 import { proxyWithHardTimeout } from "../services/proxy.service.js";
+import { consumeCreditsForUpload, rewardCreditsForSale } from "../services/credit.service.js";
+import { sendDecryptionKeyEmail } from "../services/email.service.js";
 
 function nowIsoSafe() {
   return new Date().toISOString().replace(/[:.]/g, "-");
@@ -30,20 +33,7 @@ function isSubscriptionActive(user) {
   return new Date(user.subscription.currentPeriodEnd).getTime() > Date.now();
 }
 
-async function consumeUploadCreditIfNeeded(freelancerId) {
-  const user = await User.findById(freelancerId);
-  if (!user) throw httpError(401, "Unauthorized");
-
-  if (isSubscriptionActive(user)) return;
-
-  const updated = await User.findOneAndUpdate(
-    { _id: freelancerId, credits: { $gte: 1 } },
-    { $inc: { credits: -1 } },
-    { new: true }
-  );
-
-  if (!updated) throw httpError(402, "Insufficient credits (or no active subscription)");
-}
+// Old consumeUploadCreditIfNeeded removed — replaced by credit.service.js
 
 class ByteCounter extends Transform {
   constructor() {
@@ -58,13 +48,14 @@ class ByteCounter extends Transform {
 
 export async function createFileListing(req, res, next) {
   try {
-    const { title, description, price, intendedClientEmail, demo } = req.body || {};
+    const { title, description, price, intendedClientEmail, demo, projectType } = req.body || {};
 
     if (!title || !price?.amount || !price?.currency || !intendedClientEmail || !demo?.type) {
       throw httpError(400, "title, price{amount,currency}, intendedClientEmail, demo{type} are required");
     }
 
     if (!["none", "url", "build"].includes(demo.type)) throw httpError(400, "Invalid demo type");
+    if (projectType && !["web", "app", "code"].includes(projectType)) throw httpError(400, "Invalid projectType");
 
     if (demo.type === "url") {
       if (!demo.url) throw httpError(400, "demo.url is required for demo type url");
@@ -77,6 +68,7 @@ export async function createFileListing(req, res, next) {
       intendedClientEmail: String(intendedClientEmail).toLowerCase().trim(),
       title: String(title).trim(),
       description: description ? String(description) : "",
+      projectType: projectType || "code",
       price: {
         amount: Number(price.amount),
         currency: String(price.currency).toLowerCase(),
@@ -113,8 +105,16 @@ export async function createFileListing(req, res, next) {
 
 export async function getMyFiles(req, res, next) {
   try {
-    const files = await File.find({ freelancerId: req.user.id }).sort({ createdAt: -1 });
-    res.json({ files });
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+    const skip = (page - 1) * limit;
+
+    const [files, total] = await Promise.all([
+      File.find({ freelancerId: req.user.id }).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      File.countDocuments({ freelancerId: req.user.id }),
+    ]);
+
+    res.json({ files, page, limit, total, totalPages: Math.ceil(total / limit) });
   } catch (err) {
     next(err);
   }
@@ -122,22 +122,35 @@ export async function getMyFiles(req, res, next) {
 
 export async function getAssignedFiles(req, res, next) {
   try {
-    const files = await File.find({ intendedClientEmail: req.user.email })
-      .populate("freelancerId", "name email payoutSettings")
-      .sort({ createdAt: -1 });
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+    const skip = (page - 1) * limit;
+
+    const query = { intendedClientEmail: req.user.email };
 
     // Auto-lock expired trials
     const now = new Date();
-    let changed = false;
-    for (const f of files) {
-      if (f.status === "Testing Phase" && f.trialEndsAt && f.trialEndsAt < now) {
-        f.status = "Locked";
-        await f.save();
-        changed = true;
-      }
-    }
+    await File.updateMany(
+      { ...query, status: "Testing Phase", trialEndsAt: { $lt: now } },
+      { $set: { status: "Locked" } }
+    );
 
-    res.json({ files });
+    const [files, total] = await Promise.all([
+      File.find(query)
+        .populate("freelancerId", "name email payoutSettings")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      File.countDocuments(query),
+    ]);
+
+    res.json({ 
+      files, 
+      page, 
+      limit, 
+      totalFiles: total, 
+      totalPages: Math.ceil(total / limit) 
+    });
   } catch (err) {
     next(err);
   }
@@ -150,8 +163,9 @@ export async function startTrial(req, res, next) {
     if (fileDoc.intendedClientEmail !== req.user.email) throw httpError(403, "Forbidden");
     if (fileDoc.status !== "Uploaded") throw httpError(409, "File must be in Uploaded state to start trial");
 
+    const trialHours = Number(env.TRIAL_DURATION_HOURS) || 24;
     fileDoc.status = "Testing Phase";
-    fileDoc.trialEndsAt = new Date(Date.now() + 30 * 1000); // 30 seconds for demo
+    fileDoc.trialEndsAt = new Date(Date.now() + trialHours * 3600 * 1000);
     await fileDoc.save();
 
     res.json({ success: true, status: fileDoc.status, trialEndsAt: fileDoc.trialEndsAt });
@@ -391,6 +405,19 @@ export async function proxyDemo(req, res, next) {
     if (fileDoc.intendedClientEmail !== req.user.email) throw httpError(403, "Forbidden");
     if (fileDoc.demo?.type !== "url") throw httpError(409, "No URL demo for this file");
 
+    // === TRIAL BYPASS FIX: check expiry here, not just in getAssignedFiles ===
+    if (fileDoc.status === "Testing Phase" && fileDoc.trialEndsAt && fileDoc.trialEndsAt < new Date()) {
+      fileDoc.status = "Locked";
+      await fileDoc.save();
+      throw httpError(403, "Trial has expired. Product is now locked.");
+    }
+    if (fileDoc.status === "Locked") {
+      throw httpError(403, "Product is locked. Please complete payment to access.");
+    }
+    if (fileDoc.status !== "Testing Phase" && fileDoc.status !== "Uploaded") {
+      throw httpError(409, "File is not in a demo-able state");
+    }
+
     const targetUrl = fileDoc.demo.url;
     const v = validatePublicDemoUrl(String(targetUrl));
     if (!v.ok) throw httpError(400, `Invalid demo.url: ${v.reason}`);
@@ -409,12 +436,21 @@ export async function getDecryptionKey(req, res, next) {
     if (fileDoc.intendedClientEmail !== req.user.email) throw httpError(403, "Forbidden");
     if (fileDoc.status !== "Paid") throw httpError(402, "Payment required");
 
+    // === ONE-TIME KEY: prevent re-download ===
+    if (fileDoc.keyDownloadedAt) {
+      throw httpError(410, "Decryption key has already been downloaded. Contact admin if you need it again.");
+    }
+
     const wrapped = fileDoc.encryption?.keyWrapped;
     if (!wrapped?.wrappedKeyB64 || !wrapped?.wrapIvB64 || !wrapped?.wrapAuthTagB64) {
       throw httpError(409, "Key not available");
     }
 
     const key = unwrapFileKey(wrapped);
+
+    // Mark as downloaded
+    fileDoc.keyDownloadedAt = new Date();
+    await fileDoc.save();
 
     res.json({
       alg: fileDoc.encryption.alg,
@@ -526,10 +562,22 @@ export async function uploadReceipt(req, res, next) {
       imageUrl: imageUrl || null,
       trackingLink: trackingLink || null,
       submittedAt: new Date(),
-      verifiedByAI: true // mock AI verification
+      verifiedByAI: false, // AI verification placeholder — requires real integration
     };
     fileDoc.status = "Verifying Payment";
     await fileDoc.save();
+
+    // Create Transaction record for manual payment (audit trail)
+    await Transaction.create({
+      fileId: fileDoc._id,
+      freelancerId: fileDoc.freelancerId,
+      clientEmail: req.user.email,
+      type: "checkout",
+      status: "Pending",
+      amount: fileDoc.price.amount,
+      currency: fileDoc.price.currency,
+      stripe: { eventId: `manual_${Date.now()}` },
+    });
 
     res.json({ success: true, status: fileDoc.status });
   } catch (err) {
@@ -545,24 +593,57 @@ export async function confirmPayment(req, res, next) {
     if (fileDoc.status !== "Verifying Payment") throw httpError(409, "No pending receipt to confirm");
 
     const { action } = req.body;
-    let unlockKeyB64 = null;
 
-    if (action === 'confirm') {
+    if (action === "confirm") {
       fileDoc.status = "Paid";
       fileDoc.paidAt = new Date();
+      await fileDoc.save();
 
-      const wrapped = fileDoc.encryption?.keyWrapped;
-      if (wrapped?.wrappedKeyB64 && wrapped?.wrapIvB64 && wrapped?.wrapAuthTagB64) {
-        const key = unwrapFileKey(wrapped);
-        unlockKeyB64 = key.toString("base64");
+      // Update Transaction status
+      await Transaction.updateMany(
+        { fileId: fileDoc._id, type: "checkout", status: "Pending" },
+        { $set: { status: "Succeeded" } }
+      );
+
+      // Reward credits to freelancer (90% of sale)
+      let creditsEarned = 0;
+      try {
+        creditsEarned = await rewardCreditsForSale(fileDoc.freelancerId, {
+          amountInVnd: fileDoc.price.amount,
+          fileId: fileDoc._id,
+        });
+      } catch (creditErr) {
+        console.error("[CREDIT] Failed to reward credits:", creditErr);
       }
+
+      // === NEW: Auto-send key via email ===
+      try {
+        if (fileDoc.encryption?.keyWrapped) {
+          const rawKey = unwrapFileKey(fileDoc.encryption.keyWrapped);
+          await sendDecryptionKeyEmail(fileDoc.intendedClientEmail, {
+            fileName: fileDoc.title,
+            keyB64: rawKey.toString("base64"),
+            ivB64: fileDoc.encryption.ivB64,
+            authTagB64: fileDoc.encryption.authTagB64,
+          });
+        }
+      } catch (emailErr) {
+        console.error("[MAIL] Failed to send auto-email on confirm:", emailErr);
+      }
+
+      return res.json({ success: true, status: fileDoc.status, creditsEarned });
     } else {
       fileDoc.status = "Disputed";
+      await fileDoc.save();
+
+      await Transaction.updateMany(
+        { fileId: fileDoc._id, type: "checkout", status: "Pending" },
+        { $set: { status: "Failed", failureReason: "Disputed by freelancer" } }
+      );
     }
-    
-    await fileDoc.save();
-    res.json({ success: true, status: fileDoc.status, unlockKeyB64 });
-  } catch(err) {
+
+    res.json({ success: true, status: fileDoc.status });
+  } catch (err) {
     next(err);
   }
 }
@@ -578,7 +659,7 @@ export async function disputePayment(req, res, next) {
     await fileDoc.save();
 
     res.json({ success: true, status: fileDoc.status });
-  } catch(err) {
+  } catch (err) {
     next(err);
   }
 }
