@@ -43,7 +43,7 @@ export function createApp() {
   app.use(
     rateLimit({
       windowMs: 60_000,
-      limit: 120,
+      limit: 300, // Relaxed for dev/heavy UI interaction
       standardHeaders: true,
       legacyHeaders: false,
     })

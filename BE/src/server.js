@@ -2,7 +2,10 @@ import { createApp } from "./app.js";
 import { connectDb } from "./config/db.js";
 import { env } from "./config/env.js";
 
+import { startCleanupWorker } from "./workers/cleanup.worker.js";
+
 await connectDb();
+startCleanupWorker();
 
 const app = createApp();
 

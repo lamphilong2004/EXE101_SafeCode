@@ -1,4 +1,5 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import {
   createFileListing,
   decryptUploadedFile,
@@ -13,8 +14,17 @@ import {
   uploadReceipt,
   confirmPayment,
   disputePayment,
+  getFileStatus,
 } from "../controllers/files.controller.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+
+const licenseLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // Increased for better UX during testing
+  message: { message: "Too many activation attempts. Please try again after 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 export const filesRoutes = Router();
 
@@ -25,11 +35,12 @@ filesRoutes.post("/:fileId/upload", requireAuth, requireRole("freelancer"), uplo
 
 // Client
 filesRoutes.get("/assigned", requireAuth, requireRole("client"), getAssignedFiles);
+filesRoutes.get("/:fileId/status", requireAuth, getFileStatus);
 filesRoutes.put("/:fileId/start-trial", requireAuth, requireRole("client"), startTrial);
 filesRoutes.get("/:fileId/download-encrypted", requireAuth, requireRole("client"), downloadEncrypted);
 filesRoutes.get("/:fileId/demo-build", requireAuth, requireRole("client"), downloadBuild);
 filesRoutes.get("/:fileId/encryption-meta", requireAuth, requireRole("client"), getEncryptionMeta);
-filesRoutes.get("/:fileId/key", requireAuth, requireRole("client"), getDecryptionKey);
+filesRoutes.post("/:fileId/key", requireAuth, requireRole("client"), licenseLimiter, getDecryptionKey);
 filesRoutes.post("/decrypt", requireAuth, requireRole("client"), decryptUploadedFile);
 
 // Escrow / Manual Bank Transfer Flow

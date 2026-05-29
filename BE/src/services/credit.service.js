@@ -1,41 +1,29 @@
 import { User } from "../models/User.js";
+import { File } from "../models/File.js";
 import { CreditHistory } from "../models/CreditHistory.js";
 import { httpError } from "../middleware/error.js";
 
 /* ─── Credit calculation constants ─── */
 
-const BASE_COST = 1;
+/* ─── Credit calculation constants V2 ─── */
 
-// Project type factor
-const TYPE_FACTORS = {
-  web: 2,    // URL demo — moderate server resources
-  app: 5,    // Mobile build — heavy storage + processing
-  code: 0,   // No demo — minimal resources
-};
+const BASE_UPLOAD_COST = 1.0;
+const BUILD_FEE = 2.0;
+const PREVIEW_RATE_PER_MIN = 0.1;
+const FREE_PREVIEW_MINS = 5;
 
-// File size tiers
-const SIZE_TIERS = [
-  { maxBytes: 50 * 1024 * 1024, cost: 0 },     // < 50MB: free
-  { maxBytes: 200 * 1024 * 1024, cost: 2 },     // 50-200MB: +2
-  { maxBytes: Infinity, cost: 5 },               // > 200MB: +5
-];
-
-// Sale conversion
-const CREDIT_CONVERSION_RATE = 10_000; // 1 Credit = 10,000 VND
-const PLATFORM_FEE_PERCENT = 0.10;     // 10% platform fee
+const CREDIT_CONVERSION_RATE = 2_000; // 1 Credit = 2,000 VND
+const PLATFORM_FEE_PERCENT = 0.10;    // 10% platform fee
 
 /* ─── Public functions ─── */
 
-/**
- * Calculate upload cost based on project type and file size.
- * Formula: base_cost + type_factor + size_factor
- */
-export function calculateUploadCost({ projectType = "code", sizeBytes = 0 }) {
-  const typeFactor = TYPE_FACTORS[projectType] ?? 0;
-  const sizeTier = SIZE_TIERS.find(t => sizeBytes <= t.maxBytes);
-  const sizeFactor = sizeTier ? sizeTier.cost : 5;
+import { PreviewSession } from "../models/PreviewSession.js";
 
-  return BASE_COST + typeFactor + sizeFactor;
+/**
+ * V2 formula: Simple flat fee for upload.
+ */
+export function calculateUploadCost() {
+  return BASE_UPLOAD_COST;
 }
 
 /**
@@ -48,68 +36,119 @@ export function calculateSaleCredits(amountInVnd) {
 }
 
 /**
- * Check subscription status.
- */
-function isSubscriptionActive(user) {
-  if (!user.subscription) return false;
-  if (user.subscription.status !== "active") return false;
-  if (!user.subscription.currentPeriodEnd) return true;
-  return new Date(user.subscription.currentPeriodEnd).getTime() > Date.now();
-}
-
-/**
  * Deduct credits for a file upload.
- * Subscribers bypass credit deduction.
- * Returns the cost (0 if subscriber).
+ * Returns the cost.
  */
-export async function consumeCreditsForUpload(userId, { fileId, projectType, sizeBytes }) {
+export async function consumeCreditsForUpload(userId, { fileId }) {
   const user = await User.findById(userId);
   if (!user) throw httpError(404, "User not found");
 
-  // Subscribers get free uploads
-  if (isSubscriptionActive(user)) {
-    await CreditHistory.create({
-      userId,
-      amount: 0,
-      balanceAfter: user.credits,
-      type: "upload",
-      description: `Free upload (active subscription) — ${projectType}`,
-      referenceId: fileId,
-      referenceModel: "File",
-      metadata: { sizeBytes, projectType, cost: 0, waived: true },
-    });
-    return 0;
-  }
-
-  const cost = calculateUploadCost({ projectType, sizeBytes });
+  const cost = BASE_UPLOAD_COST;
 
   if (user.credits < cost) {
     throw httpError(402, `Insufficient credits. Need ${cost}, have ${user.credits}`);
   }
 
-  // Atomic deduction to prevent race conditions
   const updatedUser = await User.findOneAndUpdate(
     { _id: userId, credits: { $gte: cost } },
     { $inc: { credits: -cost } },
     { new: true }
   );
 
-  if (!updatedUser) {
-    throw httpError(402, `Insufficient credits (race condition). Need ${cost}`);
-  }
+  if (!updatedUser) throw httpError(402, "Insufficient credits (race condition)");
 
   await CreditHistory.create({
     userId,
     amount: -cost,
     balanceAfter: updatedUser.credits,
     type: "upload",
-    description: `Upload fee: base(1) + type(${TYPE_FACTORS[projectType] ?? 0}) + size(${cost - 1 - (TYPE_FACTORS[projectType] ?? 0)})`,
+    description: "V2 Flat-rate upload fee",
     referenceId: fileId,
     referenceModel: "File",
-    metadata: { sizeBytes, projectType, cost },
   });
 
   return cost;
+}
+
+/**
+ * Core V2 Logic: Heartbeat consumption for time-based billing.
+ * Adjusted to 15s intervals for DEMO.
+ */
+export async function consumeHeartbeat(userId, fileId) {
+  const user = await User.findById(userId);
+  if (!user) throw httpError(404, "User not found");
+
+  const file = await File.findById(fileId);
+  if (!file) throw httpError(404, "File not found");
+
+  let session = await PreviewSession.findOne({ userId, fileId, status: "active" });
+  if (!session) {
+    session = await PreviewSession.create({ userId, fileId, status: "active" });
+  }
+
+  const now = new Date();
+  
+  // Calculate total seconds consumed in PREVIOUS sessions for this file
+  const previousSessions = await PreviewSession.find({ 
+    userId, 
+    fileId, 
+    _id: { $ne: session._id } 
+  });
+  const previousSeconds = previousSessions.reduce((acc, s) => {
+    // If completed, use (endTime - startTime), else if terminated use (lastHeartbeat - startTime)
+    const end = s.status === 'active' ? s.lastHeartbeat : (s.endTime || s.lastHeartbeat);
+    return acc + Math.floor((end - s.startTime) / 1000);
+  }, 0);
+
+  const currentSeconds = Math.floor((now - session.startTime) / 1000);
+  const totalSecondsElapsed = previousSeconds + currentSeconds;
+
+  // Check if still within allocated trial minutes
+  const allocatedSeconds = (file.allocatedMinutes || 0) * 60;
+  
+  // If user is within allocated trial time, heartbeat is free
+  if (totalSecondsElapsed <= allocatedSeconds) {
+    session.lastHeartbeat = now;
+    session.isFreeSession = true;
+    await session.save();
+    return { 
+      cost: 0, 
+      balance: user.credits, 
+      isFree: true, 
+      trialMinutesRemaining: Math.max(0, (allocatedSeconds - totalSecondsElapsed) / 60)
+    };
+  }
+
+  // If trial expired, start paid consumption: 0.1 CR per 15s pulse
+  const cost = 0.1; 
+  if (user.credits < cost) {
+    session.status = "terminated";
+    await session.save();
+    throw httpError(402, "Insufficient credits to continue preview");
+  }
+
+  const updatedUser = await User.findOneAndUpdate(
+    { _id: userId, credits: { $gte: cost } },
+    { $inc: { credits: -cost } },
+    { new: true }
+  );
+
+  session.lastHeartbeat = now;
+  session.totalConsumed += cost;
+  session.isFreeSession = false;
+  await session.save();
+
+  await CreditHistory.create({
+    userId,
+    amount: -cost,
+    balanceAfter: updatedUser.credits,
+    type: "preview",
+    description: `Sandbox Heartbeat (Paid after ${file.allocatedMinutes}m trial)`,
+    referenceId: fileId,
+    referenceModel: "File",
+  });
+
+  return { cost, balance: updatedUser.credits, isFree: false, trialMinutesRemaining: 0 };
 }
 
 /**

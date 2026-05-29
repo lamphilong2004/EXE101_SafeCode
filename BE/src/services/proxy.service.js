@@ -37,7 +37,10 @@ async function validateTargetUrl(targetUrl) {
   return { ok: true };
 }
 
-export function proxyWithHardTimeout({ targetUrl, hardTimeoutMs = 60_000 }) {
+import { User } from "../models/User.js";
+import { PreviewSession } from "../models/PreviewSession.js";
+
+export function proxyWithHardTimeout({ targetUrl, hardTimeoutMs = 60_000, fileId }) {
   const proxy = createProxyMiddleware({
     target: targetUrl,
     changeOrigin: true,
@@ -58,6 +61,53 @@ export function proxyWithHardTimeout({ targetUrl, hardTimeoutMs = 60_000 }) {
   });
 
   return async (req, res, next) => {
+    // === V2 ANTI-LOSS: Credit & Session Check ===
+    try {
+      const user = await User.findById(req.user.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const activeSession = await PreviewSession.findOne({ 
+        userId: req.user.id, 
+        fileId: fileId,
+        status: "active" 
+      });
+
+      if (!activeSession) {
+        return res.status(403).json({ error: "No active preview session. Please start preview from dashboard." });
+      }
+
+      // Check if we are still within the allocated trial minutes
+      const { File } = await import("../models/File.js");
+      const file = await File.findById(fileId);
+      if (!file) {
+        return res.status(404).json({ error: "File not found" });
+      }
+
+      // Calculate total seconds consumed in PREVIOUS sessions for this file
+      const previousSessions = await PreviewSession.find({ 
+        userId: req.user.id, 
+        fileId, 
+        _id: { $ne: activeSession._id } 
+      });
+      const previousSeconds = previousSessions.reduce((acc, s) => {
+        const end = s.status === 'active' ? s.lastHeartbeat : (s.endTime || s.lastHeartbeat);
+        return acc + Math.floor((end - s.startTime) / 1000);
+      }, 0);
+
+      const currentSeconds = Math.floor((new Date() - activeSession.startTime) / 1000);
+      const totalSecondsElapsed = previousSeconds + currentSeconds;
+      const allocatedSeconds = (file.allocatedMinutes || 0) * 60;
+
+      const isWithinTrial = totalSecondsElapsed <= allocatedSeconds;
+
+      if (!isWithinTrial && user.credits < 0.1) {
+        return res.status(402).json({ error: "Insufficient credits to continue preview." });
+      }
+    } catch (err) {
+      return next(err);
+    }
     // SSRF check before proxying
     const ssrfCheck = await validateTargetUrl(targetUrl);
     if (!ssrfCheck.ok) {

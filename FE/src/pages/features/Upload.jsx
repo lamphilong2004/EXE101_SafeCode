@@ -13,6 +13,8 @@ const Upload = ({ onAddFile }) => {
   const [projectType, setProjectType] = useState('code');
   const [demoType, setDemoType] = useState('none');
   const [demoUrl, setDemoUrl] = useState('');
+  const [buildFile, setBuildFile] = useState(null);
+  const [trialMinutes, setTrialMinutes] = useState('5');
   const [isUploading, setIsUploading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [estimatedCost, setEstimatedCost] = useState(null);
@@ -63,6 +65,13 @@ const Upload = ({ onAddFile }) => {
 
     if (demoType === 'url' && !demoUrl) {
       toast.error("Please provide the Live Sandbox URL for the demo.");
+      setIsUploading(false);
+      return;
+    }
+
+    if (demoType === 'build' && !buildFile) {
+      toast.error("Please select a Build Binary file for the demo.");
+      setIsUploading(false);
       return;
     }
 
@@ -82,7 +91,8 @@ const Upload = ({ onAddFile }) => {
         price: { amount: parseFloat(amount) || 0, currency: 'vnd' }, 
         intendedClientEmail: clientEmail, 
         demo: { type: demoType, url: demoUrl },
-        projectType
+        projectType,
+        trialMinutes: parseInt(trialMinutes) || 0
       });
       
       const fileId = createRes.data.fileId;
@@ -90,6 +100,9 @@ const Upload = ({ onAddFile }) => {
       // Step 2: Upload actual binary to S3 via Backend
       const formData = new FormData();
       formData.append('archive', file); // Field name MUST be 'archive' to match BE busboy
+      if (demoType === 'build' && buildFile) {
+        formData.append('buildBinary', buildFile);
+      }
 
       await api.post(`/files/${fileId}/upload`, formData);
 
@@ -174,6 +187,35 @@ const Upload = ({ onAddFile }) => {
                         <option value="web">Web Project (+2 Extra Credits)</option>
                         <option value="app">Mobile App (+5 Extra Credits)</option>
                       </select>
+                    </div>
+                    <div className="input-group">
+                      <label>Demo Type</label>
+                      <select className="form-input" value={demoType} onChange={(e) => setDemoType(e.target.value)}>
+                        <option value="none">No Demo</option>
+                        <option value="url">URL Live Preview (Managed Sandbox)</option>
+                        <option value="build">Build Binary (Executable/Installer)</option>
+                      </select>
+                    </div>
+
+                    {demoType === 'url' && (
+                      <div className="input-group">
+                        <label>Demo URL (Ngrok, Vercel, public IP, etc.)</label>
+                        <input type="url" value={demoUrl} onChange={(e) => setDemoUrl(e.target.value)} placeholder="https://my-demo.loca.lt" className="form-input" />
+                      </div>
+                    )}
+
+                    {demoType === 'build' && (
+                      <div className="input-group">
+                        <label>Build Binary File</label>
+                        <input type="file" onChange={(e) => setBuildFile(e.target.files[0])} className="form-input" style={{ padding: '8px' }} />
+                        {buildFile && <p className="text-xs text-success mt-1">Selected: {buildFile.name}</p>}
+                      </div>
+                    )}
+
+                    <div className="input-group">
+                      <label>Trial Minutes (Phút dùng thử)</label>
+                      <input type="number" value={trialMinutes} onChange={(e) => setTrialMinutes(e.target.value)} placeholder="5" className="form-input" />
+                      <p className="text-xs text-muted mt-1">Khách được xem demo miễn phí trong số phút này (trong vòng 24h).</p>
                     </div>
                     <div className="input-group">
                       <label>Description (Optional)</label>

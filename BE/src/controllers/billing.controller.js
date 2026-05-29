@@ -5,7 +5,7 @@ export async function getCredits(req, res, next) {
   try {
     const user = await User.findById(req.user.id);
     if (!user) throw httpError(401, "Unauthorized");
-    if (user.role !== "freelancer") throw httpError(403, "Forbidden");
+    if (!user) throw httpError(401, "Unauthorized");
 
     res.json({
       credits: user.credits,

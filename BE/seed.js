@@ -38,9 +38,10 @@ const users = [
     name: "Alex Freelance",
     credits: 10,
     payoutSettings: {
-      bankName: "Vietcombank (VCB)",
+      bankName: "Sacombank",
       accountNumber: "0123456789",
       accountName: "ALEX FREELANCE",
+      qrCodeUrl: "https://img.vietqr.io/image/sacombank-0123456789-compact2.jpg?accountName=ALEX%20FREELANCE",
     },
   },
   {

@@ -2,6 +2,8 @@ import { stripe } from "../services/stripe.service.js";
 import { env } from "../config/env.js";
 import { File } from "../models/File.js";
 import { Transaction } from "../models/Transaction.js";
+import { User } from "../models/User.js";
+import { CreditHistory } from "../models/CreditHistory.js";
 
 export async function stripeWebhook(req, res) {
   const sig = req.headers["stripe-signature"];
@@ -20,6 +22,31 @@ export async function stripeWebhook(req, res) {
       const paymentIntentId = session.payment_intent;
       const customerEmail = session.customer_details?.email || session.customer_email;
 
+      // Handle Credit Purchase
+      if (session.metadata && session.metadata.creditPurchase === "true") {
+        const userId = session.metadata.userId;
+        const creditsToBuy = parseInt(session.metadata.creditsToBuy, 10);
+        
+        const user = await User.findById(userId);
+        if (user) {
+          // Add credits
+          user.credits = (user.credits || 0) + creditsToBuy;
+          await user.save();
+
+          // Log history
+          await CreditHistory.create({
+            userId: user._id,
+            type: "purchase",
+            amount: creditsToBuy,
+            description: `Nạp ${creditsToBuy} Credits qua Stripe`,
+            balanceAfter: user.credits,
+            fileId: null,
+          });
+        }
+        return res.json({ received: true });
+      }
+
+      // Handle File Payment
       const fileDoc = await File.findOne({ "stripe.checkoutSessionId": checkoutSessionId });
       if (fileDoc) {
         if (fileDoc.status !== "Paid") {

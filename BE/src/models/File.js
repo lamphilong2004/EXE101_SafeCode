@@ -70,6 +70,8 @@ const FileSchema = new mongoose.Schema(
       verifiedByAI: { type: Boolean, default: false }
     },
 
+    allocatedMinutes: { type: Number, default: 0 },
+    
     trialEndsAt: { type: Date, default: null },
     keyDownloadedAt: { type: Date, default: null },
 

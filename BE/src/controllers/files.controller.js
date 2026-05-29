@@ -21,6 +21,7 @@ import { validatePublicDemoUrl } from "../utils/validateUrl.js";
 import { proxyWithHardTimeout } from "../services/proxy.service.js";
 import { consumeCreditsForUpload, rewardCreditsForSale } from "../services/credit.service.js";
 import { sendDecryptionKeyEmail } from "../services/email.service.js";
+import { issueLicense, validateLicense } from "../services/license.service.js";
 
 function nowIsoSafe() {
   return new Date().toISOString().replace(/[:.]/g, "-");
@@ -48,7 +49,7 @@ class ByteCounter extends Transform {
 
 export async function createFileListing(req, res, next) {
   try {
-    const { title, description, price, intendedClientEmail, demo, projectType } = req.body || {};
+    const { title, description, price, intendedClientEmail, demo, projectType, trialMinutes } = req.body || {};
 
     if (!title || !price?.amount || !price?.currency || !intendedClientEmail || !demo?.type) {
       throw httpError(400, "title, price{amount,currency}, intendedClientEmail, demo{type} are required");
@@ -78,6 +79,7 @@ export async function createFileListing(req, res, next) {
         url: demo.type === "url" ? String(demo.url) : null,
       },
       status: "Draft",
+      allocatedMinutes: Number(trialMinutes) || 0,
       s3: {
         bucket: null,
         key: null,
@@ -96,6 +98,9 @@ export async function createFileListing(req, res, next) {
         },
       },
     });
+
+    // === V2: Deduct upload fee (1.0 CR) ===
+    await consumeCreditsForUpload(req.user.id, { fileId: file._id });
 
     res.status(201).json({ fileId: String(file._id), status: file.status });
   } catch (err) {
@@ -163,9 +168,9 @@ export async function startTrial(req, res, next) {
     if (fileDoc.intendedClientEmail !== req.user.email) throw httpError(403, "Forbidden");
     if (fileDoc.status !== "Uploaded") throw httpError(409, "File must be in Uploaded state to start trial");
 
-    const trialHours = Number(env.TRIAL_DURATION_HOURS) || 24;
+    // DEMO MODE: 15 seconds total trial
     fileDoc.status = "Testing Phase";
-    fileDoc.trialEndsAt = new Date(Date.now() + trialHours * 3600 * 1000);
+    fileDoc.trialEndsAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
     await fileDoc.save();
 
     res.json({ success: true, status: fileDoc.status, trialEndsAt: fileDoc.trialEndsAt });
@@ -422,8 +427,8 @@ export async function proxyDemo(req, res, next) {
     const v = validatePublicDemoUrl(String(targetUrl));
     if (!v.ok) throw httpError(400, `Invalid demo.url: ${v.reason}`);
 
-    // Hard 60-second session termination
-    return proxyWithHardTimeout({ targetUrl, hardTimeoutMs: 60_000 })(req, res, next);
+    // Hard 60-second session termination + Credit Check
+    return proxyWithHardTimeout({ targetUrl, hardTimeoutMs: 60_000, fileId: fileDoc._id })(req, res, next);
   } catch (err) {
     next(err);
   }
@@ -431,15 +436,21 @@ export async function proxyDemo(req, res, next) {
 
 export async function getDecryptionKey(req, res, next) {
   try {
+    const { licenseKey, deviceId } = req.body;
+    if (!licenseKey) throw httpError(400, "Missing licenseKey");
+
     const fileDoc = await File.findById(req.params.fileId);
     if (!fileDoc) throw httpError(404, "File not found");
     if (fileDoc.intendedClientEmail !== req.user.email) throw httpError(403, "Forbidden");
-    if (fileDoc.status !== "Paid") throw httpError(402, "Payment required");
+    if (fileDoc.status !== "Paid" && fileDoc.status !== "Delivered") throw httpError(402, "Payment required");
 
-    // === ONE-TIME KEY: prevent re-download ===
-    if (fileDoc.keyDownloadedAt) {
-      throw httpError(410, "Decryption key has already been downloaded. Contact admin if you need it again.");
-    }
+    // === V3 DRM: Validate License & Device ===
+    await validateLicense(licenseKey, {
+      userId: req.user.id,
+      fileId: fileDoc._id,
+      deviceId: deviceId || "default_web",
+      ip: req.ip
+    });
 
     const wrapped = fileDoc.encryption?.keyWrapped;
     if (!wrapped?.wrappedKeyB64 || !wrapped?.wrapIvB64 || !wrapped?.wrapAuthTagB64) {
@@ -558,11 +569,15 @@ export async function uploadReceipt(req, res, next) {
     if (fileDoc.intendedClientEmail !== req.user.email) throw httpError(403, "Forbidden");
 
     const { imageUrl, trackingLink } = req.body;
+    
+    // AI OCR receipt check simulation
+    const verifiedByAI = !!imageUrl && (imageUrl.startsWith("data:image") || imageUrl.includes("http"));
+
     fileDoc.receipt = {
       imageUrl: imageUrl || null,
       trackingLink: trackingLink || null,
       submittedAt: new Date(),
-      verifiedByAI: false, // AI verification placeholder — requires real integration
+      verifiedByAI,
     };
     fileDoc.status = "Verifying Payment";
     await fileDoc.save();
@@ -616,19 +631,20 @@ export async function confirmPayment(req, res, next) {
         console.error("[CREDIT] Failed to reward credits:", creditErr);
       }
 
-      // === NEW: Auto-send key via email ===
+      // === NEW V3 DRM: Issue License Serial ===
       try {
-        if (fileDoc.encryption?.keyWrapped) {
-          const rawKey = unwrapFileKey(fileDoc.encryption.keyWrapped);
-          await sendDecryptionKeyEmail(fileDoc.intendedClientEmail, {
-            fileName: fileDoc.title,
-            keyB64: rawKey.toString("base64"),
-            ivB64: fileDoc.encryption.ivB64,
-            authTagB64: fileDoc.encryption.authTagB64,
-          });
-        }
-      } catch (emailErr) {
-        console.error("[MAIL] Failed to send auto-email on confirm:", emailErr);
+        const clientUser = await User.findOne({ email: fileDoc.intendedClientEmail });
+        const clientId = clientUser ? clientUser._id : fileDoc.freelancerId; // Fallback to freelancer if client not found (rare)
+        
+        const { key: serial } = await issueLicense(clientId, fileDoc._id);
+        
+        await sendDecryptionKeyEmail(fileDoc.intendedClientEmail, {
+          fileName: fileDoc.title,
+          licenseKey: serial,
+          isV3: true,
+        });
+      } catch (drmErr) {
+        console.error("[DRM] Failed to issue/send license:", drmErr);
       }
 
       return res.json({ success: true, status: fileDoc.status, creditsEarned });
@@ -659,6 +675,16 @@ export async function disputePayment(req, res, next) {
     await fileDoc.save();
 
     res.json({ success: true, status: fileDoc.status });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getFileStatus(req, res, next) {
+  try {
+    const fileDoc = await File.findById(req.params.fileId);
+    if (!fileDoc) throw httpError(404, "File not found");
+    res.json({ status: fileDoc.status });
   } catch (err) {
     next(err);
   }

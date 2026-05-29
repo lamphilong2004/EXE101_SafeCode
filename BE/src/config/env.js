@@ -38,4 +38,10 @@ export const env = {
   APP_BASE_URL: process.env.APP_BASE_URL || "http://localhost:5173",
 
   TRIAL_DURATION_HOURS: Number(process.env.TRIAL_DURATION_HOURS) || 24,
+
+  // BANK TRANSFER DETAILS
+  BANK_NAME: process.env.BANK_NAME || "Vietcombank",
+  BANK_ACCOUNT_NO: process.env.BANK_ACCOUNT_NO || "0123456789",
+  BANK_ACCOUNT_NAME: process.env.BANK_ACCOUNT_NAME || "SAFECODE JSC",
+  BANK_BRANCH: process.env.BANK_BRANCH || "HCM",
 };

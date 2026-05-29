@@ -25,6 +25,7 @@ const Login = () => {
     if (isRegistering) {
       result = await signup(role, formData.email, formData.password, formData.name);
     } else {
+      // Backend xác định role, frontend không cần gửi role khi login
       result = await login(role, formData.email, formData.password);
     }
 
@@ -99,25 +100,27 @@ const Login = () => {
             </div>
           </div>
 
-          <div className="role-selector">
-            <p className="role-label">{isRegistering ? 'Register as:' : 'Login as:'}</p>
-            <div className="role-options">
-              <button 
-                type="button" 
-                className={`role-btn ${role === 'freelancer' ? 'active' : ''}`}
-                onClick={() => setRole('freelancer')}
-              >
-                Freelancer
-              </button>
-              <button 
-                type="button" 
-                className={`role-btn ${role === 'client' ? 'active' : ''}`}
-                onClick={() => setRole('client')}
-              >
-                Client
-              </button>
+          {isRegistering && (
+            <div className="role-selector">
+              <p className="role-label">Register as:</p>
+              <div className="role-options">
+                <button 
+                  type="button" 
+                  className={`role-btn ${role === 'freelancer' ? 'active' : ''}`}
+                  onClick={() => setRole('freelancer')}
+                >
+                  Freelancer
+                </button>
+                <button 
+                  type="button" 
+                  className={`role-btn ${role === 'client' ? 'active' : ''}`}
+                  onClick={() => setRole('client')}
+                >
+                  Client
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           <Button variant="primary" type="submit" className="login-submit-btn" disabled={isLoggingIn}>
             {isLoggingIn ? 'Processing...' : (isRegistering ? 'Create Account' : 'Sign In Securely')}

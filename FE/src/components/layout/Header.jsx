@@ -31,8 +31,8 @@ const Header = ({ notifications = [] }) => {
 
       <div className="header-actions">
         {userRole === 'freelancer' && (
-          <div className="header-credits flex items-center gap-2 px-3 py-1 bg-orange-50 border border-orange-100 rounded-full text-orange-700 font-bold text-sm">
-            <Database size={14} />
+          <div className="header-credits-badge">
+            <Database size={16} />
             <span>{user?.credits?.toFixed(1) || 0} Credits</span>
           </div>
         )}

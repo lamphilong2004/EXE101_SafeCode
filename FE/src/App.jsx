@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/layout/Layout';
-import Login from './pages/auth/Login';
+import Landing from './pages/landing/Landing';
 import FreelancerDashboard from './pages/dashboards/FreelancerDashboard';
 import ClientDashboard from './pages/dashboards/ClientDashboard';
 import AdminDashboard from './pages/dashboards/AdminDashboard';
@@ -37,12 +37,16 @@ function App() {
         const mappedFiles = res.data.files.map(f => ({
           id: f._id,
           fileName: f.title,
-          date: new Date(f.createdAt).toLocaleDateString(),
+          date: (() => {
+            const d = new Date(f.createdAt);
+            return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+          })(),
           client: f.intendedClientEmail,
           freelancer: f.freelancerId?.name || 'Freelancer',
           payoutSettings: f.freelancerId?.payoutSettings || null,
           status: f.status,
           amount: f.price.amount,
+          allocatedMinutes: f.allocatedMinutes || 0,
           trialEndsAt: f.trialEndsAt || null,
           demoType: f.demo.type,
           demoUrl: f.demo.url
@@ -85,7 +89,7 @@ function App() {
   }, [files, user]);
 
   if (!isAuthenticated || !user) {
-    return <Login />;
+    return <Landing />;
   }
 
   const getDashboard = () => {

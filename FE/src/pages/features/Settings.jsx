@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import { User, Bell, Shield, Key, CreditCard } from 'lucide-react';
+import { User as UserIcon, Bell, Shield, Key, CreditCard, ImagePlus } from 'lucide-react';
+import api from '../../services/api';
+import { toast } from 'react-toastify';
 import './Settings.css';
 
 const Settings = ({ userRole }) => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
+  const [qrPreview, setQrPreview] = useState(user?.payoutSettings?.qrCodeUrl || '');
 
   return (
     <div className="dashboard-wrapper">
@@ -22,7 +27,7 @@ const Settings = ({ userRole }) => {
             className={`settings-tab ${activeTab === 'profile' ? 'active' : ''}`}
             onClick={() => setActiveTab('profile')}
           >
-            <User size={18} /> Profile
+            <UserIcon size={18} /> Profile
           </button>
           <button 
             className={`settings-tab ${activeTab === 'security' ? 'active' : ''}`}
@@ -154,21 +159,52 @@ const Settings = ({ userRole }) => {
               </div>
 
               <div className="form-group mt-4">
-                <label>QR Code Image URL</label>
-                <input 
-                  type="text" 
-                  defaultValue={user?.payoutSettings?.qrCodeUrl} 
-                  placeholder="https://img.vietqr.io/image/..."
-                  className="form-input"
-                  id="qrCodeUrl"
-                />
-                <p className="text-xs text-muted mt-1">Dùng link từ VietQR hoặc link ảnh QR của bạn.</p>
+                <label>QR Code Payment</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <input 
+                    type="text" 
+                    defaultValue={user?.payoutSettings?.qrCodeUrl} 
+                    placeholder="https://img.vietqr.io/image/..."
+                    className="form-input"
+                    id="qrCodeUrl"
+                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <label htmlFor="qr-upload" style={{ cursor: 'pointer', padding: '8px 16px', border: '1px dashed var(--border-color)', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--text-muted)', background: 'var(--background-color)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <ImagePlus size={16} /> Tải ảnh QR lên
+                    </label>
+                    <input 
+                      type="file" 
+                      id="qr-upload" 
+                      accept="image/*" 
+                      style={{ display: 'none' }} 
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            const base64 = ev.target.result;
+                            document.getElementById('qrCodeUrl').value = base64;
+                            setQrPreview(base64);
+                            toast.info("Đã chọn ảnh QR! Nhấn 'Save' để cập nhật.");
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                    <span className="text-xs text-muted">Hoặc dán link VietQR vào ô trên.</span>
+                  </div>
+                </div>
               </div>
 
-              {user?.payoutSettings?.qrCodeUrl && (
+              {qrPreview && (
                 <div className="qr-preview mt-4">
                   <p className="text-sm font-medium mb-2">Xem trước QR:</p>
-                  <img src={user.payoutSettings.qrCodeUrl} alt="QR Preview" style={{ maxWidth: '150px', borderRadius: '8px', border: '1px solid var(--border-color)' }} />
+                  <img 
+                    src={qrPreview} 
+                    alt="QR Preview" 
+                    id="qr-preview-img"
+                    style={{ maxWidth: '150px', borderRadius: '8px', border: '1px solid var(--border-color)' }} 
+                  />
                 </div>
               )}
 
@@ -183,10 +219,11 @@ const Settings = ({ userRole }) => {
                       accountName: document.getElementById('accountName').value,
                       qrCodeUrl: document.getElementById('qrCodeUrl').value,
                     };
-                    await api.post('/auth/payout-settings', data);
+                    await api.put('/auth/me/payout', data);
                     toast.success('Đã cập nhật thông tin thanh toán!');
                     // Refresh user data if possible, or just let it be
                   } catch (err) {
+                    console.error(err);
                     toast.error('Cập nhật thất bại');
                   }
                 }}

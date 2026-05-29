@@ -7,6 +7,7 @@ import { paymentsRoutes } from "./payments.routes.js";
 import { proxyRoutes } from "./proxy.routes.js";
 import { webhooksRoutes } from "./webhooks.routes.js";
 import { adminRoutes } from "./admin.routes.js";
+import { previewRoutes } from "./preview.routes.js";
 
 export const routes = Router();
 
@@ -16,6 +17,7 @@ routes.use("/credits", creditRoutes);
 routes.use("/files", filesRoutes);
 routes.use("/payments", paymentsRoutes);
 routes.use("/proxy", proxyRoutes);
+routes.use("/preview", previewRoutes);
 routes.use("/admin", adminRoutes);
 
 // keep webhooks separate: uses raw body

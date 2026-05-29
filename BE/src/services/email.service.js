@@ -11,38 +11,55 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-export async function sendDecryptionKeyEmail(to, { fileName, keyB64, ivB64, authTagB64 }) {
+export async function sendDecryptionKeyEmail(to, { fileName, keyB64, ivB64, authTagB64, licenseKey, isV3 }) {
   if (!env.SMTP_USER || !env.SMTP_PASS) {
-    console.warn("[MAIL] SMTP not configured. Key for", fileName, "is:", keyB64);
+    console.warn("[MAIL] SMTP not configured. License for", fileName, "is:", licenseKey || keyB64);
     return;
   }
 
-  const html = `
+  const html = isV3 ? `
     <div style="font-family: sans-serif; max-width: 600px; margin: auto; border: 1px solid #e2e8f0; padding: 24px; border-radius: 12px;">
       <h2 style="color: #4f46e5;">Thanh toán hoàn tất! 🔓</h2>
       <p>Chúc mừng! Freelancer đã xác nhận nhận được thanh toán cho dự án <strong>${fileName}</strong>.</p>
-      <p>Dưới đây là thông số kỹ thuật để giải mã sản phẩm của bạn (Hệ thống sẽ tự nhận diện khi bạn bấm 'Unlock' trên Dashboard):</p>
+      <p>Dưới đây là <strong>Mã kích hoạt (License Serial)</strong> của bạn:</p>
       
+      <div style="background: #f1f5f9; padding: 20px; border-radius: 8px; font-family: monospace; font-size: 18px; font-weight: bold; text-align: center; border: 2px dashed #4f46e5; margin: 24px 0; color: #1e293b; letter-spacing: 1px;">
+        ${licenseKey}
+      </div>
+
+      <p><strong>Hướng dẫn:</strong></p>
+      <ol>
+        <li>Truy cập Dashboard SafeCode.</li>
+        <li>Bấm vào nút <strong>"Unlock & Download"</strong> bên cạnh dự án.</li>
+        <li>Nhập mã Serial trên để kích hoạt và tải file đã giải mã.</li>
+      </ol>
+
+      <p style="font-size: 13px; color: #64748b;">Lưu ý: Mã này chỉ dùng được trên tối đa 3 thiết bị.</p>
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+      <p style="font-size: 12px; color: #64748b;">Đây là email tự động từ SafeCode.</p>
+    </div>
+  ` : `
+    <div style="font-family: sans-serif; max-width: 600px; margin: auto; border: 1px solid #e2e8f0; padding: 24px; border-radius: 12px;">
+      <h2 style="color: #4f46e5;">Thanh toán hoàn tất! 🔓</h2>
+      <p>Chúc mừng! Freelancer đã xác nhận nhận được thanh toán cho dự án <strong>${fileName}</strong>.</p>
       <div style="background: #f8fafc; padding: 16px; border-radius: 8px; font-family: monospace; font-size: 13px; border: 1px solid #cbd5e1; margin: 16px 0;">
         <p><strong>Key (Base64):</strong> ${keyB64}</p>
         <p><strong>IV:</strong> ${ivB64}</p>
         <p><strong>Auth Tag:</strong> ${authTagB64}</p>
       </div>
-
       <p>Bạn có thể truy cập Dashboard để tải file và tự động giải mã ngay bây giờ.</p>
-      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
-      <p style="font-size: 12px; color: #64748b;">Đây là email tự động từ SafeCode. Vui lòng không trả lời email này.</p>
     </div>
   `;
 
   try {
+    const subject = isV3 ? `[SafeCode] License Key cho dự án: ${fileName}` : `[SafeCode] Key giải mã cho dự án: ${fileName}`;
     await transporter.sendMail({
       from: env.SMTP_FROM,
       to,
-      subject: `[SafeCode] Key giải mã cho dự án: ${fileName}`,
+      subject,
       html,
     });
-    console.log(`[MAIL] Decryption key sent to ${to}`);
+    console.log(`[MAIL] ${isV3 ? 'License' : 'Decryption key'} sent to ${to}`);
   } catch (err) {
     console.error("[MAIL] Failed to send email:", err);
   }

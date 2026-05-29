@@ -1,23 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
-import { Users, AlertTriangle, CheckCircle, XCircle, Phone, Mail, FileText, BarChart3, Database, DollarSign, ArrowRight, Info, PlusCircle, MinusCircle } from 'lucide-react';
+import { Users, AlertTriangle, CheckCircle, XCircle, Phone, Mail, FileText, BarChart3, Database, DollarSign, ArrowRight, Info, PlusCircle, MinusCircle, Banknote } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState('disputes');
+  const [activeTab, setActiveTab] = useState('disputes'); // disputes, users, credits
   const [disputes, setDisputes] = useState([]);
   const [users, setUsers] = useState([]);
+  const [creditRequests, setCreditRequests] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedDispute, setSelectedDispute] = useState(null);
-  
   // Pagination
-  const [dPage, setDPage] = useState(1);
-  const [dTotalPages, setDTotalPages] = useState(1);
-  const [uPage, setUPage] = useState(1);
-  const [uTotalPages, setUTotalPages] = useState(1);
+  const [dPage] = useState(1);
+  const [uPage] = useState(1);
 
   // Credit Management
   const [showCreditModal, setShowCreditModal] = useState(false);
@@ -40,15 +38,16 @@ const AdminDashboard = () => {
       if (activeTab === 'disputes') {
         const res = await api.get(`/admin/disputes?page=${dPage}&limit=10`);
         setDisputes(res.data.disputes);
-        setDTotalPages(res.data.totalPages);
-      } else {
+      } else if (activeTab === 'users') {
         const res = await api.get(`/admin/users?page=${uPage}&limit=15`);
         setUsers(res.data.users);
-        setUTotalPages(res.data.totalPages);
+      } else if (activeTab === 'credits') {
+        const res = await api.get(`/admin/credit-requests`);
+        setCreditRequests(res.data.requests);
       }
     } catch (err) {
       console.error(err);
-      toast.error('Không thể tải dữ liệu admin.');
+      toast.error("Failed to load admin data");
     } finally {
       setLoading(false);
     }
@@ -62,65 +61,85 @@ const AdminDashboard = () => {
     fetchData();
   }, [fetchData]);
 
+  // Disputer actions
   const handleResolve = async (fileId, action) => {
     const labels = {
       confirm: 'XÁC NHẬN thanh toán hợp lệ',
-      reject: 'TỪ CHỐI tranh chấp',
-      requestMoreInfo: 'YÊU CẦU THÊM bằng chứng (Hạn 48h)'
+      reject: 'HỦY BỎ thanh toán',
+      warning: 'CẢNH CÁO Freelancer'
     };
-    if (!window.confirm(`Admin ${labels[action]}?`)) return;
+    if (!window.confirm(`Bạn chắc chắn muốn thực hiện hành động: "${labels[action]}"?`)) return;
+
     try {
       await api.post(`/admin/disputes/${fileId}/resolve`, { action });
-      toast.success('Thao tác thành công!');
+      toast.success("Resolved dispute successfully");
       setSelectedDispute(null);
       fetchData();
       fetchStats();
     } catch (err) {
-      console.error(err);
-      toast.error('Thao tác thất bại.');
+      toast.error(err.response?.data?.error || "Resolve failed");
     }
   };
 
-  const handleAdjustCredits = async () => {
-    if (!targetUser) return;
+  const handleApproveCredit = async (reqId) => {
+    if(!window.confirm("Duyệt yêu cầu nạp credit này?")) return;
     try {
-      await api.post(`/admin/users/${targetUser._id}/credits`, { 
-        amount: Number(creditAmount), 
-        reason: creditReason 
-      });
-      toast.success(`Đã cập nhật credit cho ${targetUser.email}`);
-      setShowCreditModal(false);
+      await api.post(`/admin/credit-requests/${reqId}/approve`);
+      toast.success("Đã duyệt thành công, nạp Credit cho user.");
       fetchData();
-      fetchStats();
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Lỗi xử lý');
+    } catch(err) {
+      toast.error(err.response?.data?.error || "Action failed");
     }
-  };
+  }
+
+  const handleRejectCredit = async (reqId) => {
+    const reason = window.prompt("Lý do từ chối (Admin Note):", "Ảnh bill không hợp lệ");
+    if(reason === null) return;
+    try {
+      await api.post(`/admin/credit-requests/${reqId}/reject`, { adminNote: reason });
+      toast.success("Đã từ chối yêu cầu.");
+      fetchData();
+    } catch(err) {
+      toast.error(err.response?.data?.error || "Action failed");
+    }
+  }
 
   return (
     <div className="admin-dashboard">
       <div className="admin-header">
-        <h1>⚙️ Bảng Điều Khiển Admin</h1>
-        <p>Giám sát doanh thu, quản lý user và giải quyết tranh chấp</p>
+        <h1>Bảng Điều Khiển Admin</h1>
+        <p>Quản lý hệ thống SafeCode</p>
       </div>
 
       {stats && (
         <div className="admin-stats-grid">
           <div className="stat-card">
-            <div className="stat-header"><Users size={16} /> Users</div>
-            <div className="stat-value">{stats.totalUsers}</div>
+            <Users className="stat-icon" />
+            <div className="stat-info">
+              <h3>Tổng User</h3>
+              <p>{stats.totalUsers}</p>
+            </div>
           </div>
           <div className="stat-card">
-            <div className="stat-header"><FileText size={16} /> Files</div>
-            <div className="stat-value">{stats.totalFiles}</div>
+            <AlertTriangle className="stat-icon warning" />
+            <div className="stat-info">
+              <h3>Tranh Chấp Mở</h3>
+              <p>{stats.totalDisputes}</p>
+            </div>
           </div>
           <div className="stat-card">
-            <div className="stat-header"><DollarSign size={16} /> Doanh thu</div>
-            <div className="stat-value">{stats.totalRevenue.toLocaleString()} VND</div>
+            <Database className="stat-icon processing" />
+            <div className="stat-info">
+              <h3>Dữ Liệu Hệ Thống</h3>
+              <p>{(stats.totalStorage / 1024 / 1024 / 1024).toFixed(2)} GB</p>
+            </div>
           </div>
           <div className="stat-card">
-            <div className="stat-header"><Database size={16} /> Credits lưu thông</div>
-            <div className="stat-value">{stats.totalCreditsInCirculation.toFixed(1)}</div>
+            <DollarSign className="stat-icon success" />
+            <div className="stat-info">
+              <h3>GD Phân Xử</h3>
+              <p>{stats.resolvedDisputes || 0}</p>
+            </div>
           </div>
         </div>
       )}
@@ -129,151 +148,274 @@ const AdminDashboard = () => {
         <button className={`admin-tab ${activeTab === 'disputes' ? 'active' : ''}`} onClick={() => setActiveTab('disputes')}>
           <AlertTriangle size={16} /> Tranh Chấp ({stats?.totalDisputes || 0})
         </button>
+        <button className={`admin-tab ${activeTab === 'credits' ? 'active' : ''}`} onClick={() => setActiveTab('credits')}>
+          <Banknote size={16} /> Nạp Credit AI
+        </button>
         <button className={`admin-tab ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}>
-          <Users size={16} /> Người Dùng
+          <Users size={16} /> Quản lý User
         </button>
       </div>
 
-      {loading ? (
-        <div className="admin-loading">Đang tải...</div>
-      ) : activeTab === 'disputes' ? (
-        <div className="admin-content">
-          {disputes.length === 0 ? (
-            <div className="admin-empty">
-              <CheckCircle size={48} style={{ color: 'var(--primary-color)' }} />
-              <p>Không có tranh chấp nào đang chờ xử lý.</p>
-            </div>
-          ) : (
-            <>
-              <div className="dispute-grid">
-                {disputes.map(d => (
-                  <div key={d._id} className="dispute-card" onClick={() => setSelectedDispute(d)}>
-                    <div className="dispute-card-header">
-                      <FileText size={20} />
-                      <span className="dispute-title">{d.title}</span>
-                      <span className={`status-badge ${d.status === 'AwaitingEvidence' ? 'status-awaiting' : 'status-disputed'}`}>
-                        {d.status === 'AwaitingEvidence' ? 'Đang chờ Evidence' : 'Disputed'}
-                      </span>
-                    </div>
-                    <div className="dispute-card-body">
-                      <div><strong>Client:</strong> {d.intendedClientEmail}</div>
-                      <div><strong>Freelancer:</strong> {d.freelancerId?.name || 'N/A'}</div>
-                      <div><strong>Số tiền:</strong> {d.price?.amount.toLocaleString()} {d.price?.currency.toUpperCase()}</div>
-                    </div>
-                    <div className="dispute-card-footer">
-                      <button className="btn-resolve confirm" onClick={(e) => { e.stopPropagation(); handleResolve(d._id, 'confirm'); }}>
-                        <CheckCircle size={14} /> Confirm
-                      </button>
-                      <button className="btn-resolve info" onClick={(e) => { e.stopPropagation(); handleResolve(d._id, 'requestMoreInfo'); }}>
-                        <Info size={14} /> Request Info
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {dTotalPages > 1 && (
-                <div className="pagination-controls">
-                  <Button variant="outline" size="sm" disabled={dPage === 1} onClick={() => setDPage(dPage - 1)}>Trang trước</Button>
-                  <span>{dPage} / {dTotalPages}</span>
-                  <Button variant="outline" size="sm" disabled={dPage === dTotalPages} onClick={() => setDPage(dPage + 1)}>Trang sau</Button>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Dispute Detail Modal */}
-          {selectedDispute && (
-            <div className="modal-overlay" onClick={() => setSelectedDispute(null)}>
-              <div className="dispute-detail-modal" onClick={e => e.stopPropagation()}>
-                <h3>Chi tiết Tranh Chấp</h3>
-                <div className="detail-grid">
-                  <div className="detail-section">
-                    <h4>📁 File</h4>
-                    <p><strong>Tên:</strong> {selectedDispute.title}</p>
-                    <p><strong>Status:</strong> {selectedDispute.status}</p>
-                    {selectedDispute.disputeDeadline && (
-                      <p className="text-danger"><strong>Deadline:</strong> {new Date(selectedDispute.disputeDeadline).toLocaleString()}</p>
+      <div className="admin-content">
+        {loading ? (
+          <div style={{ padding: '2rem', textAlign: 'center' }}>Loading dữ liệu...</div>
+        ) : (
+          <>
+            {/* DISPUTES TAB */}
+            {activeTab === 'disputes' && (
+              <div className="data-table-container">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>File & Trạng Thái</th>
+                      <th>Khách Hàng (Tạo)</th>
+                      <th>Freelancer</th>
+                      <th>Giá Trị</th>
+                      <th>Hành Động</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {disputes.length === 0 ? (
+                      <tr><td colSpan="5" className="text-center">Không có tranh chấp cần xử lý.</td></tr>
+                    ) : (
+                      disputes.map(d => (
+                        <tr key={d._id}>
+                          <td>
+                            <strong>{d.title}</strong>
+                            <br/><span className="status-badge warning">{d.status}</span>
+                          </td>
+                          <td>{d.intendedClientEmail}</td>
+                          <td>{d.freelancerId?.name || d.freelancerId?.email}</td>
+                          <td>{d.price.amount}</td>
+                          <td>
+                            <Button size="sm" variant="outline" onClick={() => setSelectedDispute(d)}>Xem Chi Tiết</Button>
+                          </td>
+                        </tr>
+                      ))
                     )}
-                  </div>
-                  <div className="detail-section">
-                    <h4>👤 Freelancer</h4>
-                    <p><strong>Tên:</strong> {selectedDispute.freelancerId?.name}</p>
-                    <p><strong>Email:</strong> {selectedDispute.freelancerId?.email}</p>
-                  </div>
-                </div>
-                {selectedDispute.receipt?.imageUrl && (
-                  <div className="receipt-preview">
-                    <h4>🧾 Bill của Client</h4>
-                    <img src={selectedDispute.receipt.imageUrl} alt="Payment Receipt" />
-                  </div>
-                )}
-                <div className="dispute-detail-actions">
-                  <Button variant="primary" onClick={() => handleResolve(selectedDispute._id, 'confirm')}>Force Confirm</Button>
-                  <Button variant="outline" onClick={() => handleResolve(selectedDispute._id, 'requestMoreInfo')}>Yêu cầu thêm bằng chứng</Button>
-                  <Button onClick={() => handleResolve(selectedDispute._id, 'reject')} style={{backgroundColor: '#fee2e2', color: '#dc2626'}}>Từ chối</Button>
-                  <Button variant="outline" onClick={() => setSelectedDispute(null)}>Quay lại</Button>
-                </div>
+                  </tbody>
+                </table>
               </div>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="admin-content">
-          <table className="admin-users-table">
-            <thead>
-              <tr>
-                <th>User</th>
-                <th>Role</th>
-                <th>Credits</th>
-                <th>Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map(u => (
-                <tr key={u._id}>
-                  <td>
-                    <div className="font-bold">{u.name}</div>
-                    <div className="text-xs text-muted">{u.email}</div>
-                  </td>
-                  <td><span className={`role-badge role-${u.role}`}>{u.role}</span></td>
-                  <td className="font-bold">{u.credits?.toFixed(1) || 0}</td>
-                  <td>
-                    <Button size="sm" variant="outline" onClick={() => { setTargetUser(u); setShowCreditModal(true); }}>
-                      <PlusCircle size={14} className="mr-1" /> Cấp Credit
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {uTotalPages > 1 && (
-            <div className="pagination-controls">
-              <Button variant="outline" size="sm" disabled={uPage === 1} onClick={() => setUPage(uPage - 1)}>Trước</Button>
-              <span>{uPage} / {uTotalPages}</span>
-              <Button variant="outline" size="sm" disabled={uPage === uTotalPages} onClick={() => setUPage(uPage + 1)}>Sau</Button>
-            </div>
-          )}
+            )}
 
-          {/* Credit Modal */}
-          {showCreditModal && targetUser && (
-            <div className="modal-overlay" onClick={() => setShowCreditModal(false)}>
-              <div className="credit-modal" onClick={e => e.stopPropagation()}>
-                <h3>Quản lý Credits cho {targetUser.name}</h3>
-                <div className="credit-form">
-                  <div className="input-group">
-                    <label>Số lượng (Số âm để trừ)</label>
-                    <input type="number" value={creditAmount} onChange={e => setCreditAmount(e.target.value)} className="form-input" />
-                  </div>
-                  <div className="input-group">
-                    <label>Lý do</label>
-                    <input type="text" value={creditReason} onChange={e => setCreditReason(e.target.value)} placeholder="VD: Hoàn tiền, Thưởng sự kiện..." className="form-input" />
-                  </div>
-                  <Button variant="primary" onClick={handleAdjustCredits}>Xác nhận thay đổi</Button>
-                  <Button variant="outline" onClick={() => setShowCreditModal(false)}>Hủy</Button>
+            {/* AI CREDIT REQUESTS TAB */}
+            {activeTab === 'credits' && (
+              <div className="data-table-container">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Ngày & Người Yêu Cầu</th>
+                      <th>Số Lượng Nạp</th>
+                      <th>Ảnh Bill CK</th>
+                      <th>AI Đề Xuất</th>
+                      <th>Trạng Thái</th>
+                      <th>Hành Động</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {creditRequests.length === 0 ? (
+                      <tr><td colSpan="6" className="text-center">Chưa có yêu cầu Nạp Credit.</td></tr>
+                    ) : (
+                      creditRequests.map(req => (
+                        <tr key={req._id}>
+                          <td>
+                            <div className="text-sm">
+                              <div><b>{req.userId?.name || 'User'}</b></div>
+                              <div className="text-muted">{req.userId?.email}</div>
+                              <small>{new Date(req.createdAt).toLocaleString()}</small>
+                            </div>
+                          </td>
+                          <td>
+                            <strong className="text-success">+{req.amount} CR</strong><br />
+                            <small>{req.amountVND.toLocaleString()} VND</small>
+                          </td>
+                          <td>
+                            <Button size="sm" variant="outline" onClick={() => window.open(req.billImageUrl, '_blank')}>Xem Bill</Button>
+                          </td>
+                          <td>
+                            {req.aiVerification?.detected ? (
+                              <div className="status-badge">
+                                {`AI: Khớp ${Math.round(req.aiVerification.confidence * 100)}%`}
+                              </div>
+                            ) : (
+                              <span className="status-badge error">Không Đọc Được</span>
+                            )}
+                          </td>
+                          <td>
+                             <span className={`status-badge ${req.status}`}>
+                               {req.status.toUpperCase()}
+                             </span>
+                          </td>
+                          <td>
+                            {req.status === 'pending' && (
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <Button size="sm" variant="success" title="Duyệt" onClick={() => handleApproveCredit(req._id)}><CheckCircle size={14}/></Button>
+                                <Button size="sm" variant="danger" title="Từ chối" onClick={() => handleRejectCredit(req._id)}><XCircle size={14}/></Button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* USERS TAB */}
+            {activeTab === 'users' && (
+              <div className="data-table-container">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Người Dùng</th>
+                      <th>Vai Trò</th>
+                      <th>Credits</th>
+                      <th>Hành Động</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map(u => (
+                      <tr key={u._id}>
+                        <td>
+                          <strong>{u.name}</strong><br/>
+                          <small>{u.email}</small>
+                        </td>
+                        <td><span className="status-badge">{u.role}</span></td>
+                        <td>{u.credits?.toFixed(1) || 0}</td>
+                        <td>
+                           <div style={{ display: 'flex', gap: '8px' }}>
+                             <Button size="sm" variant="outline" title="Chỉnh sửa Credit" onClick={() => { setTargetUser(u); setShowCreditModal(true); setCreditAmount(0); }}>
+                               Cộng/Trừ CR
+                             </Button>
+                           </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+          </>
+        )}
+      </div>
+
+      {selectedDispute && (
+        <div className="modal-overlay">
+          <div className="checkout-modal premium-ui" style={{ maxWidth: '600px' }}>
+            <div className="checkout-header" style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 className="text-xl font-bold">Phân Xử Tranh Chấp</h3>
+              <button onClick={() => setSelectedDispute(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><XCircle size={24} /></button>
+            </div>
+            <div className="checkout-body" style={{ padding: '20px', maxHeight: '70vh', overflowY: 'auto' }}>
+              <div className="payment-summary card-styled" style={{ marginBottom: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <span className="text-xs text-muted block">Dự án:</span>
+                  <strong>{selectedDispute.title}</strong>
+                </div>
+                <div>
+                  <span className="text-xs text-muted block">Giá trị:</span>
+                  <strong className="text-primary">{selectedDispute.price?.amount?.toLocaleString()} {selectedDispute.price?.currency?.toUpperCase()}</strong>
+                </div>
+                <div>
+                  <span className="text-xs text-muted block">Khách hàng:</span>
+                  <span>{selectedDispute.intendedClientEmail}</span>
+                </div>
+                <div>
+                  <span className="text-xs text-muted block">Freelancer:</span>
+                  <span>{selectedDispute.freelancerId?.name || selectedDispute.freelancerId?.email}</span>
                 </div>
               </div>
+
+              {selectedDispute.receipt?.imageUrl ? (
+                <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label className="font-bold text-sm">Minh chứng chuyển khoản (Ảnh Bill):</label>
+                  <img 
+                    src={selectedDispute.receipt.imageUrl} 
+                    alt="Receipt" 
+                    style={{ width: '100%', maxHeight: '300px', objectFit: 'contain', borderRadius: '12px', border: '1px solid var(--border-color)' }} 
+                  />
+                  {selectedDispute.receipt.trackingLink && (
+                    <div style={{ marginTop: '8px' }}>
+                      <span className="text-xs text-muted block">Link giao dịch:</span>
+                      <a href={selectedDispute.receipt.trackingLink} target="_blank" rel="noopener noreferrer" className="text-primary text-sm break-all">{selectedDispute.receipt.trackingLink}</a>
+                    </div>
+                  )}
+                  <span className="text-xs text-muted mt-1 italic block">
+                    {selectedDispute.receipt.verifiedByAI ? "✅ AI đã tự động xác minh bill khớp" : "⚠️ AI chưa xác minh hoặc phát hiện bill không khớp"}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-muted text-sm italic mt-4">Chưa có ảnh bill thanh toán được tải lên.</p>
+              )}
             </div>
-          )}
+            <div className="checkout-footer" style={{ padding: '20px', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <Button variant="success" size="sm" onClick={() => handleResolve(selectedDispute._id, 'confirm')} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <CheckCircle size={16} /> Đã nhận tiền (Confirm)
+              </Button>
+              <Button variant="danger" size="sm" onClick={() => handleResolve(selectedDispute._id, 'reject')} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <XCircle size={16} /> Hủy giao dịch (Reject)
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleResolve(selectedDispute._id, 'requestMoreInfo')}>
+                Yêu cầu bằng chứng
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setSelectedDispute(null)}>Đóng</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCreditModal && targetUser && (
+        <div className="modal-overlay">
+          <div className="checkout-modal premium-ui" style={{ maxWidth: '400px' }}>
+            <div className="checkout-header" style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 className="text-xl font-bold">Chỉnh Sửa Credit</h3>
+              <button onClick={() => setShowCreditModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><XCircle size={24} /></button>
+            </div>
+            <div className="checkout-body" style={{ padding: '20px' }}>
+              <p className="text-sm mb-4">Người dùng: <strong>{targetUser.name}</strong> ({targetUser.email})</p>
+              <div className="form-group mb-3" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label className="text-sm font-bold">Số lượng Credit (Cộng/Trừ):</label>
+                <input 
+                  type="number" 
+                  value={creditAmount} 
+                  onChange={(e) => setCreditAmount(Number(e.target.value))} 
+                  className="form-input"
+                  style={{ padding: '10px', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--background-color)', outline: 'none' }}
+                />
+                <span className="text-xs text-muted">Nhập số dương để cộng (e.g. 5) hoặc âm để trừ (e.g. -5).</span>
+              </div>
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label className="text-sm font-bold">Lý do điều chỉnh:</label>
+                <input 
+                  type="text" 
+                  value={creditReason} 
+                  onChange={(e) => setCreditReason(e.target.value)} 
+                  placeholder="Nạp tiền ngoài hệ thống / phạt vi phạm..."
+                  className="form-input"
+                  style={{ padding: '10px', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--background-color)', outline: 'none' }}
+                />
+              </div>
+            </div>
+            <div className="checkout-footer" style={{ padding: '20px', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
+              <Button variant="primary" onClick={async () => {
+                try {
+                  const res = await api.post(`/admin/users/${targetUser._id}/credits`, {
+                    amount: creditAmount,
+                    reason: creditReason
+                  });
+                  toast.success(`Đã cập nhật số dư! Số dư mới: ${res.data.newBalance} CR`);
+                  setShowCreditModal(false);
+                  fetchData();
+                  fetchStats();
+                } catch (err) {
+                  toast.error(err.response?.data?.error || "Cập nhật thất bại");
+                }
+              }} style={{ flex: 1 }}>Xác nhận</Button>
+              <Button variant="outline" onClick={() => setShowCreditModal(false)}>Hủy</Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

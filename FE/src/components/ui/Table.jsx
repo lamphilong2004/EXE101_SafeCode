@@ -1,49 +1,127 @@
-import React from 'react';
-import Badge from './Badge';
-import Button from './Button';
-import { Download, Unlock, Lock, Clock, ExternalLink, Box, CheckCircle, ShieldAlert, ImagePlus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import {
+  X, ExternalLink, Clock, CheckCircle,
+  ShieldAlert, Lock, Unlock, ImagePlus, Mail
+} from 'lucide-react';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
+import Button from './Button';
+import Badge from './Badge';
 import './Table.css';
 
 const Countdown = ({ file, updateFileStatus }) => {
-  const [timeLeft, setTimeLeft] = React.useState(0);
+  const [timeLeft, setTimeLeft] = useState('');
 
-  React.useEffect(() => {
-    if (!file.trialEndsAt || file.status !== 'Testing Phase') return;
+  useEffect(() => {
+    if (file.status !== 'Testing Phase' || !file.trialEndsAt) return;
 
-    const interval = setInterval(() => {
-      const remaining = Math.max(0, new Date(file.trialEndsAt).getTime() - Date.now());
-      setTimeLeft(remaining);
+    const timer = setInterval(() => {
+      const now = new Date().getTime();
+      const end = new Date(file.trialEndsAt).getTime();
+      const diff = end - now;
 
-      if (remaining === 0) {
-        clearInterval(interval);
-        updateFileStatus(file.id, 'Locked');
+      if (diff <= 0) {
+        clearInterval(timer);
+        setTimeLeft('Expired');
+        if (updateFileStatus) updateFileStatus(file.id, 'Locked');
+        return;
       }
+
+      const h = Math.floor(diff / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+      setTimeLeft(`${h}h ${m}m ${s}s`);
     }, 1000);
 
-    return () => clearInterval(interval);
-  }, [file.id, file.trialEndsAt, file.status, updateFileStatus]);
+    return () => clearInterval(timer);
+  }, [file, updateFileStatus]);
 
-  if (file.status !== 'Testing Phase' || !file.trialEndsAt) return null;
-  
-  const totalSeconds = Math.ceil(timeLeft / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
+  if (file.status !== 'Testing Phase') return null;
+  return (
+    <span className="countdown-timer" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', background: 'var(--background-alt)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+      <Clock size={10} style={{ marginRight: 4 }} />
+      Hết hạn dùng thử sau: {timeLeft}
+    </span>
+  );
+};
+
+const PreviewModal = ({ file, onClose }) => {
+  const { user, setUser } = useAuth();
+  const [minsRemaining, setMinsRemaining] = useState(file.allocatedMinutes || 0);
+  const [isFree, setIsFree] = useState(true);
+  const [activeCredits, setActiveCredits] = useState(user?.credits || 0);
+
+  useEffect(() => {
+    // Initial heartbeat to start session
+    const sendHeartbeat = async () => {
+      try {
+        const res = await api.post('/preview/heartbeat', { fileId: file.id });
+        const { balance, isFree: sessionIsFree, trialMinutesRemaining } = res.data;
+        setActiveCredits(balance);
+        setIsFree(sessionIsFree);
+        setMinsRemaining(trialMinutesRemaining);
+        setUser(prev => ({ ...prev, credits: balance }));
+      } catch (err) {
+        if (err.response?.status === 402) {
+          toast.error("Hết Credits! Đang ngắt kết nối Sandbox...");
+          onClose();
+        }
+      }
+    };
+
+    sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, 15000); // Pulse every 15s for demo
+
+    return () => {
+      clearInterval(interval);
+      api.post('/preview/stop', { fileId: file.id }).catch(() => { });
+    };
+  }, [file.id, onClose, setUser]);
 
   return (
-    <div className="timer-badge">
-      <Clock size={14} style={{ marginRight: 4 }} /> 
-      {hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
+    <div className="modal-overlay">
+      <div className="preview-modal-container">
+        <div className="preview-modal-header">
+          <div className="preview-info">
+            <h3 className="text-lg font-bold">{file.fileName}</h3>
+            <span className={`billing-badge ${isFree ? 'is-free' : 'is-paid'}`}>
+              <Clock size={12} className="mr-1" />
+              {isFree ? `Miễn phí (Còn ${minsRemaining?.toFixed(1)} phút)` : '0.1 CR / 15 giây (Hết trial)'}
+            </span>
+            <span className="balance-badge ml-2">
+              Ví: {activeCredits.toFixed(1)} CR
+            </span>
+            {!isFree && activeCredits < 0.5 && (
+              <Button variant="primary" size="sm" className="ml-2 py-1 px-2 text-xs" onClick={() => window.open('/credits', '_blank')}>
+                Mua thêm Credit
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => window.open(`/proxy/demo/${file.id}`, '_blank')}>
+              <ExternalLink size={16} /> Open External
+            </Button>
+            <button className="close-btn" onClick={onClose}><X size={20} /></button>
+          </div>
+        </div>
+        <div className="preview-iframe-wrapper">
+          <iframe
+            src={`/proxy/demo/${file.id}`}
+            title="Project Preview"
+            className="preview-iframe"
+          />
+        </div>
+      </div>
     </div>
   );
 };
 
 const Table = ({ data, columns, userRole, updateFileStatus }) => {
-  const [checkoutFile, setCheckoutFile] = React.useState(null);
-  const [receiptPreview, setReceiptPreview] = React.useState(null);
-  const [receiptFile, setReceiptFile] = React.useState(null);
+  const [checkoutFile, setCheckoutFile] = useState(null);
+  const [receiptPreview, setReceiptPreview] = useState(null);
+  const [receiptFile, setReceiptFile] = useState(null);
+  const [activePreviewFile, setActivePreviewFile] = useState(null);
 
   const handlePay = async (id) => {
     const file = data.find(f => f.id === id);
@@ -77,7 +155,7 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
           imageUrl: receiptPreview,
           trackingLink: txLink
         });
-        
+
         updateFileStatus(checkoutFile.id, 'Verifying Payment');
         toast.success("AI đã xác nhận bill hợp lệ! Đang chờ Freelancer check tiền trong Bank.");
         setCheckoutFile(null);
@@ -94,7 +172,7 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
     try {
       const res = await api.put(`/files/${id}/start-trial`);
       updateFileStatus(id, 'Testing Phase', { trialEndsAt: res.data.trialEndsAt });
-      toast.success("Đã bắt đầu dùng thử 24 giờ!");
+      toast.success("Đã bắt đầu dùng thử!");
     } catch (err) {
       console.error(err);
       toast.error("Không thể bắt đầu dùng thử!");
@@ -104,10 +182,10 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
   const handleFreelancerConfirm = async (id, result) => {
     const action = result === 'confirm' ? 'confirm' : 'reject';
     const msg = action === 'confirm' ? "XÁC NHẬN: Bạn đã nhận đủ tiền?" : "Bạn KHÔNG nhận được tiền?";
-    
+
     if (window.confirm(msg)) {
       try {
-        const res = await api.post(`/files/${id}/confirm`, { action });
+        await api.post(`/files/${id}/confirm`, { action });
         const newStatus = action === 'confirm' ? 'Paid' : 'Disputed';
         updateFileStatus(id, newStatus);
         toast.success(action === 'confirm' ? "Đã xác nhận thanh toán!" : "Đã báo cáo Tranh chấp!");
@@ -138,14 +216,23 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
     try {
       if (userRole !== 'client') return;
 
-      // Preferred flow: system provides key to the intended client after payment is confirmed.
-      toast.info('Đang lấy key giải mã từ hệ thống...');
+      const licenseKey = window.prompt("Nhập mã License Serial nhận được qua email:");
+      if (!licenseKey) return;
+
+      // Fingerprint placeholder - in real prod, use a dedicated lib or browser metadata
+      const deviceId = btoa(navigator.userAgent).slice(0, 16);
+
+      toast.info('Đang xác thực License & lấy key giải mã...');
 
       let keyB64;
       let ivB64;
       let authTagB64;
 
-      const keyRes = await api.get(`/files/${fileId}/key`);
+      const keyRes = await api.post(`/files/${fileId}/key`, {
+        licenseKey,
+        deviceId
+      });
+
       keyB64 = keyRes.data?.keyB64;
       ivB64 = keyRes.data?.ivB64;
       authTagB64 = keyRes.data?.authTagB64;
@@ -157,23 +244,20 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
 
       const rawKey = Uint8Array.from(atob(keyB64), (c) => c.charCodeAt(0));
       if (rawKey.length !== 32) {
-        toast.error('Key không hợp lệ (cần 32 bytes).');
+        toast.error('Key không hợp lệ.');
         return;
       }
 
-      toast.info('Đang tải file mã hoá...');
+      toast.info('Đang tải file và giải mã...');
 
       // Step 2: Download the encrypted file
       const dlRes = await api.get(`/files/${fileId}/download-encrypted`, {
         responseType: 'arraybuffer',
       });
 
-      // Step 3: Decrypt using Web Crypto API (AES-256-GCM)
-      toast.info('Đang giải mã...');
       const iv = Uint8Array.from(atob(ivB64), (c) => c.charCodeAt(0));
       const authTag = Uint8Array.from(atob(authTagB64), (c) => c.charCodeAt(0));
 
-      // AES-GCM in WebCrypto: the authTag must be appended to ciphertext
       const encBuffer = dlRes.data;
       const combined = new Uint8Array(encBuffer.byteLength + authTag.byteLength);
       combined.set(new Uint8Array(encBuffer));
@@ -189,7 +273,6 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
         combined
       );
 
-      // Step 4: Trigger browser download
       const blob = new Blob([decrypted], { type: 'application/zip' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -200,59 +283,91 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
       a.remove();
       window.URL.revokeObjectURL(url);
 
-      toast.success('File đã được giải mã và tải xuống thành công!');
+      toast.success('Kích hoạt thành công! File đã được tải xuống.');
     } catch (err) {
-      console.error('Decrypt error:', err);
-      if (err.response?.status === 402) {
-        toast.error('Thanh toán chưa được xác nhận.');
-      } else if (err.response?.status === 403) {
-        toast.error('Bạn không có quyền nhận key của file này.');
-      } else {
-        toast.error('Giải mã thất bại! Vui lòng thử lại.');
-      }
+      console.error('Activation error:', err);
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || 'Kích hoạt thất bại! Vui lòng kiểm tra lại Key.';
+      toast.error(errorMsg);
     }
   };
   return (
     <div className="table-container">
+      {activePreviewFile && (
+        <PreviewModal
+          file={activePreviewFile}
+          onClose={() => setActivePreviewFile(null)}
+        />
+      )}
       {checkoutFile && (
         <div className="modal-overlay">
-          <div className="checkout-modal">
-            <h3 style={{ marginBottom: '8px', fontSize: '1.2rem', fontWeight: 600 }}>Thanh Toán Ngân Hàng (Escrow)</h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Chuyển khoản <strong style={{color: 'var(--text-main)'}}>${checkoutFile.amount}</strong> cho Freelancer <strong style={{color: 'var(--text-main)'}}>{checkoutFile.freelancer}</strong></p>
-            
-            <div className="bank-details-box">
-              <p>Ngân hàng: {checkoutFile.payoutSettings?.bankName || 'Vietcombank (VCB)'}</p>
-              <p>Số tài khoản: {checkoutFile.payoutSettings?.accountNumber || '0123456789'}</p>
-              <p>Chủ tài khoản: {checkoutFile.payoutSettings?.accountName || checkoutFile.freelancer.toUpperCase()}</p>
+          <div className="checkout-modal premium-ui">
+            <div className="checkout-header">
+              <h3 className="text-xl font-bold">Thanh Toán An Toàn</h3>
+              <p className="text-sm">Giao dịch được bảo vệ bởi SafeCode</p>
             </div>
 
-            {checkoutFile.payoutSettings?.qrCodeUrl && (
-              <div className="qr-payment-display" style={{ marginTop: '16px', textAlign: 'center' }}>
-                <p style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px' }}>Quét mã QR để thanh toán:</p>
-                <img src={checkoutFile.payoutSettings.qrCodeUrl} alt="Freelancer QR Code" style={{ maxWidth: '200px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', border: '1px solid var(--border-color)' }} />
+            <div className="checkout-body">
+              <div className="payment-summary card-styled">
+                <div className="flex justify-between items-center mb-2">
+                  <span>Số tiền cần thanh toán:</span>
+                  <strong className="text-primary text-xl" style={{ color: 'var(--primary-color)' }}>{checkoutFile.amount.toLocaleString()} VND</strong>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Người nhận:</span>
+                  <strong className="text-main">{checkoutFile.freelancer}</strong>
+                </div>
               </div>
-            )}
 
-            <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Ảnh Bill Chuyển Khoản</label>
-              <label htmlFor="receipt-image-file" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', border: '2px dashed var(--border-color)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.9rem', background: 'var(--background-color)' }}>
-                <ImagePlus size={18} />
-                {receiptFile ? receiptFile.name : 'Nhấn để chọn ảnh Bill...'}
-              </label>
-              <input type="file" id="receipt-image-file" accept="image/*" onChange={handleReceiptImageChange} style={{ display: 'none' }} />
-              {receiptPreview && (
-                <img src={receiptPreview} alt="Receipt Preview" style={{ width: '100%', maxHeight: '160px', objectFit: 'contain', borderRadius: '8px', border: '1px solid var(--border-color)', marginTop: '4px' }} />
+              <div className="bank-details-box premium">
+                <div className="detail-row">
+                  <span className="label">Ngân hàng</span>
+                  <span className="value font-bold">{checkoutFile.payoutSettings?.bankName || 'Vietcombank (VCB)'}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="label">Số tài khoản</span>
+                  <span className="value font-mono text-primary" style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>{checkoutFile.payoutSettings?.accountNumber || '0123456789'}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="label">Chủ tài khoản</span>
+                  <span className="value">{checkoutFile.payoutSettings?.accountName || checkoutFile.freelancer.toUpperCase()}</span>
+                </div>
+              </div>
+
+              {checkoutFile.payoutSettings?.qrCodeUrl && (
+                <div className="qr-payment-display premium">
+                  <p className="qr-title">Quét mã QR để thanh toán nhanh:</p>
+                  <div className="qr-wrapper">
+                    <img src={checkoutFile.payoutSettings.qrCodeUrl} alt="Freelancer QR Code" className="qr-image" />
+                  </div>
+                </div>
               )}
+
+              <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 610, color: 'var(--text-main)' }}>Minh chứng chuyển khoản (Ảnh Bill)</label>
+                <label htmlFor="receipt-image-file" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 14px', border: '2px dashed var(--border-color)', borderRadius: '12px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.9rem', background: 'var(--background-color)', transition: 'all 0.2s' }} className="upload-label-hover">
+                  <ImagePlus size={18} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {receiptFile ? receiptFile.name : 'Nhấn để chọn ảnh Bill...'}
+                  </span>
+                </label>
+                <input type="file" id="receipt-image-file" accept="image/*" onChange={handleReceiptImageChange} style={{ display: 'none' }} />
+                {receiptPreview && (
+                  <div style={{ marginTop: '8px', position: 'relative' }}>
+                    <img src={receiptPreview} alt="Receipt Preview" style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', borderRadius: '12px', border: '1px solid var(--border-color)' }} />
+                    <button onClick={() => { setReceiptPreview(null); setReceiptFile(null); }} style={{ position: 'absolute', top: '-8px', right: '-8px', background: 'var(--error-color)', color: 'white', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyCenter: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}><X size={14} /></button>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 610, color: 'var(--text-main)' }}>Link Giao Dịch (Không bắt buộc)</label>
+                <input type="url" id="tracking-link-input" placeholder="https://bank.com/tx/..." style={{ padding: '10px', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--background-color)', outline: 'none' }} />
+              </div>
             </div>
 
-            <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Link Giao Dịch (Tracking)</label>
-              <input type="url" id="tracking-link-input" placeholder="https://bank.com/tx/..." style={{ padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--background-color)' }} />
-            </div>
-
-            <div style={{ marginTop: '24px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <Button variant="outline" onClick={() => setCheckoutFile(null)}>Hủy</Button>
-              <Button variant="primary" onClick={submitCheckout}>Gửi Bill Xác Nhận</Button>
+            <div className="checkout-footer">
+              <Button variant="outline" onClick={() => setCheckoutFile(null)} style={{ borderRadius: '10px' }}>Quay lại</Button>
+              <Button variant="primary" className="btn-glow" onClick={submitCheckout} style={{ borderRadius: '10px', flex: 1 }}>Tôi đã thanh toán (Gửi Bill)</Button>
             </div>
           </div>
         </div>
@@ -280,19 +395,26 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
               <td>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Badge status={row.status} />
-                  {userRole === 'client' && <Countdown file={row} updateFileStatus={updateFileStatus} />}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    {userRole === 'client' && <Countdown file={row} updateFileStatus={updateFileStatus} />}
+                    {userRole === 'client' && row.status === 'Uploaded' && row.allocatedMinutes > 0 && (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        Dùng thử: {row.allocatedMinutes} phút
+                      </span>
+                    )}
+                  </div>
                 </div>
               </td>
               {userRole === 'freelancer' ? (
                 <td>
-                  <div style={{ fontWeight: '600' }}>${row.amount}</div>
+                  <div style={{ fontWeight: '600' }}>{row.amount.toLocaleString()} VND</div>
                   {row.status === 'Verifying Payment' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '8px' }}>
                       <Button variant="primary" style={{ fontSize: '0.8rem', padding: '6px 10px' }} onClick={() => handleFreelancerConfirm(row.id, 'confirm')}>
-                        <CheckCircle size={14} style={{marginRight: 4}}/> Xác nhận (Đã nhận tiền)
+                        <CheckCircle size={14} style={{ marginRight: 4 }} /> Xác nhận (Đã nhận tiền)
                       </Button>
                       <Button variant="outline" style={{ fontSize: '0.8rem', padding: '6px 10px', color: 'var(--error-color)', borderColor: 'var(--error-color)' }} onClick={() => handleFreelancerConfirm(row.id, 'reject')}>
-                        <ShieldAlert size={14} style={{marginRight: 4}}/> Chưa có tiền (Báo Admin)
+                        <ShieldAlert size={14} style={{ marginRight: 4 }} /> Chưa có tiền (Báo Admin)
                       </Button>
                     </div>
                   )}
@@ -302,65 +424,57 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
                 </td>
               ) : (
                 <td>
-              {row.status === 'Uploaded' && (
-                <Button variant="primary" className="unlock-btn" title="Kích hoạt dùng thử 24h" onClick={() => handleStartTrial(row.id)}>
-                  <Clock size={16} style={{marginRight: 6}}/> Start Trial (24h)
-                </Button>
-              )}
-              {row.status === 'Testing Phase' && (
+                  {row.status === 'Uploaded' && (
+                    <Button variant="primary" className="unlock-btn" title="Kích hoạt demo" onClick={() => handleStartTrial(row.id)}>
+                      <Clock size={16} style={{ marginRight: 6 }} /> Xem Demo (Dùng thử {row.allocatedMinutes || 0} phút)
+                    </Button>
+                  )}
+                  {row.status === 'Testing Phase' && (
                     <div className="client-actions">
-                      {row.demoType === 'url' ? (
-                        <Button variant="primary" className="unlock-btn" title="Launch Demo Server" onClick={() => window.open(row.demoUrl || 'https://demo.safecode.app', '_blank')}>
-                          <ExternalLink size={16}/> Live Preview Server
-                        </Button>
-                      ) : row.demoType === 'build' ? (
-                        <Button variant="primary" className="unlock-btn" title="Download Safe Build">
-                          <Box size={16}/> Download Trial App
-                        </Button>
-                      ) : (
-                        <Button variant="outline" className="pay-btn" title="Test Download">
-                          <Download size={16}/> Test Files (Restricted)
-                        </Button>
-                      )}
+                      <Button variant="primary" className="unlock-btn" title="Launch Managed Preview" onClick={() => setActivePreviewFile(row)}>
+                        <ExternalLink size={16} style={{ marginRight: 6 }} /> Live Preview Sandbox
+                      </Button>
                     </div>
                   )}
                   {row.status === 'Verifying Payment' && (
                     <div className="client-actions">
                       <Button variant="outline" className="pay-btn" disabled title="Chờ Freelancer check Bank">
-                        <Clock size={16} style={{marginRight: 6}}/> Chờ Freelancer xác nhận...
+                        <Clock size={16} style={{ marginRight: 6 }} /> Chờ Freelancer xác nhận...
                       </Button>
                       <Button variant="outline" style={{ padding: '8px', color: 'var(--text-muted)' }} title="Báo cáo Admin" onClick={() => handleClientDispute(row.id)}>
-                        <ShieldAlert size={16}/>
+                        <ShieldAlert size={16} />
                       </Button>
                     </div>
                   )}
                   {row.status === 'Locked' && (
-                    <Button variant="outline" className="pay-btn" onClick={() => handlePay(row.id)}>
-                      <Lock size={16} style={{marginRight: 6}}/> Gửi Bill CK (${row.amount})
+                    <Button variant="outline" className="pay-btn premium-border" onClick={() => handlePay(row.id)}>
+                      <Lock size={16} style={{ marginRight: 6 }} /> Thanh toán ({row.amount.toLocaleString()} VND)
                     </Button>
                   )}
                   {row.status === 'Paid' && (
-                    <div className="client-actions">
+                    <div className="client-actions" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
                       <Button
                         variant="primary"
                         className="unlock-btn"
                         onClick={() => handleDecrypt(row.id, row.fileName)}
                       >
-                        <Unlock size={16}/> Unlock & Download
+                        <Unlock size={16} /> Unlock & Download
+                      </Button>
+                      <Button
+                        variant="outline"
+                        style={{ fontSize: '0.8rem', padding: '6px 10px', borderColor: '#ea4335', color: '#ea4335' }}
+                        title="Mở hòm thư Gmail để lấy mã Serial"
+                        onClick={() => window.open('https://mail.google.com/mail/u/0/#search/SafeCode', '_blank')}
+                      >
+                        <Mail size={14} style={{ marginRight: 4 }} /> Mở Email (Lấy Key)
                       </Button>
                     </div>
                   )}
                   {row.status === 'Pending Payment' && (
-                    <Button variant="outline" className="pay-btn" onClick={() => handlePay(row.id)}>Gửi Bill CK (${row.amount})</Button>
+                    <Button variant="outline" className="pay-btn premium-border" onClick={() => handlePay(row.id)}>Thanh toán ({row.amount.toLocaleString()} VND)</Button>
                   )}
                   {row.status === 'Disputed' && (
                     <span style={{ fontSize: '0.85rem', color: 'var(--error-color)' }}>Admin đang can thiệp</span>
-                  )}
-                  {row.status.toLowerCase() === 'delivered' && (
-                    <div className="client-actions">
-                      <Button variant="outline" title="Download Encrypted"><Download size={16}/></Button>
-                      <Button variant="primary" className="unlock-btn"><Unlock size={16}/> Unlock</Button>
-                    </div>
                   )}
                 </td>
               )}
