@@ -6,10 +6,26 @@ import './Header.css';
 const Header = ({ notifications = [] }) => {
   const { user } = useAuth();
   const userRole = user?.role || 'guest';
-  const userName = user?.name || 'Alex Freelance';
+  const userName = user?.name || user?.email?.split('@')[0] || 'User';
 
   const [open, setOpen] = React.useState(false);
   const bellRef = React.useRef(null);
+  const [realNotifications, setRealNotifications] = React.useState([]);
+
+  React.useEffect(() => {
+    const fetchNotifs = async () => {
+      try {
+        if (!user) return;
+        // In a real app, we'd fetch from api.get('/notifications');
+        // For MVP, we merge the passed down ones with any fetched ones.
+        // Here we'll just use the passed down `notifications` prop.
+        setRealNotifications(notifications);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchNotifs();
+  }, [user, notifications]);
 
   React.useEffect(() => {
     const onDocClick = (e) => {
@@ -20,7 +36,7 @@ const Header = ({ notifications = [] }) => {
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [open]);
 
-  const hasNotifications = (notifications?.length || 0) > 0;
+  const hasNotifications = (realNotifications?.length || 0) > 0;
 
   return (
     <header className="header">

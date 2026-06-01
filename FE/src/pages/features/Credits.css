@@ -1,74 +1,226 @@
+/* FE/src/pages/features/Credits.css */
+
 .credits-layout-grid {
   display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 24px;
+  grid-template-columns: 340px 1fr;
+  gap: 2rem;
+  align-items: start;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 992px) {
   .credits-layout-grid {
     grid-template-columns: 1fr;
   }
 }
 
-.credits-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
+/* Glass Panels & Animations */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 
-.credits-table th {
-  text-align: left;
-  padding: 12px 16px;
-  background-color: var(--background-color);
+.fade-in {
+  animation: fadeIn 0.4s ease-out backwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Balance Cards */
+.credits-balance-card .balance-value {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--primary-color);
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+.credits-balance-card small {
+  font-size: 1.25rem;
   color: var(--text-muted);
   font-weight: 600;
-  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 6px;
+}
+.subscription-card .subscription-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--warning-color);
 }
 
-.credits-table td {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border-color);
+/* Premium Buy Card */
+.premium-buy-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-color);
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
 }
 
-.type-badge {
-  padding: 2px 8px;
-  border-radius: var(--radius-sm);
-  font-size: 0.75rem;
-  font-weight: 600;
+.premium-buy-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+}
+
+/* Credits Input Wrapper */
+.credits-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.credits-input {
+  width: 100%;
+  padding: 1rem 3.5rem 1rem 1rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--surface-solid);
+  color: var(--primary-color);
+  transition: all 0.2s;
+}
+.credits-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+  background: white;
+}
+.credits-suffix {
+  position: absolute;
+  right: 1.25rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 1.1rem;
+  pointer-events: none;
+}
+
+/* Transfer Info Box */
+.transfer-info-box {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+.transfer-info-box .box-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 1rem;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.type-upload { background-color: #fee2e2; color: #991b1b; }
-.type-sale { background-color: #dcfce7; color: #166534; }
-.type-deposit { background-color: #dbeafe; color: #1e40af; }
-.type-adjustment { background-color: #fef3c7; color: #92400e; }
-
-.pricing-card.compact {
-  padding: 20px;
-}
-
-.price-header {
+.info-row {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 12px;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  color: var(--text-main);
 }
-
-.price-header h3 {
+.info-row:last-child {
   margin-bottom: 0;
-  font-size: 1.1rem;
 }
-
-.price-tag {
-  font-weight: 700;
-  font-size: 1.2rem;
-  color: var(--primary-color);
-}
-
-.price-tag small {
-  font-size: 0.7rem;
+.info-row span {
   color: var(--text-muted);
 }
+.info-row.copyable strong {
+  user-select: all;
+  cursor: pointer;
+}
 
-.text-danger { color: #ef4444; }
-.text-success { color: #22c55e; }
+/* Button & Icon Button */
+.submit-credits-btn {
+  height: 3rem;
+  font-size: 1rem;
+  font-weight: 700;
+  box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.39);
+}
+.submit-credits-btn:hover {
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.23);
+}
+
+.icon-btn.sm {
+  width: 28px;
+  height: 28px;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.icon-btn.sm:hover {
+  background: var(--primary-light);
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+/* Premium Table */
+.premium-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.premium-table th, .premium-table td {
+  padding: 1rem 1.5rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+.premium-table th {
+  background: var(--surface-color);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+.premium-table tr:last-child td {
+  border-bottom: none;
+}
+.premium-table tbody tr {
+  transition: background 0.2s;
+}
+.premium-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.status-pending { background: #fef3c7; color: #b45309; }
+.status-approved { background: #dcfce7; color: #15803d; }
+.status-rejected { background: #fee2e2; color: #b91c1c; }
+
+/* Type Badges */
+.type-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--surface-color);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+}
+.type-deposit, .type-refund { background: #dcfce7; border-color: #bbf7d0; color: #166534; }
+.type-payment, .type-withdrawal { background: #fee2e2; border-color: #fecaca; color: #991b1b; }

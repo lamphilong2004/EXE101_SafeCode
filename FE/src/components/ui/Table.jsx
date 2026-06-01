@@ -2,13 +2,80 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   X, ExternalLink, Clock, CheckCircle,
-  ShieldAlert, Lock, Unlock, ImagePlus, Mail
+  ShieldAlert, Lock, Unlock, ImagePlus, Mail, MessageCircle
 } from 'lucide-react';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
 import Button from './Button';
 import Badge from './Badge';
+import ChatBox from '../chat/ChatBox';
+import DisputeRoom from '../../pages/features/DisputeRoom';
 import './Table.css';
+
+const FreelancerViewModal = ({ file, onClose, onConfirm, onReject }) => {
+  return (
+    <div className="modal-overlay">
+      <div className="freelancer-view-modal premium-ui">
+        <div className="checkout-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h3 className="text-xl font-bold">Chi tiết Giao dịch</h3>
+            <p className="text-sm">Quản lý mã nguồn đã tải lên</p>
+          </div>
+          <button className="close-btn" onClick={onClose}><X size={24} /></button>
+        </div>
+
+        <div className="checkout-body">
+          <div className="payment-summary card-styled mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="font-semibold">{file.fileName}</span>
+              <Badge status={file.status} />
+            </div>
+            <div className="flex justify-between items-center mt-2">
+              <span className="text-muted">Giá bán:</span>
+              <strong className="text-primary text-xl" style={{ color: 'var(--primary-color)' }}>{file.amount.toLocaleString()} VND</strong>
+            </div>
+          </div>
+
+          <div className="bank-details-box premium mb-4">
+            <h4 className="font-bold mb-3 border-b pb-2">Thông tin Khách hàng</h4>
+            <div className="detail-row">
+              <span className="label">Email nhận Code</span>
+              <span className="value font-medium text-blue-600">{file.client}</span>
+            </div>
+            <div className="detail-row">
+              <span className="label">Thời gian upload</span>
+              <span className="value">{file.date}</span>
+            </div>
+          </div>
+
+          <div className="bank-details-box premium mb-4">
+            <h4 className="font-bold mb-3 border-b pb-2">Cấu hình File</h4>
+            <div className="detail-row">
+              <span className="label">Dùng thử Sandbox</span>
+              <span className="value font-medium text-emerald-600">{file.allocatedMinutes > 0 ? `${file.allocatedMinutes} phút` : 'Không có'}</span>
+            </div>
+          </div>
+
+          {file.status === 'Verifying Payment' && (
+            <div className="action-box bg-yellow-50 border border-yellow-200 p-4 rounded-xl mt-4">
+              <h4 className="font-bold text-yellow-800 mb-2 flex items-center gap-2"><CheckCircle size={18} /> Khách đã gửi Bill thanh toán</h4>
+              <p className="text-sm text-yellow-700 mb-4">Vui lòng kiểm tra ứng dụng Ngân hàng của bạn. Nếu đã nhận được <strong>{file.amount.toLocaleString()} VND</strong>, hãy bấm Xác nhận.</p>
+              
+              <div className="flex flex-col gap-3">
+                <Button variant="primary" className="w-full btn-glow" onClick={() => onConfirm(file.id, 'confirm')}>
+                  <CheckCircle size={18} className="mr-2" /> Đã nhận được tiền (Bàn giao Code)
+                </Button>
+                <Button variant="outline" className="w-full" style={{ borderColor: 'var(--error-color)', color: 'var(--error-color)' }} onClick={() => onReject(file.id, 'reject')}>
+                  <ShieldAlert size={18} className="mr-2" /> Chưa nhận được tiền (Báo cáo)
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Countdown = ({ file, updateFileStatus }) => {
   const [timeLeft, setTimeLeft] = useState('');
@@ -122,6 +189,9 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
   const [receiptPreview, setReceiptPreview] = useState(null);
   const [receiptFile, setReceiptFile] = useState(null);
   const [activePreviewFile, setActivePreviewFile] = useState(null);
+  const [activeChatFile, setActiveChatFile] = useState(null);
+  const [activeFreelancerView, setActiveFreelancerView] = useState(null);
+  const [expandedDisputeRow, setExpandedDisputeRow] = useState(null);
 
   const handlePay = async (id) => {
     const file = data.find(f => f.id === id);
@@ -291,11 +361,26 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
     }
   };
   return (
-    <div className="table-container">
+    <>
+      {activeFreelancerView && (
+        <FreelancerViewModal 
+          file={activeFreelancerView} 
+          onClose={() => setActiveFreelancerView(null)} 
+          onConfirm={(id) => { handleFreelancerConfirm(id, 'confirm'); setActiveFreelancerView(null); }}
+          onReject={(id) => { handleFreelancerConfirm(id, 'reject'); setActiveFreelancerView(null); }}
+        />
+      )}
       {activePreviewFile && (
         <PreviewModal
           file={activePreviewFile}
           onClose={() => setActivePreviewFile(null)}
+        />
+      )}
+      {activeChatFile && (
+        <ChatBox
+          fileId={activeChatFile}
+          userRole={userRole}
+          onClose={() => setActiveChatFile(null)}
         />
       )}
       {checkoutFile && (
@@ -353,8 +438,8 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
                 <input type="file" id="receipt-image-file" accept="image/*" onChange={handleReceiptImageChange} style={{ display: 'none' }} />
                 {receiptPreview && (
                   <div style={{ marginTop: '8px', position: 'relative' }}>
-                    <img src={receiptPreview} alt="Receipt Preview" style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', borderRadius: '12px', border: '1px solid var(--border-color)' }} />
-                    <button onClick={() => { setReceiptPreview(null); setReceiptFile(null); }} style={{ position: 'absolute', top: '-8px', right: '-8px', background: 'var(--error-color)', color: 'white', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyCenter: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}><X size={14} /></button>
+                    <img src={receiptPreview} alt="Receipt Preview" style={{ width: '100%', maxHeight: '450px', objectFit: 'contain', borderRadius: '12px', border: '1px solid var(--border-color)' }} />
+                    <button onClick={() => { setReceiptPreview(null); setReceiptFile(null); }} style={{ position: 'absolute', top: '-8px', right: '-8px', background: 'var(--error-color)', color: 'white', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}><X size={14} /></button>
                   </div>
                 )}
               </div>
@@ -372,7 +457,9 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
           </div>
         </div>
       )}
-      <table className="data-table">
+      
+      <div className="table-container">
+        <table className="data-table">
         <thead>
           <tr>
             {columns.map((col, idx) => (
@@ -383,7 +470,8 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
         </thead>
         <tbody>
           {data.map((row) => (
-            <tr key={row.id}>
+          <React.Fragment key={row.id}>
+            <tr>
               <td>
                 <div className="file-info">
                   <span className="file-name">{row.fileName}</span>
@@ -409,18 +497,23 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
                 <td>
                   <div style={{ fontWeight: '600' }}>{row.amount.toLocaleString()} VND</div>
                   {row.status === 'Verifying Payment' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '8px' }}>
-                      <Button variant="primary" style={{ fontSize: '0.8rem', padding: '6px 10px' }} onClick={() => handleFreelancerConfirm(row.id, 'confirm')}>
-                        <CheckCircle size={14} style={{ marginRight: 4 }} /> Xác nhận (Đã nhận tiền)
-                      </Button>
-                      <Button variant="outline" style={{ fontSize: '0.8rem', padding: '6px 10px', color: 'var(--error-color)', borderColor: 'var(--error-color)' }} onClick={() => handleFreelancerConfirm(row.id, 'reject')}>
-                        <ShieldAlert size={14} style={{ marginRight: 4 }} /> Chưa có tiền (Báo Admin)
-                      </Button>
+                    <div style={{ marginTop: '8px' }}>
+                      <span style={{ fontSize: '0.85rem', color: '#b45309', fontWeight: 'bold' }}>Khách đã gửi Bill</span>
                     </div>
                   )}
                   {row.status === 'Disputed' && (
-                    <span style={{ fontSize: '0.85rem', color: 'var(--error-color)' }}>Admin đang xử lý</span>
+                    <div style={{ marginTop: '8px' }}>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--error-color)' }}>Admin đang xử lý </span>
+                      <Button variant="outline" size="sm" onClick={() => setExpandedDisputeRow(expandedDisputeRow === row.id ? null : row.id)}>
+                        Xem Khiếu nại
+                      </Button>
+                    </div>
                   )}
+                  <div style={{ marginTop: '8px' }}>
+                    <Button variant="outline" size="sm" onClick={() => setActiveChatFile(row.id)}>
+                      <MessageCircle size={14} style={{ marginRight: 4 }} /> Nhắn tin
+                    </Button>
+                  </div>
                 </td>
               ) : (
                 <td>
@@ -432,8 +525,12 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
                   {row.status === 'Testing Phase' && (
                     <div className="client-actions">
                       <Button variant="primary" className="unlock-btn" title="Launch Managed Preview" onClick={() => setActivePreviewFile(row)}>
-                        <ExternalLink size={16} style={{ marginRight: 6 }} /> Live Preview Sandbox
+                        <ExternalLink size={16} style={{ marginRight: 6 }} /> Xem Live Demo
                       </Button>
+                      <div className="mt-2 p-2 bg-blue-50 text-blue-700 rounded text-xs border border-blue-100 flex items-start gap-1">
+                        <ShieldAlert size={12} className="shrink-0 mt-0.5" />
+                        <span>Môi trường Sandbox ảo: Bạn có thể test trực tiếp, source code hoàn toàn an toàn và không bị lộ.</span>
+                      </div>
                     </div>
                   )}
                   {row.status === 'Verifying Payment' && (
@@ -474,25 +571,61 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
                     <Button variant="outline" className="pay-btn premium-border" onClick={() => handlePay(row.id)}>Thanh toán ({row.amount.toLocaleString()} VND)</Button>
                   )}
                   {row.status === 'Disputed' && (
-                    <span style={{ fontSize: '0.85rem', color: 'var(--error-color)' }}>Admin đang can thiệp</span>
+                    <div style={{ marginTop: '8px' }}>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--error-color)' }}>Admin đang can thiệp </span>
+                      <Button variant="outline" size="sm" onClick={() => setExpandedDisputeRow(expandedDisputeRow === row.id ? null : row.id)}>
+                        Xem Khiếu nại
+                      </Button>
+                    </div>
                   )}
+                  <div style={{ marginTop: '8px' }}>
+                    <Button variant="outline" size="sm" onClick={() => setActiveChatFile(row.id)}>
+                      <MessageCircle size={14} style={{ marginRight: 4 }} /> Nhắn tin
+                    </Button>
+                  </div>
                 </td>
               )}
               {userRole === 'freelancer' && (
                 <td>
-                  <Button variant="outline">View</Button>
+                  <Button variant="primary" className="shadow-glow" size="sm" onClick={() => setActiveFreelancerView(row)}>
+                    Quản lý File
+                  </Button>
                 </td>
               )}
             </tr>
+            {expandedDisputeRow === row.id && (
+              <tr key={`dispute-${row.id}`} className="dispute-expanded-row">
+                <td colSpan={columns.length + 1}>
+                  <DisputeRoom file={row} onResolve={() => setExpandedDisputeRow(null)} />
+                </td>
+              </tr>
+            )}
+          </React.Fragment>
           ))}
           {data.length === 0 && (
             <tr>
-              <td colSpan={columns.length + 1} className="empty-state">No files found.</td>
+              <td colSpan={columns.length + 1} className="empty-state" style={{ padding: '64px 20px', textAlign: 'center', background: '#f8fafc' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', maxWidth: '400px', margin: '0 auto' }}>
+                  <img src="https://cdn-icons-png.flaticon.com/512/7486/7486747.png" alt="Empty" style={{ width: 80, height: 80, opacity: 0.8 }} />
+                  <h4 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.25rem', fontWeight: 700 }}>Chưa có giao dịch nào!</h4>
+                  <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: '1.5' }}>
+                    {userRole === 'freelancer' 
+                      ? "🚀 Khởi đầu ngay bằng cách mã hóa Source Code đầu tiên của bạn để gửi cho khách hàng một cách an toàn nhất!"
+                      : "Bạn chưa mua mã nguồn nào. Các giao dịch mua bán an toàn (Escrow) sẽ được quản lý tại đây."}
+                  </p>
+                  {userRole === 'freelancer' && (
+                    <Button variant="primary" className="mt-2 shadow-glow" onClick={() => window.location.hash = '#upload'}>
+                      + Tải lên Code mới
+                    </Button>
+                  )}
+                </div>
+              </td>
             </tr>
           )}
         </tbody>
       </table>
     </div>
+    </>
   );
 };
 

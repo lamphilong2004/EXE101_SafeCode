@@ -78,6 +78,23 @@ export async function me(req, res, next) {
   }
 }
 
+export async function updateProfile(req, res, next) {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) throw httpError(404, "User not found");
+
+    const { name, companyName } = req.body;
+    if (name !== undefined) user.name = String(name).trim();
+    // Assuming companyName could be stored in a new field or just in name
+    // For now we'll just update name. If companyName is provided, we can store it in user.companyName (need to update schema, or just skip it).
+
+    await user.save();
+    res.json({ success: true, user: sanitizeUser(user) });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function updatePayoutSettings(req, res, next) {
   try {
     const user = await User.findById(req.user.id);

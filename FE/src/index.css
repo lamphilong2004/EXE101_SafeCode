@@ -1,26 +1,26 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
 
 :root {
-  /* Premium Dark/Light theme tokens */
+  /* Default/Freelancer Theme (Indigo/Violet) */
   --primary-color: #6366f1; /* Indigo 500 */
   --primary-hover: #4f46e5; /* Indigo 600 */
   --primary-light: #e0e7ff; /* Indigo 100 */
   --primary-dark: #3730a3;
   
-  --secondary-color: #ec4899; /* Pink 500 */
-  --secondary-hover: #db2777; 
-  --secondary-light: #fce7f3;
+  --secondary-color: #8b5cf6; /* Violet 500 */
+  --secondary-hover: #7c3aed; 
+  --secondary-light: #ede9fe;
 
   --background-color: #f0f2f5; 
   --background-gradient: linear-gradient(135deg, #f6f8fb 0%, #e5e7eb 100%);
   
-  --surface-color: rgba(255, 255, 255, 0.85); /* For glassmorphism */
+  --surface-color: rgba(255, 255, 255, 0.85);
   --surface-solid: #ffffff;
   
-  --text-main: #111827; /* Gray 900 */
-  --text-muted: #4b5563; /* Gray 600 */
+  --text-main: #111827;
+  --text-muted: #4b5563;
   
-  --border-color: rgba(229, 231, 235, 0.5); /* Semi-transparent border */
+  --border-color: rgba(229, 231, 235, 0.5);
   --border-solid: #e5e7eb;
   
   --success-color: #10b981; 
@@ -35,16 +35,41 @@
   --radius-lg: 24px;
   --radius-full: 9999px;
   
-  /* Modern soft shadows */
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
   --shadow-md: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.01);
   --shadow-lg: 0 20px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.04);
   --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.3);
   
-  /* Glassmorphism filters */
   --backdrop-blur: blur(16px);
-  
   --sidebar-width: 280px;
+}
+
+body[data-role="client"] {
+  /* Client Theme (Emerald/Teal for Trust & E-commerce feel) */
+  --primary-color: #10b981; /* Emerald 500 */
+  --primary-hover: #059669; /* Emerald 600 */
+  --primary-light: #d1fae5;
+  --primary-dark: #047857;
+  
+  --secondary-color: #14b8a6; /* Teal 500 */
+  --secondary-hover: #0d9488;
+  --secondary-light: #ccfbf1;
+  
+  --background-gradient: linear-gradient(135deg, #f0fdf4 0%, #e5e7eb 100%);
+  --shadow-glow: 0 0 20px rgba(16, 185, 129, 0.3);
+}
+
+body[data-role="admin"] {
+  /* Admin Theme (Slate/Red for Control & Alertness) */
+  --primary-color: #475569; /* Slate 600 */
+  --primary-hover: #334155; 
+  --primary-light: #f1f5f9;
+  --primary-dark: #1e293b;
+  
+  --secondary-color: #ef4444; /* Red 500 */
+  --secondary-hover: #dc2626;
+  --secondary-light: #fee2e2;
+  --shadow-glow: 0 0 20px rgba(71, 85, 105, 0.3);
 }
 
 * {
@@ -123,6 +148,11 @@ input, textarea {
 .gap-8 { gap: 32px; }
 .w-full { width: 100%; }
 .h-full { height: 100%; }
+.text-center { text-align: center; }
+.mt-4 { margin-top: 16px; }
+.mt-8 { margin-top: 32px; }
+.mb-4 { margin-bottom: 16px; }
+.mb-8 { margin-bottom: 32px; }
 
 /* Animations */
 @keyframes fadeIn {
@@ -131,9 +161,9 @@ input, textarea {
 }
 
 @keyframes pulse-glow {
-  0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
-  70% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(var(--primary-rgb), 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(var(--primary-rgb), 0); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--primary-rgb), 0); }
 }
 
 /* Glass panel utility */

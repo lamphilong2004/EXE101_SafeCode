@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UploadCloud, File, X, CheckCircle } from 'lucide-react';
+import { UploadCloud, File, X, CheckCircle, ShieldCheck } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import api from '../../services/api';
@@ -132,8 +132,12 @@ const Upload = ({ onAddFile }) => {
     <div className="upload-page">
       <div className="dashboard-header mb-6">
         <div>
-          <h1 className="page-title">Upload Source Code</h1>
-          <p className="page-subtitle">Encrypt and send your source code to a client.</p>
+          <h1 className="page-title flex items-center gap-2">
+            Tải lên Source Code
+          </h1>
+          <p className="page-subtitle">
+            Bảo mật mã nguồn của bạn bằng chuẩn <strong>AES-256</strong> trước khi gửi cho khách hàng.
+          </p>
         </div>
       </div>
 
@@ -149,13 +153,17 @@ const Upload = ({ onAddFile }) => {
                 <div className="dropzone-icon">
                   <UploadCloud size={48} />
                 </div>
-                <h3>Drag & Drop your file here</h3>
-                <p>or</p>
+                <h3>Kéo thả file mã nguồn vào đây</h3>
+                <p>hoặc</p>
                 <label className="btn btn-outline browse-btn">
-                  Browse Files
+                  Duyệt File
                   <input type="file" onChange={handleFileChange} hidden />
                 </label>
-                <p className="file-hints">Supported: .zip, .rar, .tar.gz (Max 5GB)</p>
+                <p className="file-hints text-muted text-sm mt-2">Hỗ trợ: .zip, .rar, .tar.gz (Tối đa 5GB)</p>
+                <div className="mt-4 p-3 bg-indigo-50 text-indigo-700 rounded-lg text-sm flex items-start gap-2 border border-indigo-100">
+                  <ShieldCheck size={18} className="mt-0.5 shrink-0" />
+                  <span><strong>Bảo mật tuyệt đối:</strong> Source code của bạn sẽ được băm nhỏ và mã hóa đầu-cuối (End-to-End Encryption) ngay trên trình duyệt. Khách hàng không thể ăn cắp code nếu chưa thanh toán đầy đủ qua hệ thống Escrow.</span>
+                </div>
               </div>
 
               {file && (
@@ -171,15 +179,15 @@ const Upload = ({ onAddFile }) => {
                     </button>
                   </div>
 
-                  <div className="upload-form">
-                    <div className="input-group">
-                      <label>Client Email</label>
-                      <input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} placeholder="client@example.com" className="form-input" />
-                    </div>
-                    <div className="input-group">
-                      <label>Amount (VND)</label>
-                      <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="5000000" className="form-input" />
-                    </div>
+                    <div className="upload-form">
+                      <div className="input-group">
+                        <label>Email Khách hàng <span className="text-danger">*</span></label>
+                        <input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} placeholder="khachhang@email.com" className="form-input" />
+                      </div>
+                      <div className="input-group">
+                        <label>Giá bán (VNĐ) <span className="text-danger">*</span></label>
+                        <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="VD: 5000000" className="form-input" />
+                      </div>
                     <div className="input-group">
                       <label>Project Type</label>
                       <select className="form-input" value={projectType} onChange={(e) => setProjectType(e.target.value)}>
@@ -225,10 +233,10 @@ const Upload = ({ onAddFile }) => {
                     {estimatedCost !== null && (
                       <div className="credit-estimate mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md">
                         <p className="text-sm font-medium text-blue-800">
-                          Estimated Cost: <span className="font-bold">{estimatedCost} Credits</span>
+                          Chi phí hệ thống (Credit): <span className="font-bold">{estimatedCost} CR</span>
                         </p>
                         <p className="text-xs text-blue-600 mt-1">
-                          Calculated based on {projectType.toUpperCase()} type and {(file.size / (1024 * 1024)).toFixed(1)}MB size.
+                          Tính toán dựa trên loại dự án {projectType.toUpperCase()} và dung lượng file {(file.size / (1024 * 1024)).toFixed(1)}MB.
                         </p>
                       </div>
                     )}
@@ -239,7 +247,7 @@ const Upload = ({ onAddFile }) => {
                       disabled={isUploading}
                       className="w-full mt-4"
                     >
-                      {isUploading ? 'Encrypting & Sending...' : `Encrypt & Send (${estimatedCost || 0} Credits)`}
+                      {isUploading ? 'Đang Mã hóa & Gửi...' : `Mã hóa & Gửi File (${estimatedCost || 0} CR)`}
                     </Button>
                   </div>
                 </div>
@@ -248,10 +256,10 @@ const Upload = ({ onAddFile }) => {
           ) : (
             <div className="success-state">
               <CheckCircle size={64} className="success-icon" />
-              <h2>File Sent Successfully!</h2>
-              <p>Your encrypted file has been securely delivered. The client will receive an email notification to process the payment.</p>
+              <h2>Đã Gửi Thành Công!</h2>
+              <p>Mã nguồn của bạn đã được mã hóa an toàn và đẩy lên hệ thống. Khách hàng sẽ nhận được Email thông báo thanh toán (Escrow).</p>
               <Button variant="outline" onClick={() => { setFile(null); setIsSuccess(false); }}>
-                Send Another File
+                Gửi Thêm File Khác
               </Button>
             </div>
           )}

@@ -15,6 +15,7 @@
   margin-bottom: 8px;
   background: linear-gradient(135deg, var(--text-main) 0%, var(--primary-dark) 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -199,6 +200,7 @@
   height: 150px;
   background: rgba(255,255,255,0.1);
   border-radius: 50%;
+  pointer-events: none;
 }
 
 .checkout-header h3 {
@@ -285,6 +287,18 @@
   box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
   border: 1px solid var(--border-color);
   transition: transform 0.3s;
+}
+
+.checkout-modal {
+  background: var(--surface-solid);
+  border-radius: var(--radius-lg);
+  width: 90%;
+  max-width: 700px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  position: relative;
+  animation: modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .qr-wrapper:hover {

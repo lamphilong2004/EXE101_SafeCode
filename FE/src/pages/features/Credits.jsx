@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Zap, Check, ArrowUpRight, ArrowDownRight, History, ShoppingCart, Upload, Banknote } from 'lucide-react';
+import { CreditCard, Zap, Check, ArrowUpRight, ArrowDownRight, History, Banknote, Upload, Copy } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import api from '../../services/api';
@@ -60,7 +60,7 @@ const Credits = () => {
     try {
       const res = await api.post('/credits/request', { amount: creditsToBuy, billImageUrl: billUrl });
       if (res.data.success) {
-        toast.success("Đã gửi yêu cầu nạp Credit. Vui lòng chờ Admin duyệt.");
+        toast.success("Đã gửi yêu cầu nạp Credit thành công! Vui lòng chờ Admin duyệt.");
         setRequests([res.data.request, ...requests]);
         setBillUrl('');
       }
@@ -72,6 +72,11 @@ const Credits = () => {
     }
   };
 
+  const copyToClipboard = (text, type) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`Đã sao chép ${type}!`);
+  };
+
   const getIcon = (type, amount) => {
     if (amount > 0) return <ArrowUpRight className="text-success" size={16} />;
     return <ArrowDownRight className="text-danger" size={16} />;
@@ -79,54 +84,151 @@ const Credits = () => {
 
   const formatAmount = (amt) => (amt > 0 ? `+${amt}` : amt);
 
+  const transferAmount = creditsToBuy * 1000;
+  const transferContent = `NAP SAFE ${user?.email?.split('@')[0] || user?.id?.slice(-4)}`;
+
   return (
     <div className="dashboard-wrapper">
       <div className="dashboard-header mb-6">
         <div>
           <h1 className="page-title">Credits & Thanh toán</h1>
-          <p className="page-subtitle">Quản lý số dư và nạp thêm Credit để tiếp tục giao dịch.</p>
+          <p className="page-subtitle">Nạp tiền để tiếp tục sử dụng các dịch vụ và mua bán Source Code an toàn.</p>
         </div>
       </div>
 
       <div className="dashboard-stats-grid mb-6">
         <Card
+          className="credits-balance-card glass-panel fade-in"
           title="Credit Khả dụng"
-          icon={<CreditCard size={24} />}
-          value={`${user?.credits?.toFixed(1) || 0} Credits`}
+          icon={<CreditCard size={28} className="text-primary" />}
+          value={
+            <div className="balance-value">
+              <span>{user?.credits?.toFixed(1) || 0}</span>
+              <small>CR</small>
+            </div>
+          }
         />
         <Card
+          className="subscription-card glass-panel fade-in"
           title="Gói hiện tại"
-          icon={<Zap size={24} />}
-          value={user?.subscription?.status === 'active' ? "Pro Unlimited" : "Pay-per-file"}
+          icon={<Zap size={28} className="text-warning" />}
+          value={<div className="subscription-value">Pay-per-file</div>}
         />
       </div>
 
       <div className="credits-layout-grid">
+        <div className="credits-sidebar fade-in" style={{ animationDelay: '0.1s' }}>
+          <h2 className="section-title mb-4 flex items-center gap-2">
+            <Zap className="text-primary" size={20} /> Mua thêm Credit
+          </h2>
+          
+          <div className="pricing-card premium-buy-card">
+            <div className="price-header">
+              <h3>Chuyển khoản Ngân hàng</h3>
+              <div className="price-tag">1,000đ<small>/Credit</small></div>
+            </div>
+            
+            <div className="form-group mb-5">
+              <label className="text-sm font-bold mb-2 block">Số Credit muốn nạp:</label>
+              <div className="credits-input-wrapper">
+                <input 
+                  type="number" 
+                  min="1" 
+                  max="10000"
+                  value={creditsToBuy} 
+                  onChange={(e) => setCreditsToBuy(Number(e.target.value))} 
+                  className="credits-input"
+                />
+                <span className="credits-suffix">CR</span>
+              </div>
+            </div>
+
+            <div className="transfer-info-box mb-5">
+              <p className="box-title">Thông tin chuyển khoản</p>
+              
+              <div className="info-row">
+                <span>Ngân hàng:</span>
+                <strong>{bankConfig.bankName}</strong>
+              </div>
+              
+              <div className="info-row copyable">
+                <span>Số tài khoản:</span>
+                <div className="flex items-center gap-2">
+                  <strong className="text-primary text-lg">{bankConfig.accountNumber}</strong>
+                  <button className="icon-btn sm" onClick={() => copyToClipboard(bankConfig.accountNumber, 'Số tài khoản')} title="Copy số tài khoản">
+                    <Copy size={14} />
+                  </button>
+                </div>
+              </div>
+              
+              <div className="info-row">
+                <span>Chủ tài khoản:</span>
+                <strong>{bankConfig.accountName}</strong>
+              </div>
+
+              <div className="info-row copyable">
+                <span>Số tiền:</span>
+                <div className="flex items-center gap-2">
+                  <strong className="text-danger text-lg">{transferAmount.toLocaleString()} VNĐ</strong>
+                  <button className="icon-btn sm" onClick={() => copyToClipboard(transferAmount.toString(), 'Số tiền')} title="Copy số tiền">
+                    <Copy size={14} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="info-row copyable">
+                <span>Nội dung CK:</span>
+                <div className="flex items-center gap-2">
+                  <strong className="tracking-wide bg-yellow-100 px-2 py-1 rounded text-gray-800">{transferContent}</strong>
+                  <button className="icon-btn sm" onClick={() => copyToClipboard(transferContent, 'Nội dung CK')} title="Copy nội dung">
+                    <Copy size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="form-group mb-5">
+              <label className="text-sm font-bold mb-2 block">Link ảnh Bill chuyển khoản:</label>
+              <input 
+                type="text" 
+                placeholder="Dán link ảnh bằng chứng giao dịch..." 
+                value={billUrl} 
+                onChange={(e) => setBillUrl(e.target.value)} 
+                className="form-input text-sm"
+              />
+            </div>
+
+            <Button variant="primary" className="w-full submit-credits-btn" onClick={handleRequestCredits} disabled={isSubmitting}>
+              <Upload size={18} className="mr-2" /> {isSubmitting ? 'Đang gửi...' : 'Gửi Yêu cầu Nạp'}
+            </Button>
+          </div>
+        </div>
+
         <div className="credits-main">
           {requests.length > 0 && (
-            <>
+            <div className="fade-in" style={{ animationDelay: '0.2s' }}>
               <h2 className="section-title mb-4 flex items-center gap-2">
-                <Banknote size={20} /> Lịch sử Nạp Credit (Chuyển khoản)
+                <Banknote size={20} className="text-primary" /> Lịch sử Nạp Credit
               </h2>
-              <Card className="p-0 overflow-hidden mb-6">
-                <table className="credits-table">
+              <Card className="p-0 overflow-hidden mb-8 glass-panel border-0">
+                <table className="credits-table premium-table">
                   <thead>
                     <tr>
                       <th>Ngày gửi</th>
                       <th>Số Credit</th>
-                      <th>Số tiền (VND)</th>
+                      <th>Thành tiền</th>
                       <th>Trạng thái</th>
                     </tr>
                   </thead>
                   <tbody>
                     {requests.map(req => (
                       <tr key={req._id}>
-                        <td className="text-xs">{new Date(req.createdAt).toLocaleString()}</td>
-                        <td className="font-bold">+{req.amount}</td>
-                        <td>{req.amountVND.toLocaleString()}</td>
+                        <td className="text-sm text-muted">{new Date(req.createdAt).toLocaleString()}</td>
+                        <td className="font-bold text-success">+{req.amount} CR</td>
+                        <td className="font-medium">{req.amountVND.toLocaleString()} đ</td>
                         <td>
-                          <span className="type-badge">
-                            {req.status}
+                          <span className={`status-badge status-${req.status}`}>
+                            {req.status === 'pending' ? 'Đang chờ' : req.status === 'approved' ? 'Thành công' : 'Từ chối'}
                           </span>
                         </td>
                       </tr>
@@ -134,120 +236,56 @@ const Credits = () => {
                   </tbody>
                 </table>
               </Card>
-            </>
+            </div>
           )}
 
-          <h2 className="section-title mb-4 flex items-center gap-2">
-            <History size={20} /> Biến động Số dư
-          </h2>
-          <Card className="p-0 overflow-hidden">
-            <table className="credits-table">
-              <thead>
-                <tr>
-                  <th>Ngày</th>
-                  <th>Loại</th>
-                  <th>Mô tả</th>
-                  <th>Biến động</th>
-                  <th>Số dư</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr><td colSpan="5" className="text-center p-4">Đang tải...</td></tr>
-                ) : history.length === 0 ? (
-                  <tr><td colSpan="5" className="text-center p-4">Chưa có giao dịch.</td></tr>
-                ) : (
-                  history.map(row => (
-                    <tr key={row._id}>
-                      <td className="text-xs">{new Date(row.createdAt).toLocaleString()}</td>
-                      <td>
-                        <span className={`type-badge type-${row.type}`}>{row.type}</span>
-                      </td>
-                      <td className="text-xs">{row.description}</td>
-                      <td className="font-bold">
-                        <div className="flex items-center gap-1">
-                          {getIcon(row.type, row.amount)} {formatAmount(row.amount)}
-                        </div>
-                      </td>
-                      <td className="font-bold">{row.balanceAfter?.toFixed(1)}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-            {totalPages > 1 && (
-              <div className="pagination p-3 border-t flex justify-center gap-2">
-                <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>Prev</Button>
-                <span className="flex items-center px-2 text-sm">Trang {page} / {totalPages}</span>
-                <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage(page + 1)}>Next</Button>
-              </div>
-            )}
-          </Card>
-        </div>
-
-        <div className="credits-sidebar">
-          <h2 className="section-title mb-4">Nạp Credit</h2>
-          
-          <div className="pricing-card compact mb-6" style={{ borderColor: 'var(--primary-color)' }}>
-            <div className="price-header">
-              <h3>Chuyển khoản Ngân hàng</h3>
-              <div className="price-tag">1,000 VND<small>/Credit</small></div>
-            </div>
-            
-            <div className="mt-4 mb-4">
-              <label className="text-sm font-bold mb-1 block">Số Credit muốn nạp:</label>
-              <div className="flex gap-2 items-center">
-                <input 
-                  type="number" 
-                  min="1" 
-                  max="10000"
-                  value={creditsToBuy} 
-                  onChange={(e) => setCreditsToBuy(Number(e.target.value))} 
-                  className="w-full p-2 border rounded text-sm"
-                  style={{ borderColor: 'var(--border-color)', outline: 'none' }}
-                />
-              </div>
-            </div>
-
-            <div className="bg-gray-50 p-3 rounded mb-4 text-sm border">
-              <p className="font-bold text-primary mb-2">Thông tin chuyển khoản:</p>
-              <p>Ngân hàng: <b>{bankConfig.bankName}</b></p>
-              <p>Số TK: <b>{bankConfig.accountNumber}</b></p>
-              <p>Chủ TK: <b>{bankConfig.accountName}</b></p>
-              <p>Số tiền cần chuyển: <b className="text-danger">{(creditsToBuy * 1000).toLocaleString()} VND</b></p>
-              <p>Nội dung: <b>NẠP SAFE {user?.email}</b></p>
-            </div>
-
-            <div className="mb-4">
-              <label className="text-sm font-bold mb-1 block">Tải lên ảnh Bill chuyển khoản:</label>
-              <input 
-                type="text" 
-                placeholder="Nhập URL ảnh Bill (Tạm thời)" 
-                value={billUrl} 
-                onChange={(e) => setBillUrl(e.target.value)} 
-                className="w-full p-2 border rounded text-sm"
-                style={{ borderColor: 'var(--border-color)', outline: 'none' }}
-              />
-              <p className="text-xs text-muted mt-1 italic">*Tạm thời dán link ảnh để test flow.</p>
-            </div>
-
-            <Button variant="primary" className="w-full" size="sm" onClick={handleRequestCredits} disabled={isSubmitting}>
-              <Upload size={16} className="mr-2" /> {isSubmitting ? 'Đang gửi...' : 'Gửi Yêu cầu Nạp'}
-            </Button>
-          </div>
-
-          <div className="pricing-card compact popular">
-            <div className="popular-badge">Subscription</div>
-            <div className="price-header">
-              <h3>Pro Unlimited</h3>
-              <div className="price-tag">180,000 VND<small>/tháng</small></div>
-            </div>
-            <ul className="features text-sm">
-              <li><Check size={14} className="text-success" /> Upload không giới hạn (Không tốn Credit)</li>
-              <li><Check size={14} className="text-success" /> Xử lý Sandbox ưu tiên</li>
-              <li><Check size={14} className="text-success" /> Tính năng chống sao chép nâng cao</li>
-            </ul>
-            <Button variant="outline" className="w-full mt-2" size="sm" disabled>Sắp ra mắt</Button>
+          <div className="fade-in" style={{ animationDelay: '0.3s' }}>
+            <h2 className="section-title mb-4 flex items-center gap-2">
+              <History size={20} className="text-primary" /> Biến động Số dư
+            </h2>
+            <Card className="p-0 overflow-hidden glass-panel border-0">
+              <table className="credits-table premium-table">
+                <thead>
+                  <tr>
+                    <th>Ngày giao dịch</th>
+                    <th>Loại</th>
+                    <th>Mô tả chi tiết</th>
+                    <th>Biến động</th>
+                    <th>Số dư sau</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr><td colSpan="5" className="text-center p-8">Đang tải dữ liệu...</td></tr>
+                  ) : history.length === 0 ? (
+                    <tr><td colSpan="5" className="text-center p-8 text-muted">Bạn chưa có giao dịch nào.</td></tr>
+                  ) : (
+                    history.map(row => (
+                      <tr key={row._id}>
+                        <td className="text-sm text-muted">{new Date(row.createdAt).toLocaleString()}</td>
+                        <td>
+                          <span className={`type-badge type-${row.type}`}>{row.type}</span>
+                        </td>
+                        <td className="text-sm">{row.description}</td>
+                        <td className="font-bold">
+                          <div className={`flex items-center gap-1 ${row.amount > 0 ? 'text-success' : 'text-danger'}`}>
+                            {getIcon(row.type, row.amount)} {formatAmount(row.amount)} CR
+                          </div>
+                        </td>
+                        <td className="font-bold text-gray-700">{row.balanceAfter?.toFixed(1)} CR</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+              {totalPages > 1 && (
+                <div className="pagination p-4 bg-gray-50 flex justify-center gap-3 border-t border-gray-100">
+                  <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>Trang trước</Button>
+                  <span className="flex items-center px-4 font-medium text-sm bg-white border rounded shadow-sm">Trang {page} / {totalPages}</span>
+                  <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage(page + 1)}>Trang sau</Button>
+                </div>
+              )}
+            </Card>
           </div>
         </div>
       </div>

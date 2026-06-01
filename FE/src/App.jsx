@@ -26,7 +26,14 @@ function App() {
   useEffect(() => {
     // REAL DATA FETCHING API
     const fetchFiles = async () => {
-      if (!isAuthenticated || !user) return;
+      if (!isAuthenticated || !user) {
+        document.body.removeAttribute('data-role');
+        return;
+      }
+      
+      // Update body role for theme styling
+      document.body.dataset.role = user.role;
+
       if (user.role === 'admin') return; // Admin has no file list
       try {
         const endpoint = user.role === 'freelancer' ? '/files/mine' : '/files/assigned';

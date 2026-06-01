@@ -26,9 +26,33 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     };
     verifyUser();
+
+    const handleUnauthorized = () => {
+      setUser(null);
+      localStorage.removeItem('safecode_token');
+    };
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    };
   }, []);
 
-  // Mock login fallback if API fails (so Demo UI still runs)
+  // Error mapping utility
+  const mapErrorMessage = (errorMsg) => {
+    if (!errorMsg) return "Có lỗi xảy ra, vui lòng thử lại!";
+    const msg = errorMsg.toLowerCase();
+    
+    if (msg.includes("invalid credentials")) return "Email hoặc Mật khẩu không chính xác!";
+    if (msg.includes("email already exists")) return "Email này đã được đăng ký. Vui lòng đăng nhập!";
+    if (msg.includes("email and password are required")) return "Vui lòng nhập đầy đủ Email và Mật khẩu!";
+    if (msg.includes("password must be at least")) return "Mật khẩu phải có ít nhất 6 ký tự!";
+    if (msg.includes("invalid role")) return "Vai trò tài khoản không hợp lệ!";
+    if (msg.includes("too many auth attempts")) return "Bạn thao tác quá nhanh! Vui lòng thử lại sau 1 phút.";
+    
+    return errorMsg; // Fallback
+  };
+
   // Real login API call
   const login = async (role, email, password) => {
     try {
@@ -39,9 +63,8 @@ export const AuthProvider = ({ children }) => {
       setUser(user);
       return { success: true };
     } catch (error) {
-      console.error(error);
-      const msg = error.response?.data?.error || error.response?.data?.message || "Login failed";
-      return { success: false, message: msg };
+      const rawMsg = error.response?.data?.error || error.response?.data?.message || "Login failed";
+      return { success: false, message: mapErrorMessage(rawMsg) };
     }
   };
 
@@ -54,9 +77,8 @@ export const AuthProvider = ({ children }) => {
       setUser(user);
       return { success: true };
     } catch (error) {
-      console.error(error);
-      const msg = error.response?.data?.error || error.response?.data?.message || "Registration failed";
-      return { success: false, message: msg };
+      const rawMsg = error.response?.data?.error || error.response?.data?.message || "Registration failed";
+      return { success: false, message: mapErrorMessage(rawMsg) };
     }
   };
 

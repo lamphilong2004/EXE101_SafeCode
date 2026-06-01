@@ -22,4 +22,16 @@ api.interceptors.request.use(
   }
 );
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('safecode_token');
+      // Dispatch a custom event to notify AuthContext to log out
+      window.dispatchEvent(new Event('auth:unauthorized'));
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;
