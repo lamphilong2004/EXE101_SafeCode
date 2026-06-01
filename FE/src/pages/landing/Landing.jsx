@@ -240,7 +240,7 @@ const Landing = () => {
           className="auth-modal-overlay" 
           onClick={(e) => { if (e.target.className === 'auth-modal-overlay') setShowModal(false) }}
         >
-          <div className="auth-modal-card glass-panel">
+          <div className="auth-modal-card">
             <button className="close-modal-btn" onClick={() => setShowModal(false)}>
               <X size={24} />
             </button>
