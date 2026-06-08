@@ -3,8 +3,10 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
+import swaggerUi from "swagger-ui-express";
 
 import { env } from "./config/env.js";
+import { swaggerSpec } from "./config/swagger.js";
 import { routes } from "./routes/index.js";
 import { notFoundHandler, errorHandler } from "./middleware/error.js";
 
@@ -13,7 +15,8 @@ export function createApp() {
 
   app.set("trust proxy", 1);
 
-  app.use(helmet());
+  // Disable CSP so Swagger UI loads styles properly in browser
+  app.use(helmet({ contentSecurityPolicy: false }));
 
   const allowedOrigins = String(env.CORS_ORIGIN || "")
     .split(",")
@@ -57,6 +60,8 @@ export function createApp() {
   });
 
   app.get("/health", (req, res) => res.json({ ok: true }));
+
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
   app.use(routes);
 
