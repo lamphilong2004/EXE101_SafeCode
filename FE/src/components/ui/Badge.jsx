@@ -1,32 +1,27 @@
 import React from 'react';
 import './Badge.css';
 
+const statusMap = {
+  'draft':             { cls: 'status-draft',     label: 'Draft' },
+  'uploaded':          { cls: 'status-uploaded',  label: 'Uploaded' },
+  'testing phase':     { cls: 'status-testing',   label: 'Testing' },
+  'locked':            { cls: 'status-locked',    label: 'Locked' },
+  'verifying payment': { cls: 'status-verifying', label: 'Verifying...' },
+  'paid':              { cls: 'status-paid',      label: 'Paid' },
+  'delivered':         { cls: 'status-paid',      label: 'Delivered' },
+  'disputed':          { cls: 'status-disputed',  label: 'Disputed' },
+  'active':            { cls: 'status-paid',      label: 'Active' },
+  'pending payment':   { cls: 'status-verifying', label: 'Pending' },
+};
+
 const Badge = ({ status }) => {
-  const getStatusClass = (status) => {
-    switch (status.toLowerCase()) {
-      case 'delivered':
-      case 'paid':
-      case 'active':
-        return 'badge-success';
-      case 'testing phase':
-      case 'verifying payment':
-        return 'badge-primary';
-      case 'pending payment':
-      case 'processing':
-      case 'awaiting evidence':
-        return 'badge-warning';
-      case 'disputed':
-      case 'locked':
-      case 'revoked':
-        return 'badge-error';
-      default:
-        return 'badge-default';
-    }
-  };
+  const key = (status || '').toLowerCase();
+  const { cls, label } = statusMap[key] || { cls: 'status-draft', label: status };
 
   return (
-    <span className={`badge ${getStatusClass(status)}`}>
-      {status}
+    <span className={`status-badge ${cls}`}>
+      <span className="status-badge-dot" />
+      {label}
     </span>
   );
 };

@@ -82,6 +82,20 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginWithGoogle = async (role, token) => {
+    try {
+      const res = await api.post('/auth/google', { token, role });
+      const { token: appToken, user } = res.data;
+      
+      localStorage.setItem('safecode_token', appToken);
+      setUser(user);
+      return { success: true };
+    } catch (error) {
+      const rawMsg = error.response?.data?.error || error.response?.data?.message || "Google login failed";
+      return { success: false, message: mapErrorMessage(rawMsg) };
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('safecode_token');
     setUser(null);
@@ -90,7 +104,7 @@ export const AuthProvider = ({ children }) => {
   if (loading) return <div style={{height: '100vh', display: 'flex', alignItems: 'center', justifyContent:'center'}}>Loading...</div>;
 
   return (
-    <AuthContext.Provider value={{ user, setUser, login, signup, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, setUser, login, signup, loginWithGoogle, logout, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

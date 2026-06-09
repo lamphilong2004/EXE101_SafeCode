@@ -604,20 +604,19 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
           ))}
           {data.length === 0 && (
             <tr>
-              <td colSpan={columns.length + 1} className="empty-state" style={{ padding: '64px 20px', textAlign: 'center', background: '#f8fafc' }}>
+              <td colSpan={columns.length + 1} style={{ padding: '64px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', maxWidth: '400px', margin: '0 auto' }}>
-                  <img src="https://cdn-icons-png.flaticon.com/512/7486/7486747.png" alt="Empty" style={{ width: 80, height: 80, opacity: 0.8 }} />
-                  <h4 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.25rem', fontWeight: 700 }}>Chưa có giao dịch nào!</h4>
-                  <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: '1.5' }}>
-                    {userRole === 'freelancer' 
-                      ? "🚀 Khởi đầu ngay bằng cách mã hóa Source Code đầu tiên của bạn để gửi cho khách hàng một cách an toàn nhất!"
-                      : "Bạn chưa mua mã nguồn nào. Các giao dịch mua bán an toàn (Escrow) sẽ được quản lý tại đây."}
-                  </p>
-                  {userRole === 'freelancer' && (
-                    <Button variant="primary" className="mt-2 shadow-glow" onClick={() => window.location.hash = '#upload'}>
-                      + Tải lên Code mới
-                    </Button>
-                  )}
+                  <div style={{ width: 64, height: 64, borderRadius: 16, background: 'var(--primary-light)', border: '1px solid var(--border-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-color)' }}>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                  </div>
+                  <div>
+                    <h4 style={{ margin: '0 0 8px', color: 'var(--text-main)', fontSize: '1.1rem', fontWeight: 700 }}>Chưa có giao dịch nào</h4>
+                    <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.875rem', lineHeight: '1.6' }}>
+                      {userRole === 'freelancer'
+                        ? 'Bắt đầu bằng cách tải lên mã nguồn đầu tiên của bạn để gửi cho khách hàng.'
+                        : 'Các file mã nguồn được giao cho bạn sẽ xuất hiện tại đây.'}
+                    </p>
+                  </div>
                 </div>
               </td>
             </tr>

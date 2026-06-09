@@ -2,57 +2,65 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 12px 24px;
+  gap: 7px;
+  padding: 10px 22px;
   border-radius: var(--radius-md);
   font-weight: 600;
-  font-size: 0.95rem;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 0.875rem;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
+  cursor: pointer;
+  border: none;
+  white-space: nowrap;
+  text-decoration: none;
 }
 
 .btn:disabled {
-  opacity: 0.6;
+  opacity: 0.4;
   cursor: not-allowed;
   pointer-events: none;
 }
 
+/* Primary */
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
   color: white;
-  box-shadow: var(--shadow-glow);
+  box-shadow: var(--shadow-glow-sm);
   border: 1px solid transparent;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+  box-shadow: var(--shadow-glow);
 }
 
 .btn-primary:active {
   transform: translateY(0);
 }
 
+/* Outline */
 .btn-outline {
-  background-color: transparent;
-  color: var(--text-main);
-  border: 2px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-subtle);
+  border: 1px solid var(--border-color);
 }
 
-.btn-outline:hover {
-  border-color: var(--primary-color);
+.btn-outline:hover:not(:disabled) {
+  border-color: var(--border-glow);
   color: var(--primary-color);
-  background-color: var(--primary-light);
-  box-shadow: var(--shadow-sm);
+  background: var(--primary-light);
+  box-shadow: var(--shadow-glow-sm);
 }
 
+/* Secondary */
 .btn-secondary {
-  background-color: var(--text-main);
-  color: white;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  border: 1px solid var(--border-bright);
 }
 
-.btn-secondary:hover {
-  background-color: #000;
-  box-shadow: var(--shadow-md);
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
 }
