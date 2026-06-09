@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   X, ExternalLink, Clock, CheckCircle,
   ShieldAlert, Lock, Unlock, ImagePlus, Mail, MessageCircle,
-  Download, ShieldCheck, AlertCircle
+  Download, ShieldCheck, AlertCircle, Zap
 } from 'lucide-react';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
@@ -264,6 +264,7 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
 
   // Decrypt progress state
   const [decryptState, setDecryptState] = useState(null); // null | { stage, percent, label, error }
+  const [isPayosLoading, setIsPayosLoading] = useState(false);
 
   const handlePay = async (id) => {
     const file = data.find(f => f.id === id);
@@ -307,6 +308,29 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
         console.error(err);
         toast.error("Gửi Bill thất bại!");
       }
+    }
+  };
+
+  const submitPayosCheckout = async () => {
+    if (!checkoutFile) return;
+    setIsPayosLoading(true);
+    try {
+      const res = await api.post(`/payments/payos/${checkoutFile.id}`, {
+        successUrl: window.location.href, // Or a dedicated success page
+        cancelUrl: window.location.href
+      });
+      if (res.data.checkoutUrl) {
+        window.location.href = res.data.checkoutUrl;
+      } else if (res.data.alreadyPaid) {
+        toast.info("File này đã được thanh toán!");
+        updateFileStatus(checkoutFile.id, 'Paid');
+        setCheckoutFile(null);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || err.response?.data?.error || "Không thể tạo link thanh toán tự động.");
+    } finally {
+      setIsPayosLoading(false);
     }
   };
 
@@ -518,56 +542,87 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
                 </div>
               </div>
 
-              <div className="bank-details-box premium">
-                <div className="detail-row">
-                  <span className="label">Ngân hàng</span>
-                  <span className="value font-bold">{checkoutFile.payoutSettings?.bankName || 'Vietcombank (VCB)'}</span>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 24, marginBottom: 16 }}>
+                {/* Auto Checkout */}
+                <div style={{ background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1))', padding: '20px', borderRadius: '16px', border: '1px solid rgba(99, 102, 241, 0.3)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                  <div style={{ width: 48, height: 48, background: 'linear-gradient(135deg, #6366f1, #a855f7)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', marginBottom: 12 }}>
+                    <Zap size={24} />
+                  </div>
+                  <h4 style={{ fontWeight: 700, marginBottom: 8 }}>Thanh Toán Tự Động</h4>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 16, minHeight: 40 }}>Quét VietQR qua PayOS. Nhận Code ngay lập tức không cần chờ đợi.</p>
+                  <Button variant="primary" className="btn-glow w-full" onClick={submitPayosCheckout} disabled={isPayosLoading}>
+                    {isPayosLoading ? 'Đang tạo link...' : 'Thanh toán ngay'}
+                  </Button>
                 </div>
-                <div className="detail-row">
-                  <span className="label">Số tài khoản</span>
-                  <span className="value font-mono text-primary" style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>{checkoutFile.payoutSettings?.accountNumber || '0123456789'}</span>
-                </div>
-                <div className="detail-row">
-                  <span className="label">Chủ tài khoản</span>
-                  <span className="value">{checkoutFile.payoutSettings?.accountName || checkoutFile.freelancer.toUpperCase()}</span>
+
+                {/* Manual Checkout */}
+                <div style={{ background: 'var(--background-alt)', padding: '20px', borderRadius: '16px', border: '1px dashed var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                  <div style={{ width: 48, height: 48, background: 'var(--background-color)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', marginBottom: 12, border: '1px solid var(--border-color)' }}>
+                    <Clock size={24} />
+                  </div>
+                  <h4 style={{ fontWeight: 700, marginBottom: 8 }}>Tải Bill Thủ Công</h4>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 16, minHeight: 40 }}>Chuyển tiền vào ví Freelancer và tải ảnh chụp màn hình lên.</p>
+                  <Button variant="outline" className="w-full" onClick={() => document.getElementById('manual-checkout-details').style.display = 'block'}>
+                    Xem thông tin
+                  </Button>
                 </div>
               </div>
 
-              {checkoutFile.payoutSettings?.qrCodeUrl && (
-                <div className="qr-payment-display premium">
-                  <p className="qr-title">Quét mã QR để thanh toán nhanh:</p>
-                  <div className="qr-wrapper">
-                    <img src={checkoutFile.payoutSettings.qrCodeUrl} alt="Freelancer QR Code" className="qr-image" />
+              <div id="manual-checkout-details" style={{ display: 'none' }}>
+                <div className="bank-details-box premium mt-4">
+                  <div className="detail-row">
+                    <span className="label">Ngân hàng</span>
+                    <span className="value font-bold">{checkoutFile.payoutSettings?.bankName || 'Vietcombank (VCB)'}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="label">Số tài khoản</span>
+                    <span className="value font-mono text-primary" style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>{checkoutFile.payoutSettings?.accountNumber || '0123456789'}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="label">Chủ tài khoản</span>
+                    <span className="value">{checkoutFile.payoutSettings?.accountName || checkoutFile.freelancer.toUpperCase()}</span>
                   </div>
                 </div>
-              )}
 
-              <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: 610, color: 'var(--text-main)' }}>Minh chứng chuyển khoản (Ảnh Bill)</label>
-                <label htmlFor="receipt-image-file" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 14px', border: '2px dashed var(--border-color)', borderRadius: '12px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.9rem', background: 'var(--background-color)', transition: 'all 0.2s' }} className="upload-label-hover">
-                  <ImagePlus size={18} />
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {receiptFile ? receiptFile.name : 'Nhấn để chọn ảnh Bill...'}
-                  </span>
-                </label>
-                <input type="file" id="receipt-image-file" accept="image/*" onChange={handleReceiptImageChange} style={{ display: 'none' }} />
-                {receiptPreview && (
-                  <div style={{ marginTop: '8px', position: 'relative' }}>
-                    <img src={receiptPreview} alt="Receipt Preview" style={{ width: '100%', maxHeight: '450px', objectFit: 'contain', borderRadius: '12px', border: '1px solid var(--border-color)' }} />
-                    <button onClick={() => { setReceiptPreview(null); setReceiptFile(null); }} style={{ position: 'absolute', top: '-8px', right: '-8px', background: 'var(--error-color)', color: 'white', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}><X size={14} /></button>
+                {checkoutFile.payoutSettings?.qrCodeUrl && (
+                  <div className="qr-payment-display premium">
+                    <p className="qr-title">Quét mã QR để thanh toán nhanh:</p>
+                    <div className="qr-wrapper">
+                      <img src={checkoutFile.payoutSettings.qrCodeUrl} alt="Freelancer QR Code" className="qr-image" />
+                    </div>
                   </div>
                 )}
-              </div>
 
-              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: 610, color: 'var(--text-main)' }}>Link Giao Dịch (Không bắt buộc)</label>
-                <input type="url" id="tracking-link-input" placeholder="https://bank.com/tx/..." style={{ padding: '10px', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--background-color)', outline: 'none' }} />
+                <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 610, color: 'var(--text-main)' }}>Minh chứng chuyển khoản (Ảnh Bill)</label>
+                  <label htmlFor="receipt-image-file" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 14px', border: '2px dashed var(--border-color)', borderRadius: '12px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.9rem', background: 'var(--background-color)', transition: 'all 0.2s' }} className="upload-label-hover">
+                    <ImagePlus size={18} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {receiptFile ? receiptFile.name : 'Nhấn để chọn ảnh Bill...'}
+                    </span>
+                  </label>
+                  <input type="file" id="receipt-image-file" accept="image/*" onChange={handleReceiptImageChange} style={{ display: 'none' }} />
+                  {receiptPreview && (
+                    <div style={{ marginTop: '8px', position: 'relative' }}>
+                      <img src={receiptPreview} alt="Receipt Preview" style={{ width: '100%', maxHeight: '450px', objectFit: 'contain', borderRadius: '12px', border: '1px solid var(--border-color)' }} />
+                      <button onClick={() => { setReceiptPreview(null); setReceiptFile(null); }} style={{ position: 'absolute', top: '-8px', right: '-8px', background: 'var(--error-color)', color: 'white', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}><X size={14} /></button>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 610, color: 'var(--text-main)' }}>Link Giao Dịch (Không bắt buộc)</label>
+                  <input type="url" id="tracking-link-input" placeholder="https://bank.com/tx/..." style={{ padding: '10px', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--background-color)', outline: 'none' }} />
+                </div>
+
+                <div className="checkout-footer mt-6">
+                  <Button variant="primary" className="btn-glow" onClick={submitCheckout} style={{ borderRadius: '10px', flex: 1 }}>Tôi đã thanh toán (Gửi Bill)</Button>
+                </div>
               </div>
             </div>
 
-            <div className="checkout-footer">
-              <Button variant="outline" onClick={() => setCheckoutFile(null)} style={{ borderRadius: '10px' }}>Quay lại</Button>
-              <Button variant="primary" className="btn-glow" onClick={submitCheckout} style={{ borderRadius: '10px', flex: 1 }}>Tôi đã thanh toán (Gửi Bill)</Button>
+            <div className="checkout-footer" style={{ borderTop: 'none', paddingTop: 0 }}>
+              <Button variant="outline" onClick={() => setCheckoutFile(null)} style={{ borderRadius: '10px', width: '100%' }}>Hủy bỏ</Button>
             </div>
           </div>
         </div>

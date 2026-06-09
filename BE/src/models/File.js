@@ -63,6 +63,11 @@ const FileSchema = new mongoose.Schema(
       customerId: { type: String, default: null, index: true },
     },
 
+    payos: {
+      orderCode: { type: Number, default: null, index: true },
+      paymentLinkId: { type: String, default: null },
+    },
+
     receipt: {
       imageUrl: { type: String, default: null },
       trackingLink: { type: String, default: null },

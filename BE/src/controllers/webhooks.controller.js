@@ -1,9 +1,11 @@
 import { stripe } from "../services/stripe.service.js";
+import payos from "../services/payos.service.js";
 import { env } from "../config/env.js";
 import { File } from "../models/File.js";
 import { Transaction } from "../models/Transaction.js";
 import { User } from "../models/User.js";
 import { CreditHistory } from "../models/CreditHistory.js";
+import { createNotification } from "./notifications.controller.js";
 
 export async function stripeWebhook(req, res) {
   const sig = req.headers["stripe-signature"];
@@ -92,5 +94,39 @@ export async function stripeWebhook(req, res) {
     // eslint-disable-next-line no-console
     console.error("Stripe webhook handler failed", err);
     return res.status(500).json({ error: "Webhook handler error" });
+  }
+}
+
+export async function payosWebhook(req, res) {
+  try {
+    const webhookData = payos.verifyPaymentWebhookData(req.body);
+
+    if (webhookData.code === "00") {
+      const orderCode = webhookData.data.orderCode;
+      const fileDoc = await File.findOne({ "payos.orderCode": orderCode });
+
+      if (fileDoc && fileDoc.status !== "Paid") {
+        fileDoc.status = "Paid";
+        fileDoc.paidAt = new Date();
+        await fileDoc.save();
+
+        await Transaction.updateMany(
+          { fileId: fileDoc._id, type: "checkout", status: "Pending", "payos.orderCode": orderCode },
+          { $set: { status: "Succeeded" } }
+        );
+
+        // Notify Freelancer
+        await createNotification(
+          fileDoc.freelancerId,
+          "payment_received",
+          `Khách hàng đã thanh toán qua VietQR cho file "${fileDoc.title}". Tiền đã vào tài khoản nền tảng.`,
+          fileDoc._id
+        );
+      }
+    }
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("PayOS webhook handler failed", err);
+    return res.status(500).json({ success: false, error: err.message });
   }
 }
