@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
+import socket from '../services/socket';
 
 const AuthContext = createContext();
 
@@ -18,6 +19,9 @@ export const AuthProvider = ({ children }) => {
         try {
           const res = await api.get('/auth/me'); // Endpoint to verify JWT
           setUser(res.data.user);
+          // Connect socket with stored token on page reload
+          socket.auth = { token };
+          socket.connect();
         } catch (error) {
           console.error("Token verification failed", error);
           localStorage.removeItem('safecode_token');
@@ -61,6 +65,9 @@ export const AuthProvider = ({ children }) => {
       
       localStorage.setItem('safecode_token', token);
       setUser(user);
+      // Connect socket after login
+      socket.auth = { token };
+      socket.connect();
       return { success: true };
     } catch (error) {
       const rawMsg = error.response?.data?.error || error.response?.data?.message || "Login failed";
@@ -75,6 +82,9 @@ export const AuthProvider = ({ children }) => {
       
       localStorage.setItem('safecode_token', token);
       setUser(user);
+      // Connect socket after signup
+      socket.auth = { token };
+      socket.connect();
       return { success: true };
     } catch (error) {
       const rawMsg = error.response?.data?.error || error.response?.data?.message || "Registration failed";
@@ -94,6 +104,9 @@ export const AuthProvider = ({ children }) => {
       
       localStorage.setItem('safecode_token', appToken);
       setUser(user);
+      // Connect socket after Google login
+      socket.auth = { token: appToken };
+      socket.connect();
       return { success: true };
     } catch (error) {
       const rawMsg = error.response?.data?.error || error.response?.data?.message || "Google login failed";
@@ -104,6 +117,8 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('safecode_token');
     setUser(null);
+    // Disconnect socket on logout
+    socket.disconnect();
   };
 
   if (loading) return <div style={{height: '100vh', display: 'flex', alignItems: 'center', justifyContent:'center'}}>Loading...</div>;

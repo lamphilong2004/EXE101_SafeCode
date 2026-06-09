@@ -1,6 +1,7 @@
 import { Message } from '../models/Message.js';
 import { File } from '../models/File.js';
 import { Notification } from '../models/Notification.js';
+import { emitToRoom, createNotification } from '../socket.js';
 
 export const getMessagesByFile = async (req, res) => {
   try {
@@ -36,10 +37,35 @@ export const sendMessage = async (req, res) => {
     });
 
     await message.save();
-    
-    // Create notification for the other party
-    // Simple mock logic for notification target
-    const msgObj = await message.populate('sender', 'name');
+    const msgObj = await message.populate('sender', 'name role');
+
+    // Broadcast the new message to everyone in this file's chat room in real-time
+    emitToRoom(`file_chat_${fileId}`, 'new_message', msgObj);
+
+    // Notify the other party
+    const isFreelancer = String(file.freelancerId._id) === String(req.user.id);
+    if (isFreelancer) {
+      // Sender is freelancer -> notify client
+      const { User } = await import('../models/User.js');
+      const clientUser = await User.findOne({ email: file.intendedClientEmail });
+      if (clientUser) {
+        createNotification(
+          String(clientUser._id),
+          `Tin nhắn mới từ Freelancer`,
+          `Freelancer vừa gửi tin nhắn trong dự án "${file.title}".`,
+          { type: 'message', relatedFileId: file._id }
+        );
+      }
+    } else {
+      // Sender is client -> notify freelancer
+      createNotification(
+        String(file.freelancerId._id),
+        `Tin nhắn mới từ Khách hàng`,
+        `Khách hàng vừa gửi tin nhắn trong dự án "${file.title}".`,
+        { type: 'message', relatedFileId: file._id }
+      );
+    }
+
     res.status(201).json(msgObj);
   } catch (err) {
     res.status(500).json({ error: err.message });

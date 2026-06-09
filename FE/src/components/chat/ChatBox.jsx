@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, User, X } from 'lucide-react';
 import api from '../../services/api';
+import socket from '../../services/socket';
 import './ChatBox.css';
 
 const ChatBox = ({ fileId, userRole, onClose }) => {
@@ -12,35 +13,63 @@ const ChatBox = ({ fileId, userRole, onClose }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
-  const fetchMessages = React.useCallback(async () => {
-    try {
-      const res = await api.get(`/messages/${fileId}`);
-      setMessages(res.data);
-      scrollToBottom();
-    } catch (err) {
-      console.error('Error fetching messages', err);
-    }
-  }, [fileId, scrollToBottom]);
-
+  // Load initial messages
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    const fetchMessages = async () => {
+      try {
+        const res = await api.get(`/messages/${fileId}`);
+        setMessages(res.data);
+      } catch (err) {
+        console.error('Error fetching messages', err);
+      }
+    };
     fetchMessages();
-    const interval = setInterval(fetchMessages, 5000); // Polling for MVP
-    return () => clearInterval(interval);
-  }, [fetchMessages]);
+  }, [fileId]);
 
+  // Auto-scroll when messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
+
+  // Join socket room and listen for real-time messages
+  useEffect(() => {
+    const room = `file_chat_${fileId}`;
+    socket.emit('join_room', room);
+
+    const handleNewMessage = (msg) => {
+      setMessages(prev => {
+        // Avoid duplicates: if we already have this _id, skip
+        if (msg._id && prev.some(m => m._id === msg._id)) return prev;
+        return [...prev, msg];
+      });
+    };
+
+    socket.on('new_message', handleNewMessage);
+
+    return () => {
+      socket.emit('leave_room', room);
+      socket.off('new_message', handleNewMessage);
+    };
+  }, [fileId]);
 
   const handleSend = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
 
+    const text = input.trim();
+    setInput('');
+
     try {
-      const res = await api.post(`/messages/${fileId}`, { text: input });
-      setMessages([...messages, res.data]);
-      setInput('');
-      scrollToBottom();
+      // Optimistic local append (real message will come via socket)
+      const res = await api.post(`/messages/${fileId}`, { text });
+      // The socket broadcast will also deliver this; dedup logic above handles it
+      setMessages(prev => {
+        if (res.data._id && prev.some(m => m._id === res.data._id)) return prev;
+        return [...prev, res.data];
+      });
     } catch (err) {
       console.error('Error sending message', err);
+      setInput(text); // Restore on error
     }
   };
 
@@ -54,11 +83,10 @@ const ChatBox = ({ fileId, userRole, onClose }) => {
       <div className="chat-messages">
         {messages.length === 0 && <p className="text-center text-muted mt-4">Chưa có tin nhắn nào. Bắt đầu trao đổi ngay!</p>}
         {messages.map((msg, idx) => {
-          // Fallback logic for mock data if backend route is not ready
           const isMine = msg.isMine || msg.sender?.role === userRole; 
           const time = msg.createdAt ? new Date(msg.createdAt) : new Date();
           return (
-            <div key={idx} className={`chat-message ${isMine ? 'mine' : 'theirs'}`}>
+            <div key={msg._id || idx} className={`chat-message ${isMine ? 'mine' : 'theirs'}`}>
               {!isMine && <div className="avatar bg-gray-200 text-gray-500"><User size={14} /></div>}
               <div className="message-content">
                 <p>{msg.text}</p>

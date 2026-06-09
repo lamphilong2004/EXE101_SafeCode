@@ -22,6 +22,7 @@ import { proxyWithHardTimeout } from "../services/proxy.service.js";
 import { consumeCreditsForUpload, rewardCreditsForSale } from "../services/credit.service.js";
 import { sendDecryptionKeyEmail } from "../services/email.service.js";
 import { issueLicense, validateLicense } from "../services/license.service.js";
+import { createNotification } from "../socket.js";
 
 function nowIsoSafe() {
   return new Date().toISOString().replace(/[:.]/g, "-");
@@ -594,6 +595,14 @@ export async function uploadReceipt(req, res, next) {
       stripe: { eventId: `manual_${Date.now()}` },
     });
 
+    // Notify the Freelancer that a receipt has been submitted
+    createNotification(
+      String(fileDoc.freelancerId),
+      "Khách hàng vừa gửi biên lai thanh toán",
+      `Khách hàng đã nộp biên lai cho dự án "${fileDoc.title}". Vui lòng kiểm tra và xác nhận.`,
+      { type: "payment", relatedFileId: fileDoc._id }
+    );
+
     res.json({ success: true, status: fileDoc.status });
   } catch (err) {
     next(err);
@@ -632,17 +641,29 @@ export async function confirmPayment(req, res, next) {
       }
 
       // === NEW V3 DRM: Issue License Serial ===
+      let serial = null;
       try {
         const clientUser = await User.findOne({ email: fileDoc.intendedClientEmail });
-        const clientId = clientUser ? clientUser._id : fileDoc.freelancerId; // Fallback to freelancer if client not found (rare)
+        const clientId = clientUser ? clientUser._id : fileDoc.freelancerId;
         
-        const { key: serial } = await issueLicense(clientId, fileDoc._id);
+        const { key: licenseSerial } = await issueLicense(clientId, fileDoc._id);
+        serial = licenseSerial;
         
         await sendDecryptionKeyEmail(fileDoc.intendedClientEmail, {
           fileName: fileDoc.title,
           licenseKey: serial,
           isV3: true,
         });
+
+        // Notify the Client that payment is confirmed and license is ready
+        if (clientUser) {
+          createNotification(
+            String(clientUser._id),
+            "Thanh toán được xác nhận! 🎉",
+            `Freelancer đã xác nhận thanh toán cho "${fileDoc.title}". Khóa giải mã đã được gửi vào email của bạn.`,
+            { type: "payment", relatedFileId: fileDoc._id }
+          );
+        }
       } catch (drmErr) {
         console.error("[DRM] Failed to issue/send license:", drmErr);
       }
@@ -656,6 +677,17 @@ export async function confirmPayment(req, res, next) {
         { fileId: fileDoc._id, type: "checkout", status: "Pending" },
         { $set: { status: "Failed", failureReason: "Disputed by freelancer" } }
       );
+
+      // Notify Client that the receipt was rejected and a dispute was opened
+      const clientUser = await User.findOne({ email: fileDoc.intendedClientEmail });
+      if (clientUser) {
+        createNotification(
+          String(clientUser._id),
+          "Biên lai thanh toán bị từ chối",
+          `Freelancer đã từ chối biên lai của bạn cho dự án "${fileDoc.title}". Khiếu nại đã được mở để admin xem xét.`,
+          { type: "dispute", relatedFileId: fileDoc._id }
+        );
+      }
     }
 
     res.json({ success: true, status: fileDoc.status });

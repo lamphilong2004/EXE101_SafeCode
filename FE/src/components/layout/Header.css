@@ -106,7 +106,7 @@
   box-shadow: var(--shadow-glow-sm);
 }
 
-/* Notification Dot */
+/* Notification Dot (legacy fallback) */
 .notification-dot {
   position: absolute;
   top: 7px;
@@ -119,6 +119,28 @@
   box-shadow: 0 0 8px var(--danger-color);
 }
 
+/* Notification Count Badge */
+.notification-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  background: var(--danger-color);
+  border-radius: 9px;
+  border: 2px solid rgba(6, 11, 24, 0.9);
+  box-shadow: 0 0 8px var(--danger-color);
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  animation: pulse-dot 2s infinite;
+}
+
 /* Notifications Dropdown */
 .notifications {
   position: relative;
@@ -129,9 +151,9 @@
   top: calc(100% + 12px);
   right: 0;
   width: 360px;
-  max-height: 420px;
+  max-height: 480px;
   overflow: auto;
-  background: rgba(13, 20, 37, 0.95);
+  background: rgba(13, 20, 37, 0.97);
   backdrop-filter: blur(20px);
   border: 1px solid var(--border-bright);
   border-radius: var(--radius-lg);
@@ -156,13 +178,18 @@
 }
 
 .notification-item {
-  padding: 14px 20px;
+  padding: 12px 20px;
   font-size: 0.875rem;
   color: var(--text-subtle);
   border-bottom: 1px solid var(--border-color);
   transition: background 0.2s ease;
   cursor: pointer;
   line-height: 1.5;
+}
+
+.notification-item.unread {
+  background: rgba(99, 102, 241, 0.07);
+  border-left: 3px solid var(--primary-color);
 }
 
 .notification-item:hover {
@@ -174,12 +201,33 @@
   border-bottom: none;
 }
 
+.notif-title {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-main);
+  margin: 0 0 3px 0;
+}
+
+.notif-message {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0 0 4px 0;
+  line-height: 1.4;
+}
+
+.notif-time {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
 .notifications-empty {
   padding: 32px 20px;
   text-align: center;
   font-size: 0.875rem;
   color: var(--text-muted);
 }
+
 
 /* User Profile */
 .user-profile {
