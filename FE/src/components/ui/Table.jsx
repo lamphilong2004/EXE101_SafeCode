@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   X, ExternalLink, Clock, CheckCircle,
-  ShieldAlert, Lock, Unlock, ImagePlus, Mail, MessageCircle
+  ShieldAlert, Lock, Unlock, ImagePlus, Mail, MessageCircle,
+  Download, ShieldCheck, AlertCircle
 } from 'lucide-react';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
@@ -76,6 +77,74 @@ const FreelancerViewModal = ({ file, onClose, onConfirm, onReject }) => {
     </div>
   );
 };
+
+/* ─── Decrypt Progress Modal ─── */
+const DecryptProgressModal = ({ stage, percent, label, error, onClose }) => (
+  <div className="modal-overlay" style={{ zIndex: 9999 }}>
+    <div className="checkout-modal premium-ui" style={{ maxWidth: 420, textAlign: 'center' }}>
+      <div className="checkout-header" style={{ justifyContent: 'center', borderBottom: '1px solid var(--border-color)', padding: '18px 24px' }}>
+        <h3 className="text-xl font-bold">
+          {error ? '❌ Giải mã thất bại' : stage === 'done' ? '✅ Hoàn tất!' : '🔓 Đang giải mã...'}
+        </h3>
+      </div>
+      <div className="checkout-body" style={{ padding: '28px 24px' }}>
+        {error ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+            <AlertCircle size={48} style={{ color: 'var(--danger-color)' }} />
+            <p style={{ color: 'var(--danger-color)', fontSize: '0.9rem' }}>{error}</p>
+            <Button variant="outline" onClick={onClose}>Đóng</Button>
+          </div>
+        ) : stage === 'done' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+            <ShieldCheck size={52} style={{ color: 'var(--success-color)' }} />
+            <p style={{ fontWeight: 600, fontSize: '1rem' }}>File đã được giải mã và tải xuống!</p>
+            <Button variant="primary" onClick={onClose}>Đóng</Button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18, alignItems: 'stretch' }}>
+            {/* Animated lock icon */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
+              <div style={{
+                width: 64, height: 64, borderRadius: '50%',
+                background: 'var(--primary-light)',
+                border: '2px solid var(--border-glow)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                animation: 'pulse-glow 1.5s ease-in-out infinite',
+                color: 'var(--primary-color)'
+              }}>
+                <Unlock size={28} />
+              </div>
+            </div>
+
+            {/* Step label */}
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-subtle)', minHeight: 20 }}>{label || 'Đang xử lý...'}</p>
+
+            {/* Progress bar */}
+            <div style={{
+              width: '100%', height: 10, borderRadius: 999,
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid var(--border-color)',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                height: '100%',
+                width: `${percent}%`,
+                borderRadius: 999,
+                background: 'linear-gradient(90deg, var(--primary-color), var(--secondary-color))',
+                transition: 'width 0.4s ease',
+                boxShadow: '0 0 12px var(--primary-color)'
+              }} />
+            </div>
+
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>
+              {percent}% hoàn thành
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+);
 
 const Countdown = ({ file, updateFileStatus }) => {
   const [timeLeft, setTimeLeft] = useState('');
@@ -193,6 +262,9 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
   const [activeFreelancerView, setActiveFreelancerView] = useState(null);
   const [expandedDisputeRow, setExpandedDisputeRow] = useState(null);
 
+  // Decrypt progress state
+  const [decryptState, setDecryptState] = useState(null); // null | { stage, percent, label, error }
+
   const handlePay = async (id) => {
     const file = data.find(f => f.id === id);
     setCheckoutFile(file);
@@ -286,82 +358,125 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
     try {
       if (userRole !== 'client') return;
 
-      const licenseKey = window.prompt("Nhập mã License Serial nhận được qua email:");
+      const licenseKey = window.prompt('Nhập mã License Serial nhận được qua email:');
       if (!licenseKey) return;
 
-      // Fingerprint placeholder - in real prod, use a dedicated lib or browser metadata
+      // Device fingerprint
       const deviceId = btoa(navigator.userAgent).slice(0, 16);
 
-      toast.info('Đang xác thực License & lấy key giải mã...');
+      setDecryptState({ stage: 'fetching_key', percent: 5, label: 'Đang xác thực License Key...' });
 
-      let keyB64;
-      let ivB64;
-      let authTagB64;
-
-      const keyRes = await api.post(`/files/${fileId}/key`, {
-        licenseKey,
-        deviceId
-      });
-
-      keyB64 = keyRes.data?.keyB64;
-      ivB64 = keyRes.data?.ivB64;
-      authTagB64 = keyRes.data?.authTagB64;
+      // Step 1: Get decryption key
+      let keyB64, ivB64, authTagB64;
+      try {
+        const keyRes = await api.post(`/files/${fileId}/key`, { licenseKey, deviceId });
+        keyB64      = keyRes.data?.keyB64;
+        ivB64       = keyRes.data?.ivB64;
+        authTagB64  = keyRes.data?.authTagB64;
+      } catch (err) {
+        const msg = err.response?.data?.error || 'License Key không hợp lệ hoặc đã hết hạn.';
+        setDecryptState({ stage: 'error', percent: 0, label: '', error: msg });
+        return;
+      }
 
       if (!keyB64 || !ivB64 || !authTagB64) {
-        toast.error('Không lấy được key/metadata để giải mã.');
+        setDecryptState({ stage: 'error', percent: 0, label: '', error: 'Không lấy được thông tin khoá từ server.' });
         return;
       }
 
-      const rawKey = Uint8Array.from(atob(keyB64), (c) => c.charCodeAt(0));
-      if (rawKey.length !== 32) {
-        toast.error('Key không hợp lệ.');
-        return;
-      }
+      setDecryptState({ stage: 'downloading', percent: 20, label: 'Đang tải file mã hoá từ server...' });
 
-      toast.info('Đang tải file và giải mã...');
+      // Step 2: Download encrypted file with XHR progress
+      const encryptedBuffer = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        const token = localStorage.getItem('safecode_token');
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+        xhr.open('GET', `${baseUrl}/api/files/${fileId}/download-encrypted`);
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.responseType = 'arraybuffer';
 
-      // Step 2: Download the encrypted file
-      const dlRes = await api.get(`/files/${fileId}/download-encrypted`, {
-        responseType: 'arraybuffer',
+        xhr.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const dlPercent = Math.round((e.loaded / e.total) * 40); // 20→60%
+            setDecryptState(prev => ({
+              ...prev,
+              percent: 20 + dlPercent,
+              label: `Đang tải: ${(e.loaded / 1024 / 1024).toFixed(1)} MB / ${(e.total / 1024 / 1024).toFixed(1)} MB`
+            }));
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve(xhr.response);
+          else reject(new Error(`Tải file thất bại (HTTP ${xhr.status})`));
+        };
+
+        xhr.onerror = () => reject(new Error('Lỗi mạng khi tải file.'));
+        xhr.send();
       });
 
-      const iv = Uint8Array.from(atob(ivB64), (c) => c.charCodeAt(0));
-      const authTag = Uint8Array.from(atob(authTagB64), (c) => c.charCodeAt(0));
+      setDecryptState({ stage: 'decrypting', percent: 62, label: 'Đang khởi động Web Worker giải mã...' });
 
-      const encBuffer = dlRes.data;
-      const combined = new Uint8Array(encBuffer.byteLength + authTag.byteLength);
-      combined.set(new Uint8Array(encBuffer));
-      combined.set(authTag, encBuffer.byteLength);
+      // Step 3: Offload decryption to Web Worker
+      const decryptedBuffer = await new Promise((resolve, reject) => {
+        const worker = new Worker('/decrypt.worker.js');
 
-      const cryptoKey = await window.crypto.subtle.importKey(
-        'raw', rawKey, { name: 'AES-GCM' }, false, ['decrypt']
-      );
+        worker.onmessage = (e) => {
+          const { type, percent, label, buffer, message } = e.data;
+          if (type === 'progress') {
+            // Worker progress maps 0→100 to our 62→95 range
+            const mapped = 62 + Math.round((percent / 100) * 33);
+            setDecryptState(prev => ({ ...prev, percent: Math.min(mapped, 95), label }));
+          } else if (type === 'done') {
+            worker.terminate();
+            resolve(buffer);
+          } else if (type === 'error') {
+            worker.terminate();
+            reject(new Error(message));
+          }
+        };
 
-      const decrypted = await window.crypto.subtle.decrypt(
-        { name: 'AES-GCM', iv, tagLength: 128 },
-        cryptoKey,
-        combined
-      );
+        worker.onerror = (err) => { worker.terminate(); reject(err); };
 
-      const blob = new Blob([decrypted], { type: 'application/zip' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
+        // Transfer encryptedBuffer ownership to worker (zero-copy)
+        worker.postMessage(
+          { type: 'decrypt', encryptedBuffer, keyB64, ivB64, authTagB64 },
+          [encryptedBuffer]
+        );
+      });
+
+      setDecryptState({ stage: 'saving', percent: 98, label: 'Đang lưu file về máy...' });
+
+      // Step 4: Trigger download
+      const blob = new Blob([decryptedBuffer], { type: 'application/zip' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
       a.download = (fileName || 'project') + '_decrypted.zip';
       document.body.appendChild(a);
       a.click();
       a.remove();
-      window.URL.revokeObjectURL(url);
+      URL.revokeObjectURL(url);
 
-      toast.success('Kích hoạt thành công! File đã được tải xuống.');
+      setDecryptState({ stage: 'done', percent: 100, label: 'Hoàn tất!' });
+
     } catch (err) {
-      console.error('Activation error:', err);
-      const errorMsg = err.response?.data?.message || err.response?.data?.error || 'Kích hoạt thất bại! Vui lòng kiểm tra lại Key.';
-      toast.error(errorMsg);
+      console.error('Decrypt error:', err);
+      setDecryptState({ stage: 'error', percent: 0, label: '', error: err.message || 'Giải mã thất bại! Vui lòng kiểm tra lại Key.' });
     }
   };
   return (
     <>
+      {/* Decrypt Progress Modal */}
+      {decryptState && (
+        <DecryptProgressModal
+          stage={decryptState.stage}
+          percent={decryptState.percent}
+          label={decryptState.label}
+          error={decryptState.error}
+          onClose={() => setDecryptState(null)}
+        />
+      )}
       {activeFreelancerView && (
         <FreelancerViewModal 
           file={activeFreelancerView} 
