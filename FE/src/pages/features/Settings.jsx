@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import { User as UserIcon, Bell, Shield, Key, CreditCard, ImagePlus, Save, CheckCircle } from 'lucide-react';
+import { User as UserIcon, Bell, Shield, Key, CreditCard, ImagePlus, Save, CheckCircle, ShieldCheck, ShieldAlert, Clock } from 'lucide-react';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
 import './Settings.css';
@@ -12,6 +12,43 @@ const Settings = ({ userRole }) => {
   const [activeTab, setActiveTab] = useState('profile');
   const [qrPreview, setQrPreview] = useState(user?.payoutSettings?.qrCodeUrl || '');
   const [isSaving, setIsSaving] = useState(false);
+
+  // KYC state
+  const [kycStatus, setKycStatus] = useState(null); // null = loading
+  const [kycForm, setKycForm] = useState({ fullName: '', cccdNumber: '', cccdFront: '', cccdBack: '' });
+  const [kycSubmitting, setKycSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (userRole === 'freelancer') {
+      api.get('/kyc/me').then(res => setKycStatus(res.data)).catch(() => {});
+    }
+  }, [userRole]);
+
+  const handleKycImageChange = (field) => (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error('Ảnh quá lớn! Tối đa 5MB.'); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => setKycForm(prev => ({ ...prev, [field]: ev.target.result }));
+    reader.readAsDataURL(file);
+  };
+
+  const handleKycSubmit = async () => {
+    if (!kycForm.fullName || !kycForm.cccdNumber || !kycForm.cccdFront || !kycForm.cccdBack) {
+      toast.error('Vui lòng điền đầy đủ thông tin và tải lên cả 2 mặt CCCD!');
+      return;
+    }
+    setKycSubmitting(true);
+    try {
+      await api.post('/kyc/submit', kycForm);
+      toast.success('Đã nộp hồ sơ KYC! Vui lòng chờ Admin xét duyệt.');
+      setKycStatus({ status: 'pending', submittedAt: new Date() });
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Nộp hồ sơ thất bại');
+    } finally {
+      setKycSubmitting(false);
+    }
+  };
 
   // Profile form state
   const [profileData, setProfileData] = useState({
@@ -85,6 +122,14 @@ const Settings = ({ userRole }) => {
                   onClick={() => setActiveTab('payout')}
                 >
                   <CreditCard size={18} /> Thanh toán
+                </button>
+                <button 
+                  className={`settings-tab ${activeTab === 'kyc' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('kyc')}
+                >
+                  <ShieldCheck size={18} /> Xác minh KYC
+                  {kycStatus?.status === 'pending' && <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--warning-color)', display: 'inline-block', marginLeft: 6 }} />}
+                  {kycStatus?.status === 'rejected' && <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--danger-color)', display: 'inline-block', marginLeft: 6 }} />}
                 </button>
                 <button 
                   className={`settings-tab ${activeTab === 'api' ? 'active' : ''}`}
@@ -288,6 +333,93 @@ const Settings = ({ userRole }) => {
               >
                 <CheckCircle size={18} className="mr-2" /> Lưu thông tin Ngân hàng
               </Button>
+            </Card>
+          )}
+
+          {activeTab === 'kyc' && userRole === 'freelancer' && (
+            <Card className="settings-card glass-panel fade-in">
+              <h2 className="section-title mb-2">Xác minh Danh tính (KYC)</h2>
+              <p className="text-muted mb-6 text-sm">Xác minh CCCD để tăng độ tin cậy và mở khóa chức năng rút tiền. Chỉ Admin SafeCode mới được xem thông tin này.</p>
+
+              {/* KYC Status Banner */}
+              {kycStatus?.status === 'approved' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 20px', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', marginBottom: '24px' }}>
+                  <ShieldCheck size={22} style={{ color: 'var(--success-color)', flexShrink: 0 }} />
+                  <div>
+                    <p className="font-bold" style={{ color: 'var(--success-color)' }}>Đã xác minh thành công ✅</p>
+                    <p className="text-sm text-muted">Danh tính của bạn đã được Admin SafeCode phê duyệt.</p>
+                  </div>
+                </div>
+              )}
+              {kycStatus?.status === 'pending' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 20px', borderRadius: '10px', background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)', marginBottom: '24px' }}>
+                  <Clock size={22} style={{ color: 'var(--warning-color)', flexShrink: 0 }} />
+                  <div>
+                    <p className="font-bold" style={{ color: 'var(--warning-color)' }}>Đang chờ xét duyệt ⏳</p>
+                    <p className="text-sm text-muted">Hồ sơ của bạn đã được nộp và đang chờ Admin kiểm tra. Thường xử lý trong 1-2 ngày làm việc.</p>
+                  </div>
+                </div>
+              )}
+              {kycStatus?.status === 'rejected' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 20px', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', marginBottom: '24px' }}>
+                  <ShieldAlert size={22} style={{ color: 'var(--danger-color)', flexShrink: 0 }} />
+                  <div>
+                    <p className="font-bold" style={{ color: 'var(--danger-color)' }}>Hồ sơ bị từ chối ❌</p>
+                    <p className="text-sm text-muted">Lý do: {kycStatus.adminNote || 'Không rõ'}. Vui lòng nộp lại bên dưới.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* KYC Form — only show if not approved or pending */}
+              {kycStatus?.status !== 'approved' && kycStatus?.status !== 'pending' && (
+                <>
+                  <div className="form-group mb-5">
+                    <label>Họ và Tên (theo CCCD)</label>
+                    <input
+                      type="text"
+                      value={kycForm.fullName}
+                      onChange={e => setKycForm(p => ({ ...p, fullName: e.target.value }))}
+                      placeholder="VD: NGUYEN VAN A"
+                      className="form-input uppercase"
+                    />
+                  </div>
+                  <div className="form-group mb-5">
+                    <label>Số CCCD / CMND</label>
+                    <input
+                      type="text"
+                      value={kycForm.cccdNumber}
+                      onChange={e => setKycForm(p => ({ ...p, cccdNumber: e.target.value }))}
+                      placeholder="VD: 012345678901"
+                      className="form-input"
+                      maxLength={12}
+                    />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                    <div className="form-group">
+                      <label>Ảnh CCCD mặt trước</label>
+                      <label htmlFor="cccd-front" className="qr-upload-btn" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '20px', cursor: 'pointer', minHeight: '120px', justifyContent: 'center' }}>
+                        {kycForm.cccdFront
+                          ? <img src={kycForm.cccdFront} alt="CCCD front" style={{ width: '100%', borderRadius: '6px', maxHeight: '140px', objectFit: 'contain' }} />
+                          : <><ImagePlus size={28} /><span className="text-sm">Tải ảnh lên</span></>}
+                      </label>
+                      <input id="cccd-front" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleKycImageChange('cccdFront')} />
+                    </div>
+                    <div className="form-group">
+                      <label>Ảnh CCCD mặt sau</label>
+                      <label htmlFor="cccd-back" className="qr-upload-btn" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '20px', cursor: 'pointer', minHeight: '120px', justifyContent: 'center' }}>
+                        {kycForm.cccdBack
+                          ? <img src={kycForm.cccdBack} alt="CCCD back" style={{ width: '100%', borderRadius: '6px', maxHeight: '140px', objectFit: 'contain' }} />
+                          : <><ImagePlus size={28} /><span className="text-sm">Tải ảnh lên</span></>}
+                      </label>
+                      <input id="cccd-back" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleKycImageChange('cccdBack')} />
+                    </div>
+                  </div>
+                  <Button variant="primary" onClick={handleKycSubmit} disabled={kycSubmitting}>
+                    <ShieldCheck size={18} className="mr-2" />
+                    {kycSubmitting ? 'Đang nộp...' : 'Nộp Hồ Sơ KYC'}
+                  </Button>
+                </>
+              )}
             </Card>
           )}
 

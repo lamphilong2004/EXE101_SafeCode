@@ -1,18 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
-import { Users, AlertTriangle, CheckCircle, XCircle, Phone, Mail, FileText, BarChart3, Database, DollarSign, ArrowRight, Info, PlusCircle, MinusCircle, Banknote } from 'lucide-react';
+import { Users, AlertTriangle, CheckCircle, XCircle, Phone, Mail, FileText, BarChart3, Database, DollarSign, ArrowRight, Info, PlusCircle, MinusCircle, Banknote, ShieldCheck, ShieldX } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState('disputes'); // disputes, users, credits
+  const [activeTab, setActiveTab] = useState('disputes'); // disputes, users, credits, kyc
   const [disputes, setDisputes] = useState([]);
   const [users, setUsers] = useState([]);
   const [creditRequests, setCreditRequests] = useState([]);
+  const [kycRequests, setKycRequests] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedDispute, setSelectedDispute] = useState(null);
+  const [selectedKyc, setSelectedKyc] = useState(null);
   // Pagination
   const [dPage] = useState(1);
   const [uPage] = useState(1);
@@ -44,6 +46,9 @@ const AdminDashboard = () => {
       } else if (activeTab === 'credits') {
         const res = await api.get(`/admin/credit-requests`);
         setCreditRequests(res.data.requests);
+      } else if (activeTab === 'kyc') {
+        const res = await api.get('/kyc/pending?status=pending');
+        setKycRequests(res.data.users);
       }
     } catch (err) {
       console.error(err);
@@ -102,7 +107,22 @@ const AdminDashboard = () => {
     } catch(err) {
       toast.error(err.response?.data?.error || "Action failed");
     }
-  }
+  };
+
+  const handleReviewKyc = async (userId, action) => {
+    const adminNote = action === 'reject'
+      ? window.prompt("Lý do từ chối (bắt buộc):", "Ảnh CCCD không rõ nét")
+      : null;
+    if (action === 'reject' && adminNote === null) return;
+    try {
+      await api.post(`/kyc/${userId}/review`, { action, adminNote });
+      toast.success(action === 'approve' ? 'Đã phê duyệt KYC!' : 'Đã từ chối KYC.');
+      setSelectedKyc(null);
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Thao tác thất bại');
+    }
+  };
 
   return (
     <div className="admin-dashboard">
@@ -150,6 +170,9 @@ const AdminDashboard = () => {
         </button>
         <button className={`admin-tab ${activeTab === 'credits' ? 'active' : ''}`} onClick={() => setActiveTab('credits')}>
           <Banknote size={16} /> Nạp Credit AI
+        </button>
+        <button className={`admin-tab ${activeTab === 'kyc' ? 'active' : ''}`} onClick={() => setActiveTab('kyc')}>
+          <ShieldCheck size={16} /> KYC Danh Tính
         </button>
         <button className={`admin-tab ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}>
           <Users size={16} /> Quản lý User
@@ -262,7 +285,48 @@ const AdminDashboard = () => {
               </div>
             )}
 
-            {/* USERS TAB */}
+            {/* KYC TAB */}
+            {activeTab === 'kyc' && (
+              <div className="data-table-container">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Người Dùng</th>
+                      <th>Họ Tên CCCD</th>
+                      <th>Số CCCD</th>
+                      <th>Ngày Nộp</th>
+                      <th>Hành Động</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {kycRequests.length === 0 ? (
+                      <tr><td colSpan="5" className="text-center">Không có hồ sơ KYC đang chờ duyệt.</td></tr>
+                    ) : (
+                      kycRequests.map(u => (
+                        <tr key={u._id}>
+                          <td>
+                            <strong>{u.name}</strong><br/>
+                            <small>{u.email}</small><br/>
+                            <span className="status-badge">{u.role}</span>
+                          </td>
+                          <td>{u.kyc?.fullName || '-'}</td>
+                          <td>
+                            <span style={{ fontFamily: 'monospace' }}>{u.kyc?.cccdNumber || '-'}</span>
+                          </td>
+                          <td>
+                            <small>{u.kyc?.submittedAt ? new Date(u.kyc.submittedAt).toLocaleString('vi-VN') : '-'}</small>
+                          </td>
+                          <td>
+                            <Button size="sm" variant="outline" onClick={() => setSelectedKyc(u)}>Xem Hồ Sơ</Button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
             {activeTab === 'users' && (
               <div className="data-table-container">
                 <table className="admin-table">
@@ -414,6 +478,73 @@ const AdminDashboard = () => {
                 }
               }} style={{ flex: 1 }}>Xác nhận</Button>
               <Button variant="outline" onClick={() => setShowCreditModal(false)}>Hủy</Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {selectedKyc && (
+        <div className="modal-overlay">
+          <div className="checkout-modal premium-ui" style={{ maxWidth: '650px' }}>
+            <div className="checkout-header" style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 className="text-xl font-bold">Xem Xét Hồ Sơ KYC</h3>
+              <button onClick={() => setSelectedKyc(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><XCircle size={24} /></button>
+            </div>
+            <div className="checkout-body" style={{ padding: '20px', maxHeight: '70vh', overflowY: 'auto' }}>
+              <div className="payment-summary card-styled" style={{ marginBottom: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <span className="text-xs text-muted block">Người nộp:</span>
+                  <strong>{selectedKyc.name}</strong>
+                  <br/><small className="text-muted">{selectedKyc.email}</small>
+                </div>
+                <div>
+                  <span className="text-xs text-muted block">Vai trò:</span>
+                  <span className="status-badge">{selectedKyc.role}</span>
+                </div>
+                <div>
+                  <span className="text-xs text-muted block">Họ tên (CCCD):</span>
+                  <strong>{selectedKyc.kyc?.fullName}</strong>
+                </div>
+                <div>
+                  <span className="text-xs text-muted block">Số CCCD:</span>
+                  <strong style={{ fontFamily: 'monospace', letterSpacing: '0.1em' }}>{selectedKyc.kyc?.cccdNumber}</strong>
+                </div>
+                <div>
+                  <span className="text-xs text-muted block">Ngày nộp:</span>
+                  <small>{selectedKyc.kyc?.submittedAt ? new Date(selectedKyc.kyc.submittedAt).toLocaleString('vi-VN') : '-'}</small>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
+                <div>
+                  <label className="font-bold text-sm" style={{ display: 'block', marginBottom: '8px' }}>Mặt trước CCCD:</label>
+                  {selectedKyc.kyc?.cccdFront ? (
+                    <img
+                      src={selectedKyc.kyc.cccdFront}
+                      alt="CCCD mặt trước"
+                      style={{ width: '100%', borderRadius: '8px', border: '1px solid var(--border-color)', objectFit: 'contain', maxHeight: '200px' }}
+                    />
+                  ) : <p className="text-muted text-sm italic">Không có ảnh</p>}
+                </div>
+                <div>
+                  <label className="font-bold text-sm" style={{ display: 'block', marginBottom: '8px' }}>Mặt sau CCCD:</label>
+                  {selectedKyc.kyc?.cccdBack ? (
+                    <img
+                      src={selectedKyc.kyc.cccdBack}
+                      alt="CCCD mặt sau"
+                      style={{ width: '100%', borderRadius: '8px', border: '1px solid var(--border-color)', objectFit: 'contain', maxHeight: '200px' }}
+                    />
+                  ) : <p className="text-muted text-sm italic">Không có ảnh</p>}
+                </div>
+              </div>
+            </div>
+            <div className="checkout-footer" style={{ padding: '20px', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <Button variant="success" size="sm" onClick={() => handleReviewKyc(selectedKyc._id, 'approve')} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <ShieldCheck size={16} /> Phê Duyệt KYC
+              </Button>
+              <Button variant="danger" size="sm" onClick={() => handleReviewKyc(selectedKyc._id, 'reject')} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <ShieldX size={16} /> Từ Chối
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setSelectedKyc(null)}>Đóng</Button>
             </div>
           </div>
         </div>

@@ -38,6 +38,22 @@ const UserSchema = new mongoose.Schema(
 
     refreshTokenVersion: { type: Number, default: 0 },
     lastLoginAt: { type: Date, default: null },
+
+    kyc: {
+      status: {
+        type: String,
+        enum: ["none", "pending", "approved", "rejected"],
+        default: "none",
+        index: true,
+      },
+      cccdFront: { type: String, default: null },  // base64 or URL
+      cccdBack:  { type: String, default: null },
+      fullName:  { type: String, default: null },
+      cccdNumber: { type: String, default: null },
+      submittedAt: { type: Date, default: null },
+      reviewedAt:  { type: Date, default: null },
+      adminNote:   { type: String, default: null },
+    },
   },
   { timestamps: true }
 );
