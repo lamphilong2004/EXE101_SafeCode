@@ -5,7 +5,7 @@ import { File } from "../models/File.js";
 import { Transaction } from "../models/Transaction.js";
 import { User } from "../models/User.js";
 import { CreditHistory } from "../models/CreditHistory.js";
-import { createNotification } from "./notifications.controller.js";
+import { createNotification } from "../socket.js";
 
 export async function stripeWebhook(req, res) {
   const sig = req.headers["stripe-signature"];
