@@ -18,9 +18,9 @@ export const env = {
   JWT_SECRET: required("JWT_SECRET"),
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "7d",
 
-  AWS_REGION: required("AWS_REGION"),
-  AWS_ACCESS_KEY_ID: required("AWS_ACCESS_KEY_ID"),
-  AWS_SECRET_ACCESS_KEY: required("AWS_SECRET_ACCESS_KEY"),
+  AWS_REGION: process.env.AWS_REGION || "ap-southeast-1",
+  AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID || "mock",
+  AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY || "mock",
   S3_BUCKET_ENCRYPTED: process.env.S3_BUCKET_ENCRYPTED,
   S3_BUCKET_PUBLIC: process.env.S3_BUCKET_PUBLIC,
 
@@ -33,8 +33,8 @@ export const env = {
 
   MASTER_KEY_B64: required("MASTER_KEY_B64"),
 
-  STRIPE_SECRET_KEY: required("STRIPE_SECRET_KEY"),
-  STRIPE_WEBHOOK_SECRET: required("STRIPE_WEBHOOK_SECRET"),
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "mock",
+  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || "mock",
   APP_BASE_URL: process.env.APP_BASE_URL || "http://localhost:5173",
 
   TRIAL_DURATION_HOURS: Number(process.env.TRIAL_DURATION_HOURS) || 24,
