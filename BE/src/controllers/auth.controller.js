@@ -145,7 +145,7 @@ async function getGoogleUserPayload(idToken) {
 
 export async function googleLogin(req, res, next) {
   try {
-    const { token: idToken, role } = req.body || {};
+    const { token: idToken, role, isRegisteringConfirmation } = req.body || {};
     if (!idToken) throw httpError(400, "Google ID token is required");
 
     const payload = await getGoogleUserPayload(idToken);
@@ -155,6 +155,10 @@ export async function googleLogin(req, res, next) {
     let user = await User.findOne({ email: String(email).toLowerCase().trim() });
     
     if (!user) {
+      if (!isRegisteringConfirmation) {
+        return res.status(202).json({ actionRequired: 'select_role', email, name });
+      }
+
       const resolvedRole = role || 'client';
       if (resolvedRole !== 'freelancer' && resolvedRole !== 'client') {
         throw httpError(400, "Invalid role for registration");

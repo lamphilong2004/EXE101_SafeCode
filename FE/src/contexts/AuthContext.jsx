@@ -82,9 +82,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const loginWithGoogle = async (role, token) => {
+  const loginWithGoogle = async (role, token, isRegisteringConfirmation = false) => {
     try {
-      const res = await api.post('/auth/google', { token, role });
+      const res = await api.post('/auth/google', { token, role, isRegisteringConfirmation });
+      
+      if (res.status === 202 && res.data.actionRequired === 'select_role') {
+        return { success: false, actionRequired: 'select_role' };
+      }
+
       const { token: appToken, user } = res.data;
       
       localStorage.setItem('safecode_token', appToken);

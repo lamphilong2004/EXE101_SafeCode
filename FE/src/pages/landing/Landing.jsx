@@ -15,6 +15,7 @@ const Landing = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '', name: '' });
   const [scrolled, setScrolled] = useState(false);
+  const [pendingGoogleToken, setPendingGoogleToken] = useState(null);
 
   const { login, signup, loginWithGoogle } = useAuth();
   const roleRef = useRef(role);
@@ -62,7 +63,12 @@ const Landing = () => {
     const idToken = response.credential;
     setIsLoggingIn(true);
     try {
-      const result = await loginWithGoogle(roleRef.current, idToken);
+      const result = await loginWithGoogle(roleRef.current, idToken, false);
+      if (result.actionRequired === 'select_role') {
+        setPendingGoogleToken(idToken);
+        return;
+      }
+
       if (result.success) {
         toast.success('Đăng nhập bằng Google thành công!');
         window.history.pushState(null, '', '/');
@@ -83,7 +89,7 @@ const Landing = () => {
       const timer = setTimeout(() => {
         if (window.google?.accounts?.id) {
           const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID_PLACEHOLDER';
-          
+
           window.google.accounts.id.initialize({
             client_id: clientId,
             callback: handleGoogleCredentialResponse,
@@ -94,10 +100,10 @@ const Landing = () => {
           if (buttonParent) {
             window.google.accounts.id.renderButton(
               buttonParent,
-              { 
-                theme: "outline", 
-                size: "large", 
-                width: buttonParent.clientWidth || 320, 
+              {
+                theme: "outline",
+                size: "large",
+                width: buttonParent.clientWidth || 320,
                 text: "continue_with",
                 shape: "rectangular"
               }
@@ -116,7 +122,7 @@ const Landing = () => {
       <nav className={`landing-nav ${scrolled ? 'nav-scrolled' : ''}`}>
         <div className="landing-logo">
           <ShieldCheck size={26} className="logo-icon pulse-animation" />
-          <span>safeCode</span>
+          <span>SafeCode</span>
         </div>
 
         <div className="landing-nav-links hidden md:flex">
@@ -190,7 +196,7 @@ const Landing = () => {
         <div className="section-header">
           <h2 className="section-title">Quy trình vận hành</h2>
           <p className="section-subtitle">
-            safeCode đơn giản hóa quy trình thanh toán và bàn giao sản phẩm kỹ thuật số
+            SafeCode đơn giản hóa quy trình thanh toán và bàn giao sản phẩm kỹ thuật số
             thông qua hệ thống escrow mã hóa tự động.
           </p>
         </div>
@@ -390,23 +396,96 @@ const Landing = () => {
             </div>
 
             {/* Status indicator */}
-            <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:'1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
               <span style={{
-                width:6, height:6, borderRadius:'50%',
-                background:'var(--secondary)',
-                boxShadow:'0 0 6px var(--secondary)',
-                display:'inline-block',
-                animation:'pulse-dot 2s infinite'
+                width: 6, height: 6, borderRadius: '50%',
+                background: 'var(--secondary)',
+                boxShadow: '0 0 6px var(--secondary)',
+                display: 'inline-block',
+                animation: 'pulse-dot 2s infinite'
               }}></span>
               <span style={{
-                fontFamily:'JetBrains Mono,monospace',
-                fontSize:'0.68rem',
-                letterSpacing:'0.08em',
-                color:'var(--secondary)',
-                textTransform:'uppercase'
+                fontFamily: 'JetBrains Mono,monospace',
+                fontSize: '0.68rem',
+                letterSpacing: '0.08em',
+                color: 'var(--secondary)',
+                textTransform: 'uppercase'
               }}>Giao thức an toàn</span>
             </div>
 
+            {pendingGoogleToken ? (
+              <div className="auth-form" style={{textAlign: 'center', padding: '1rem 0'}}>
+                <h3 style={{marginBottom: '1.5rem', color: 'var(--text-color)'}}>
+                  Vui lòng chọn vai trò để hoàn tất đăng ký
+                </h3>
+                
+                <div className="role-selector" style={{margin: '0 auto 2rem auto'}}>
+                  <div className="role-options">
+                    <button
+                      type="button"
+                      className={`role-btn ${role === 'freelancer' ? 'active-freelancer' : ''}`}
+                      onClick={() => setRole('freelancer')}
+                    >
+                      <Code size={18} style={{ marginBottom: '0.3rem' }} />
+                      <span>Freelancer</span>
+                      <small>Bán Source Code</small>
+                    </button>
+                    <button
+                      type="button"
+                      className={`role-btn ${role === 'client' ? 'active-client' : ''}`}
+                      onClick={() => setRole('client')}
+                    >
+                      <Wallet size={18} style={{ marginBottom: '0.3rem' }} />
+                      <span>Khách hàng</span>
+                      <small>Mua Source Code</small>
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{display: 'flex', gap: '1rem', flexDirection: 'column'}}>
+                  <Button 
+                    variant="primary" 
+                    className={`auth-submit-btn ${role === 'client' ? 'bg-emerald-500' : ''}`}
+                    disabled={isLoggingIn}
+                    onClick={async () => {
+                      setIsLoggingIn(true);
+                      const res = await loginWithGoogle(roleRef.current, pendingGoogleToken, true);
+                      if (res.success) {
+                        toast.success('Đăng ký bằng Google thành công!');
+                        window.history.pushState(null, '', '/');
+                        window.location.reload();
+                      } else {
+                        toast.error(res.message);
+                        setIsLoggingIn(false);
+                      }
+                    }}
+                  >
+                    {isLoggingIn ? 'Đang xử lý...' : 'Hoàn tất đăng ký'}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setPendingGoogleToken(null);
+                      setTimeout(() => {
+                        if (window.google?.accounts?.id) {
+                          const buttonParent = document.getElementById("google-signin-button");
+                          if (buttonParent) {
+                            window.google.accounts.id.renderButton(
+                              buttonParent,
+                              { theme: "outline", size: "large", width: buttonParent.clientWidth || 320, text: "continue_with", shape: "rectangular" }
+                            );
+                          }
+                        }
+                      }, 100);
+                    }}
+                    disabled={isLoggingIn}
+                    style={{width: '100%', borderColor: 'var(--border-color)', color: 'var(--text-color)'}}
+                  >
+                    Hủy bỏ
+                  </Button>
+                </div>
+              </div>
+            ) : (
             <form onSubmit={handleSubmit} className="auth-form">
               {isRegistering && (
                 <div className="input-group">
@@ -500,13 +579,13 @@ const Landing = () => {
                 <span style={{ margin: '0 12px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>HOẶC</span>
                 <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }}></div>
               </div>
-              
-              <div 
-                id="google-signin-button" 
-                style={{ 
-                  width: '100%', 
-                  display: 'flex', 
-                  justifyContent: 'center', 
+
+              <div
+                id="google-signin-button"
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  justifyContent: 'center',
                   minHeight: '44px',
                   marginTop: '4px'
                 }}
@@ -525,6 +604,7 @@ const Landing = () => {
                 </button>
               </div>
             </form>
+            )}
           </div>
         </div>
       )}
