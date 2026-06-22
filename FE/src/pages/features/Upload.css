@@ -110,13 +110,29 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   font-size: 0.95rem;
-  background-color: var(--surface-color);
+  background-color: #0f172a !important; /* Force solid dark background to prevent browser default white */
+  color: var(--text-main) !important;
   outline: none;
   transition: border-color 0.2s;
 }
 
+.form-input option {
+  background-color: #0f172a !important; /* Force solid dark background */
+  color: #f1f5f9 !important; /* Force light text */
+}
+
 .form-input:focus {
   border-color: var(--primary-color);
+  background-color: #0f172a !important;
+}
+
+.form-input:-webkit-autofill,
+.form-input:-webkit-autofill:hover, 
+.form-input:-webkit-autofill:focus, 
+.form-input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px #0f172a inset !important;
+    -webkit-text-fill-color: #f1f5f9 !important;
+    transition: background-color 5000s ease-in-out 0s;
 }
 
 textarea.form-input {

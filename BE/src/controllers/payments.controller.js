@@ -77,19 +77,69 @@ export async function createCheckout(req, res, next) {
 
 export async function createPayosCheckout(req, res, next) {
   try {
-    if (!isPayosConfigured) {
-      throw httpError(500, "PayOS chưa được cấu hình. Vui lòng thêm API Key vào .env");
-    }
-
     const { fileId } = req.params;
     const fileDoc = await File.findById(fileId);
     if (!fileDoc) throw httpError(404, "File not found");
     if (fileDoc.intendedClientEmail !== req.user.email) throw httpError(403, "Forbidden");
     if (fileDoc.status === "Paid") return res.json({ alreadyPaid: true });
-    if (fileDoc.status !== "Uploaded" && fileDoc.status !== "CheckoutCreated" && fileDoc.status !== "Locked") {
+    if (fileDoc.status !== "Uploaded" && fileDoc.status !== "CheckoutCreated" && fileDoc.status !== "Locked" && fileDoc.status !== "Testing Phase") {
       throw httpError(409, "File is not ready for checkout");
     }
 
+    // === MOCK PAYMENT FLOW (For Demo/Presentation) ===
+    if (!isPayosConfigured) {
+      console.log(`[MOCK PAYMENT] Simulating successful payment for file ${fileId}`);
+      
+      fileDoc.status = "Paid";
+      fileDoc.paidAt = new Date();
+      await fileDoc.save();
+
+      // Simulate a Transaction record
+      await Transaction.create({
+        fileId: fileDoc._id,
+        freelancerId: fileDoc.freelancerId,
+        clientEmail: req.user.email,
+        type: "checkout",
+        status: "Succeeded",
+        amount: fileDoc.price.amount,
+        currency: fileDoc.price.currency,
+        stripe: { eventId: `mock_${Date.now()}` },
+      });
+
+      // Issue License
+      const { issueLicense } = await import("../services/license.service.js");
+      const { sendDecryptionKeyEmail } = await import("../services/email.service.js");
+      const { rewardCreditsForSale } = await import("../services/credit.service.js");
+      const { createNotification } = await import("../socket.js");
+      
+      try {
+        const { key: licenseSerial } = await issueLicense(req.user.id, fileDoc._id);
+        await sendDecryptionKeyEmail(fileDoc.intendedClientEmail, {
+          fileName: fileDoc.title,
+          licenseKey: licenseSerial,
+          isV3: true,
+        });
+
+        await rewardCreditsForSale(fileDoc.freelancerId, {
+          amountInVnd: fileDoc.price.amount,
+          fileId: fileDoc._id,
+        });
+
+        createNotification(
+          String(fileDoc.freelancerId),
+          "Thanh toán (Giả lập) thành công! 🎉",
+          `Khách hàng đã thanh toán thành công cho "${fileDoc.title}".`,
+          { type: "payment", relatedFileId: fileDoc._id }
+        );
+      } catch (err) {
+        console.error("[MOCK PAYMENT] Post-payment actions failed:", err);
+      }
+
+      // Instead of returning a checkoutUrl, return a flag to tell the frontend to simulate success
+      return res.json({ mockSuccess: true });
+    }
+
+    // === REAL PAYOS FLOW ===
     const { successUrl, cancelUrl } = req.body || {};
     const finalSuccessUrl = successUrl || `${env.APP_BASE_URL}/payment/success?fileId=${fileId}`;
     const finalCancelUrl = cancelUrl || `${env.APP_BASE_URL}/payment/cancel?fileId=${fileId}`;

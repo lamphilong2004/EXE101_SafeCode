@@ -13,8 +13,8 @@ const Upload = ({ onAddFile }) => {
   const [projectType, setProjectType] = useState('code');
   const [demoType, setDemoType] = useState('none');
   const [demoUrl, setDemoUrl] = useState('');
+  const [trialMinutes, setTrialMinutes] = useState(15);
   const [buildFile, setBuildFile] = useState(null);
-  const [trialMinutes, setTrialMinutes] = useState('5');
   const [isUploading, setIsUploading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [estimatedCost, setEstimatedCost] = useState(null);
@@ -76,7 +76,7 @@ const Upload = ({ onAddFile }) => {
     }
 
     setIsUploading(true);
-    
+
     if (file.size === 0) {
       toast.error("File is empty. Please select a non-empty file.");
       setIsUploading(false);
@@ -85,16 +85,16 @@ const Upload = ({ onAddFile }) => {
 
     try {
       // Step 1: Create File Listing Record in MongoDB
-      const createRes = await api.post('/files', { 
-        title: file.name, 
-        description: "Source code upload", 
-        price: { amount: parseFloat(amount) || 0, currency: 'vnd' }, 
-        intendedClientEmail: clientEmail, 
+      const createRes = await api.post('/files', {
+        title: file.name,
+        description: "Source code upload",
+        price: { amount: parseFloat(amount) || 0, currency: 'vnd' },
+        intendedClientEmail: clientEmail,
         demo: { type: demoType, url: demoUrl },
         projectType,
         trialMinutes: parseInt(trialMinutes) || 0
       });
-      
+
       const fileId = createRes.data.fileId;
 
       // Step 2: Upload actual binary to S3 via Backend
@@ -107,7 +107,7 @@ const Upload = ({ onAddFile }) => {
       await api.post(`/files/${fileId}/upload`, formData);
 
       toast.success("File securely encrypted and sent to database!");
-      
+
       // Notify parent to refresh list
       onAddFile({
         id: fileId,
@@ -117,7 +117,7 @@ const Upload = ({ onAddFile }) => {
         status: 'Uploaded',
         amount: parseFloat(amount) || 0
       });
-      
+
       setIsSuccess(true);
     } catch (error) {
       console.error(error);
@@ -145,8 +145,8 @@ const Upload = ({ onAddFile }) => {
         <Card className="upload-card">
           {!isSuccess ? (
             <>
-              <div 
-                className="dropzone" 
+              <div
+                className="dropzone"
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={handleDrop}
               >
@@ -179,15 +179,15 @@ const Upload = ({ onAddFile }) => {
                     </button>
                   </div>
 
-                    <div className="upload-form">
-                      <div className="input-group">
-                        <label>Email Khách hàng <span className="text-danger">*</span></label>
-                        <input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} placeholder="khachhang@email.com" className="form-input" />
-                      </div>
-                      <div className="input-group">
-                        <label>Giá bán (VNĐ) <span className="text-danger">*</span></label>
-                        <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="VD: 5000000" className="form-input" />
-                      </div>
+                  <div className="upload-form">
+                    <div className="input-group">
+                      <label>Email Khách hàng <span className="text-danger">*</span></label>
+                      <input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} placeholder="khachhang@email.com" className="form-input" />
+                    </div>
+                    <div className="input-group">
+                      <label>Giá bán (VNĐ) <span className="text-danger">*</span></label>
+                      <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="VD: 5000000" className="form-input" />
+                    </div>
                     <div className="input-group">
                       <label>Project Type</label>
                       <select className="form-input" value={projectType} onChange={(e) => setProjectType(e.target.value)}>
@@ -200,7 +200,7 @@ const Upload = ({ onAddFile }) => {
                       <label>Demo Type</label>
                       <select className="form-input" value={demoType} onChange={(e) => setDemoType(e.target.value)}>
                         <option value="none">No Demo</option>
-                        <option value="url">URL Live Preview (Managed Sandbox)</option>
+                        <option value="url">Vercel / URL Live Preview</option>
                         <option value="build">Build Binary (Executable/Installer)</option>
                       </select>
                     </div>
@@ -212,6 +212,13 @@ const Upload = ({ onAddFile }) => {
                       </div>
                     )}
 
+                    {demoType !== 'none' && (
+                      <div className="input-group">
+                        <label>Thời gian dùng thử (Phút)</label>
+                        <input type="number" value={trialMinutes} onChange={(e) => setTrialMinutes(e.target.value)} placeholder="VD: 15" className="form-input" />
+                      </div>
+                    )}
+
                     {demoType === 'build' && (
                       <div className="input-group">
                         <label>Build Binary File</label>
@@ -219,12 +226,6 @@ const Upload = ({ onAddFile }) => {
                         {buildFile && <p className="text-xs text-success mt-1">Selected: {buildFile.name}</p>}
                       </div>
                     )}
-
-                    <div className="input-group">
-                      <label>Trial Minutes (Phút dùng thử)</label>
-                      <input type="number" value={trialMinutes} onChange={(e) => setTrialMinutes(e.target.value)} placeholder="5" className="form-input" />
-                      <p className="text-xs text-muted mt-1">Khách được xem demo miễn phí trong số phút này (trong vòng 24h).</p>
-                    </div>
                     <div className="input-group">
                       <label>Description (Optional)</label>
                       <textarea placeholder="e.g. Frontend React Files" className="form-input" rows={2}></textarea>
@@ -241,9 +242,9 @@ const Upload = ({ onAddFile }) => {
                       </div>
                     )}
 
-                    <Button 
-                      variant="primary" 
-                      onClick={handleUpload} 
+                    <Button
+                      variant="primary"
+                      onClick={handleUpload}
                       disabled={isUploading}
                       className="w-full mt-4"
                     >

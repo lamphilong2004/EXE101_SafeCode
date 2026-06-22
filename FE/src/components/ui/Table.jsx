@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   X, ExternalLink, Clock, CheckCircle,
@@ -14,7 +15,7 @@ import DisputeRoom from '../../pages/features/DisputeRoom';
 import './Table.css';
 
 const FreelancerViewModal = ({ file, onClose, onConfirm, onReject }) => {
-  return (
+  return createPortal(
     <div className="modal-overlay">
       <div className="freelancer-view-modal premium-ui">
         <div className="checkout-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -74,12 +75,13 @@ const FreelancerViewModal = ({ file, onClose, onConfirm, onReject }) => {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
 /* ─── Decrypt Progress Modal ─── */
-const DecryptProgressModal = ({ stage, percent, label, error, onClose }) => (
+const DecryptProgressModal = ({ stage, percent, label, error, onClose }) => createPortal(
   <div className="modal-overlay" style={{ zIndex: 9999 }}>
     <div className="checkout-modal premium-ui" style={{ maxWidth: 420, textAlign: 'center' }}>
       <div className="checkout-header" style={{ justifyContent: 'center', borderBottom: '1px solid var(--border-color)', padding: '18px 24px' }}>
@@ -143,7 +145,8 @@ const DecryptProgressModal = ({ stage, percent, label, error, onClose }) => (
         )}
       </div>
     </div>
-  </div>
+  </div>,
+  document.body
 );
 
 const Countdown = ({ file, updateFileStatus }) => {
@@ -215,7 +218,7 @@ const PreviewModal = ({ file, onClose }) => {
     };
   }, [file.id, onClose, setUser]);
 
-  return (
+  return createPortal(
     <div className="modal-overlay">
       <div className="preview-modal-container">
         <div className="preview-modal-header">
@@ -249,7 +252,8 @@ const PreviewModal = ({ file, onClose }) => {
           />
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
@@ -261,6 +265,22 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
   const [activeChatFile, setActiveChatFile] = useState(null);
   const [activeFreelancerView, setActiveFreelancerView] = useState(null);
   const [expandedDisputeRow, setExpandedDisputeRow] = useState(null);
+
+  // Filter state
+  const [activeFilter, setActiveFilter] = useState('Tất cả');
+  const filterTabs = [
+    { label: 'Tất cả', statuses: [] },
+    { label: 'Chờ thanh toán', statuses: ['Locked', 'Verifying Payment', 'Pending Payment'] },
+    { label: 'Đang dùng thử', statuses: ['Uploaded', 'Testing Phase'] },
+    { label: 'Hoàn thành', statuses: ['Paid', 'Delivered'] },
+    { label: 'Tranh chấp', statuses: ['Disputed'] }
+  ];
+
+  const filteredData = data.filter(row => {
+    if (activeFilter === 'Tất cả') return true;
+    const tab = filterTabs.find(t => t.label === activeFilter);
+    return tab && tab.statuses.includes(row.status);
+  });
 
   // Decrypt progress state
   const [decryptState, setDecryptState] = useState(null); // null | { stage, percent, label, error }
@@ -319,7 +339,12 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
         successUrl: window.location.href, // Or a dedicated success page
         cancelUrl: window.location.href
       });
-      if (res.data.checkoutUrl) {
+
+      if (res.data.mockSuccess) {
+        toast.success("✅ Thanh toán Giả lập thành công! Source code đã được mở khóa.");
+        updateFileStatus(checkoutFile.id, 'Paid');
+        setCheckoutFile(null);
+      } else if (res.data.checkoutUrl) {
         window.location.href = res.data.checkoutUrl;
       } else if (res.data.alreadyPaid) {
         toast.info("File này đã được thanh toán!");
@@ -515,14 +540,15 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
           onClose={() => setActivePreviewFile(null)}
         />
       )}
-      {activeChatFile && (
+      {activeChatFile && createPortal(
         <ChatBox
           fileId={activeChatFile}
           userRole={userRole}
           onClose={() => setActiveChatFile(null)}
-        />
+        />,
+        document.body
       )}
-      {checkoutFile && (
+      {checkoutFile && createPortal(
         <div className="modal-overlay">
           <div className="checkout-modal premium-ui">
             <div className="checkout-header">
@@ -625,9 +651,21 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
               <Button variant="outline" onClick={() => setCheckoutFile(null)} style={{ borderRadius: '10px', width: '100%' }}>Hủy bỏ</Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       
+      <div className="filter-tabs">
+        {filterTabs.map(tab => (
+          <button 
+            key={tab.label}
+            className={`filter-tab ${activeFilter === tab.label ? 'active' : ''}`}
+            onClick={() => setActiveFilter(tab.label)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
       <div className="table-container">
         <table className="data-table">
         <thead>
@@ -639,7 +677,7 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
           </tr>
         </thead>
         <tbody>
-          {data.map((row) => (
+          {filteredData.map((row) => (
           <React.Fragment key={row.id}>
             <tr>
               <td>
@@ -772,7 +810,7 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
             )}
           </React.Fragment>
           ))}
-          {data.length === 0 && (
+          {filteredData.length === 0 && (
             <tr>
               <td colSpan={columns.length + 1} style={{ padding: '64px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', maxWidth: '400px', margin: '0 auto' }}>

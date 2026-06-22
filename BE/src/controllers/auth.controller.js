@@ -145,10 +145,6 @@ export async function login(req, res, next) {
     const ok = await bcrypt.compare(String(password), user.passwordHash);
     if (!ok) throw httpError(401, "Invalid credentials");
 
-    if (user.isVerified === false) {
-      return res.status(403).json({ error: "Vui lòng xác thực email của bạn", actionRequired: 'verify_otp', email: user.email });
-    }
-
     user.lastLoginAt = new Date();
     await user.save();
 
