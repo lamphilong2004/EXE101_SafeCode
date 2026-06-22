@@ -12,6 +12,6 @@ export const isPayosConfigured =
   clientId !== 'YOUR_PAYOS_CLIENT_ID' &&
   clientId.trim() !== '';
 
-const payos = new PayOS({ clientId, apiKey, checksumKey });
+const payos = new PayOS(clientId, apiKey, checksumKey);
 
 export default payos;

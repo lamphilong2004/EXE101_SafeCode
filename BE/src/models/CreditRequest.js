@@ -23,7 +23,14 @@ const creditRequestSchema = new mongoose.Schema({
   },
   billImageUrl: {
     type: String,
-    required: true
+    required: false
+  },
+  payosOrderCode: {
+    type: Number,
+    index: true
+  },
+  paymentLinkId: {
+    type: String
   },
   bankAccountDetails: {
     type: String

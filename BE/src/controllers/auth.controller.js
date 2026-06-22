@@ -1,9 +1,11 @@
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { User } from "../models/User.js";
 import { httpError } from "../middleware/error.js";
 import { signJwt } from "../middleware/auth.js";
 import { OAuth2Client } from "google-auth-library";
 import jwt from "jsonwebtoken";
+import { sendPasswordResetEmail } from "../services/email.service.js";
 
 function sanitizeUser(user) {
   return {
@@ -181,6 +183,54 @@ export async function googleLogin(req, res, next) {
 
     const token = signJwt(user);
     res.json({ token, user: sanitizeUser(user) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function forgotPassword(req, res, next) {
+  try {
+    const { email } = req.body || {};
+    if (!email) throw httpError(400, "Email is required");
+
+    const user = await User.findOne({ email: String(email).toLowerCase().trim() });
+    if (!user) {
+      return res.json({ success: true, message: "If that email is registered, we have sent a reset link." });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+    await user.save();
+
+    const resetUrl = `${req.headers.origin || "http://localhost:5173"}?token=${resetToken}`;
+    await sendPasswordResetEmail(user.email, resetUrl);
+
+    res.json({ success: true, message: "If that email is registered, we have sent a reset link." });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function resetPassword(req, res, next) {
+  try {
+    const { token, newPassword } = req.body || {};
+    if (!token || !newPassword) throw httpError(400, "Token and new password are required");
+    if (String(newPassword).length < 6) throw httpError(400, "Password must be at least 6 characters");
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) throw httpError(400, "Invalid or expired reset token");
+
+    user.passwordHash = await bcrypt.hash(String(newPassword), 10);
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    res.json({ success: true, message: "Password has been reset successfully" });
   } catch (err) {
     next(err);
   }

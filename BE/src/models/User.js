@@ -39,6 +39,9 @@ const UserSchema = new mongoose.Schema(
     refreshTokenVersion: { type: Number, default: 0 },
     lastLoginAt: { type: Date, default: null },
 
+    resetPasswordToken: { type: String, default: null },
+    resetPasswordExpires: { type: Date, default: null },
+
     kyc: {
       status: {
         type: String,

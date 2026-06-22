@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   ShieldCheck, Lock, Mail, Code, Wallet, Zap,
-  X, ArrowRight, Star, Users, MessageSquare, Key
+  X, ArrowRight, Star, Users, MessageSquare, Key, Crown, Diamond, Check
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
@@ -10,12 +10,13 @@ import './Landing.css';
 
 const Landing = () => {
   const [showModal, setShowModal] = useState(false);
+  const [modalView, setModalView] = useState('login'); // 'login' | 'register' | 'forgot' | 'reset'
   const [role, setRole] = useState('freelancer');
-  const [isRegistering, setIsRegistering] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [formData, setFormData] = useState({ email: '', password: '', name: '' });
+  const [formData, setFormData] = useState({ email: '', password: '', confirmPassword: '', name: '' });
   const [scrolled, setScrolled] = useState(false);
   const [pendingGoogleToken, setPendingGoogleToken] = useState(null);
+  const [resetToken, setResetToken] = useState(null);
 
   const { login, signup, loginWithGoogle } = useAuth();
   const roleRef = useRef(role);
@@ -28,11 +29,23 @@ const Landing = () => {
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
+    
+    // Check for reset token in URL
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    if (token) {
+      setResetToken(token);
+      setModalView('reset');
+      setShowModal(true);
+      // Remove token from URL for cleaner look
+      window.history.replaceState({}, document.title, "/");
+    }
+    
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const openModal = (register = false) => {
-    setIsRegistering(register);
+  const openModal = (view = 'login') => {
+    setModalView(view);
     setShowModal(true);
   };
 
@@ -44,13 +57,49 @@ const Landing = () => {
     e.preventDefault();
     setIsLoggingIn(true);
     let result;
-    if (isRegistering) {
+    
+    if (modalView === 'forgot') {
+      try {
+        const res = await api.post('/auth/forgot-password', { email: formData.email });
+        toast.success(res.data.message || 'Đã gửi link khôi phục nếu email tồn tại.');
+        setModalView('login');
+      } catch (err) {
+        toast.error('Lỗi khi gửi yêu cầu quên mật khẩu.');
+      }
+      setIsLoggingIn(false);
+      return;
+    }
+
+    if (modalView === 'reset') {
+      if (formData.password !== formData.confirmPassword) {
+        toast.error('Mật khẩu xác nhận không khớp!');
+        setIsLoggingIn(false);
+        return;
+      }
+      try {
+        const res = await api.post('/auth/reset-password', { token: resetToken, newPassword: formData.password });
+        toast.success(res.data.message || 'Đặt lại mật khẩu thành công!');
+        setModalView('login');
+      } catch (err) {
+        toast.error(err.response?.data?.error || 'Lỗi khi đặt lại mật khẩu.');
+      }
+      setIsLoggingIn(false);
+      return;
+    }
+
+    if (modalView === 'register') {
+      if (formData.password !== formData.confirmPassword) {
+        toast.error('Mật khẩu xác nhận không khớp!');
+        setIsLoggingIn(false);
+        return;
+      }
       result = await signup(role, formData.email, formData.password, formData.name);
     } else {
       result = await login(role, formData.email, formData.password);
     }
+    
     if (result.success) {
-      toast.success(isRegistering ? 'Tài khoản đã được tạo!' : 'Chào mừng trở lại!');
+      toast.success(modalView === 'register' ? 'Tài khoản đã được tạo!' : 'Chào mừng trở lại!');
       window.history.pushState(null, '', '/');
       window.location.reload();
     } else {
@@ -113,7 +162,7 @@ const Landing = () => {
       }, 150);
       return () => clearTimeout(timer);
     }
-  }, [showModal, isRegistering]);
+  }, [showModal, modalView]);
 
   return (
     <div className="landing-container">
@@ -128,14 +177,15 @@ const Landing = () => {
         <div className="landing-nav-links hidden md:flex">
           <a href="#features">Features</a>
           <a href="#how-it-works">Security</a>
+          <a href="#pricing">Pricing</a>
           <a href="#testimonials">Reviews</a>
         </div>
 
         <div className="landing-nav-actions">
-          <Button variant="outline" className="btn-login" onClick={() => openModal(false)}>
+          <Button variant="outline" className="btn-login" onClick={() => openModal('login')}>
             Login
           </Button>
-          <Button variant="primary" className="btn-signup" onClick={() => openModal(true)}>
+          <Button variant="primary" className="btn-signup" onClick={() => openModal('register')}>
             Get Started
           </Button>
         </div>
@@ -164,10 +214,10 @@ const Landing = () => {
           </p>
 
           <div className="hero-cta">
-            <Button variant="primary" size="large" onClick={() => openModal(true)} className="cta-btn shadow-glow">
+            <Button variant="primary" size="large" onClick={() => openModal('register')} className="cta-btn shadow-glow">
               Bắt đầu ngay <ArrowRight size={18} className="ml-2" />
             </Button>
-            <Button variant="secondary" size="large" onClick={() => openModal(false)} className="cta-btn glass-btn">
+            <Button variant="secondary" size="large" onClick={() => openModal('login')} className="cta-btn glass-btn">
               Xem Demo
             </Button>
           </div>
@@ -297,6 +347,86 @@ const Landing = () => {
         </div>
       </section>
 
+      {/* ── Pricing ── */}
+      <section id="pricing" className="pricing-section">
+        <div className="pricing-intro">
+          <div className="pricing-icons">
+            <div className="pricing-icon-wrapper"><Crown size={20} color="#06b6d4" /></div>
+            <div className="pricing-icon-wrapper"><Zap size={20} color="#10b981" /></div>
+            <div className="pricing-icon-wrapper"><Diamond size={20} color="#d946ef" /></div>
+          </div>
+          <h2>Mở Khóa Premium</h2>
+          <p>Chọn gói phù hợp - Nâng tầm trải nghiệm</p>
+        </div>
+
+        <div className="pricing-grid">
+          {/* Cyan Card */}
+          <div className="pricing-card neon-cyan">
+            <div className="pricing-badge">Featured</div>
+            <div className="pricing-header">
+              <div className="pricing-icon"><Crown size={48} /></div>
+              <h3 className="pricing-tier">SAFECODE VIP</h3>
+              <div className="pricing-price-text">Miễn phí</div>
+            </div>
+
+            <div className="pricing-features">
+              <div className="feature-item">
+                <Check size={18} />
+                <span>Tuyệt vời để <strong>trải nghiệm thử</strong></span>
+              </div>
+              <div className="feature-item">
+                <Check size={18} />
+                <span>Tặng ngay <strong>50 Credit</strong> khi đăng ký</span>
+              </div>
+              <div className="feature-item">
+                <Check size={18} />
+                <span>Truy cập đầy đủ tính năng mã hóa</span>
+              </div>
+              <div className="feature-item">
+                <Check size={18} />
+                <span>Thanh toán Escrow an toàn</span>
+              </div>
+            </div>
+
+            <button className="pricing-btn" onClick={() => openModal('register')}>
+              Đăng Ký Ngay
+            </button>
+          </div>
+
+          {/* Magenta Card */}
+          <div className="pricing-card neon-magenta">
+            <div className="pricing-header">
+              <div className="pricing-icon"><Diamond size={48} /></div>
+              <h3 className="pricing-tier">SAFECODE PRO</h3>
+              <div className="pricing-price-text">250,000đ cho 1 tháng</div>
+            </div>
+
+            <div className="pricing-features">
+              <div className="feature-item">
+                <Check size={18} />
+                <span>Dành cho freelancer <strong>giao dịch nhiều</strong></span>
+              </div>
+              <div className="feature-item">
+                <Check size={18} />
+                <span>Tặng <strong>250 Credit</strong> mỗi tháng</span>
+              </div>
+              <div className="feature-item">
+                <Check size={18} />
+                <span>Tặng thêm <strong>50 Credit</strong> miễn phí lần đầu</span>
+              </div>
+              <div className="feature-item">
+                <Check size={18} />
+                <span>Hỗ trợ ưu tiên <strong>24/7</strong></span>
+              </div>
+            </div>
+
+            <button className="pricing-btn" onClick={() => openModal('register')}>
+              Nâng Cấp Ngay
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* ── Testimonials ── */}
       <section id="testimonials" className="testimonials-section">
         <div className="section-header">
@@ -364,7 +494,7 @@ const Landing = () => {
         <div className="footer-content">
           <div className="footer-brand">
             <ShieldCheck size={22} className="text-primary-color" />
-            <span>safeCode</span>
+            <span>SafeCode</span>
           </div>
           <p className="text-muted text-sm mt-4">
             © 2026 safeCode. SECURE PROTOCOL ACTIVE. Xây dựng vì một môi trường Freelance Việt Nam trong sạch.
@@ -378,24 +508,23 @@ const Landing = () => {
           className="auth-modal-overlay"
           onClick={(e) => { if (e.target.className === 'auth-modal-overlay') setShowModal(false); }}
         >
-          <div className="auth-modal-card">
-            <button className="close-modal-btn" onClick={() => setShowModal(false)}>
-              <X size={18} />
-            </button>
-
+          <div className="auth-modal-content">
+            <button className="modal-close" onClick={() => setShowModal(false)}><X size={20} /></button>
+            
             <div className="auth-header">
-              <div className="auth-icon-wrapper shadow-glow">
-                <ShieldCheck size={28} />
-              </div>
-              <h2>{isRegistering ? 'Đăng ký tài khoản' : 'Chào mừng trở lại'}</h2>
+              <ShieldCheck size={40} className="auth-logo pulse-animation" />
+              <h2>
+                {modalView === 'register' ? 'Tạo Tài Khoản' : 
+                 modalView === 'login' ? 'Đăng Nhập' : 
+                 modalView === 'forgot' ? 'Quên Mật Khẩu' : 'Đặt Lại Mật Khẩu'}
+              </h2>
               <p>
-                {isRegistering
-                  ? 'Bắt đầu hành trình bảo mật với safeCode.'
-                  : 'Truy cập vào kho lưu trữ mã hóa của bạn.'}
+                {modalView === 'register' ? 'Bảo vệ mã nguồn của bạn ngay hôm nay' : 
+                 modalView === 'login' ? 'Truy cập vào không gian làm việc an toàn' : 
+                 modalView === 'forgot' ? 'Nhập email để nhận link khôi phục' : 'Vui lòng nhập mật khẩu mới của bạn'}
               </p>
             </div>
 
-            {/* Status indicator */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
               <span style={{
                 width: 6, height: 6, borderRadius: '50%',
@@ -414,12 +543,12 @@ const Landing = () => {
             </div>
 
             {pendingGoogleToken ? (
-              <div className="auth-form" style={{textAlign: 'center', padding: '1rem 0'}}>
-                <h3 style={{marginBottom: '1.5rem', color: 'var(--text-color)'}}>
+              <div className="auth-form" style={{ textAlign: 'center', padding: '1rem 0' }}>
+                <h3 style={{ marginBottom: '1.5rem', color: 'var(--text-color)' }}>
                   Vui lòng chọn vai trò để hoàn tất đăng ký
                 </h3>
-                
-                <div className="role-selector" style={{margin: '0 auto 2rem auto'}}>
+
+                <div className="role-selector" style={{ margin: '0 auto 2rem auto' }}>
                   <div className="role-options">
                     <button
                       type="button"
@@ -442,9 +571,9 @@ const Landing = () => {
                   </div>
                 </div>
 
-                <div style={{display: 'flex', gap: '1rem', flexDirection: 'column'}}>
-                  <Button 
-                    variant="primary" 
+                <div style={{ display: 'flex', gap: '1rem', flexDirection: 'column' }}>
+                  <Button
+                    variant="primary"
                     className={`auth-submit-btn ${role === 'client' ? 'bg-emerald-500' : ''}`}
                     disabled={isLoggingIn}
                     onClick={async () => {
@@ -462,8 +591,8 @@ const Landing = () => {
                   >
                     {isLoggingIn ? 'Đang xử lý...' : 'Hoàn tất đăng ký'}
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => {
                       setPendingGoogleToken(null);
                       setTimeout(() => {
@@ -479,131 +608,174 @@ const Landing = () => {
                       }, 100);
                     }}
                     disabled={isLoggingIn}
-                    style={{width: '100%', borderColor: 'var(--border-color)', color: 'var(--text-color)'}}
+                    style={{ width: '100%', borderColor: 'var(--border-color)', color: 'var(--text-color)' }}
                   >
                     Hủy bỏ
                   </Button>
                 </div>
               </div>
             ) : (
-            <form onSubmit={handleSubmit} className="auth-form">
-              {isRegistering && (
-                <div className="input-group">
-                  <label>Họ và Tên</label>
-                  <div className="input-wrapper">
-                    <Users size={16} className="input-icon" />
-                    <input
-                      type="text"
-                      name="name"
-                      placeholder="Nguyễn Văn A"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      required
-                    />
+              <form onSubmit={handleSubmit} className="auth-form">
+                {modalView === 'register' && (
+                  <div className="input-group">
+                    <label>Họ và Tên</label>
+                    <div className="input-wrapper">
+                      <Users size={16} className="input-icon" />
+                      <input
+                        type="text"
+                        name="name"
+                        placeholder="Nguyễn Văn A"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              <div className="input-group">
-                <label>Email</label>
-                <div className="input-wrapper">
-                  <Mail size={16} className="input-icon" />
-                  <input
-                    type="email"
-                    name="email"
-                    placeholder="you@safecode.vn"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="input-group">
-                <label>Mật khẩu</label>
-                <div className="input-wrapper">
-                  <Lock size={16} className="input-icon" />
-                  <input
-                    type="password"
-                    name="password"
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    minLength={6}
-                    required
-                  />
-                </div>
-              </div>
-
-              {isRegistering && (
-                <div className="role-selector">
-                  <span className="role-label">Bạn tham gia với tư cách:</span>
-                  <div className="role-options">
-                    <button
-                      type="button"
-                      className={`role-btn ${role === 'freelancer' ? 'active-freelancer' : ''}`}
-                      onClick={() => setRole('freelancer')}
-                    >
-                      <Code size={18} style={{ marginBottom: '0.3rem' }} />
-                      <span>Freelancer</span>
-                      <small>Bán Source Code</small>
-                    </button>
-                    <button
-                      type="button"
-                      className={`role-btn ${role === 'client' ? 'active-client' : ''}`}
-                      onClick={() => setRole('client')}
-                    >
-                      <Wallet size={18} style={{ marginBottom: '0.3rem' }} />
-                      <span>Khách hàng</span>
-                      <small>Mua Source Code</small>
-                    </button>
+                {(modalView === 'login' || modalView === 'register' || modalView === 'forgot') && (
+                  <div className="input-group">
+                    <label>Email</label>
+                    <div className="input-wrapper">
+                      <Mail size={16} className="input-icon" />
+                      <input
+                        type="email"
+                        name="email"
+                        placeholder="you@safecode.vn"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              <Button
-                variant="primary"
-                type="submit"
-                className={`auth-submit-btn ${isRegistering && role === 'client' ? 'bg-emerald-500' : ''}`}
-                disabled={isLoggingIn}
-              >
-                {isLoggingIn
-                  ? 'Đang xử lý...'
-                  : isRegistering
-                    ? 'Đăng ký ngay'
-                    : 'Đăng nhập bảo mật'}
-              </Button>
+                {(modalView === 'login' || modalView === 'register' || modalView === 'reset') && (
+                  <div className="input-group">
+                    <label>{modalView === 'reset' ? 'Mật khẩu mới' : 'Mật khẩu'}</label>
+                    <div className="input-wrapper">
+                      <Lock size={16} className="input-icon" />
+                      <input
+                        type="password"
+                        name="password"
+                        placeholder="••••••••"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        minLength={6}
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
 
-              <div style={{ display: 'flex', alignItems: 'center', margin: '16px 0' }}>
-                <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }}></div>
-                <span style={{ margin: '0 12px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>HOẶC</span>
-                <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }}></div>
-              </div>
+                {(modalView === 'register' || modalView === 'reset') && (
+                  <div className="input-group">
+                    <label>Xác nhận mật khẩu</label>
+                    <div className="input-wrapper">
+                      <Lock size={16} className="input-icon" />
+                      <input
+                        type="password"
+                        name="confirmPassword"
+                        placeholder="••••••••"
+                        value={formData.confirmPassword}
+                        onChange={handleInputChange}
+                        minLength={6}
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
 
-              <div
-                id="google-signin-button"
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  minHeight: '44px',
-                  marginTop: '4px'
-                }}
-              ></div>
+                {modalView === 'login' && (
+                  <div style={{ textAlign: 'right', marginBottom: '1rem' }}>
+                    <a href="#" onClick={(e) => { e.preventDefault(); setModalView('forgot'); }} style={{ fontSize: '0.85rem', color: 'var(--primary)', textDecoration: 'none' }}>Quên mật khẩu?</a>
+                  </div>
+                )}
 
-              <div className="auth-switch-wrapper">
-                <span className="text-muted text-sm">
-                  {isRegistering ? 'Đã có tài khoản?' : 'Chưa có tài khoản?'}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setIsRegistering(!isRegistering)}
-                  className="auth-switch-btn"
+                {modalView === 'register' && (
+                  <div className="role-selector">
+                    <span className="role-label">Bạn tham gia với tư cách:</span>
+                    <div className="role-options">
+                      <button
+                        type="button"
+                        className={`role-btn ${role === 'freelancer' ? 'active-freelancer' : ''}`}
+                        onClick={() => setRole('freelancer')}
+                      >
+                        <Code size={18} style={{ marginBottom: '0.3rem' }} />
+                        <span>Freelancer</span>
+                        <small>Bán Source Code</small>
+                      </button>
+                      <button
+                        type="button"
+                        className={`role-btn ${role === 'client' ? 'active-client' : ''}`}
+                        onClick={() => setRole('client')}
+                      >
+                        <Wallet size={18} style={{ marginBottom: '0.3rem' }} />
+                        <span>Khách hàng</span>
+                        <small>Mua Source Code</small>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  variant="primary"
+                  type="submit"
+                  className={`auth-submit-btn ${modalView === 'register' && role === 'client' ? 'bg-emerald-500' : ''}`}
+                  disabled={isLoggingIn}
                 >
-                  {isRegistering ? 'Đăng nhập' : 'Đăng ký ngay'}
-                </button>
-              </div>
-            </form>
+                  {isLoggingIn
+                    ? 'Đang xử lý...'
+                    : modalView === 'register'
+                      ? 'Đăng ký ngay'
+                      : modalView === 'forgot'
+                        ? 'Gửi link khôi phục'
+                        : modalView === 'reset'
+                          ? 'Đặt lại mật khẩu'
+                          : 'Đăng nhập bảo mật'}
+                </Button>
+
+                {(modalView === 'login' || modalView === 'register') && (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', margin: '16px 0' }}>
+                      <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }}></div>
+                      <span style={{ margin: '0 12px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>HOẶC</span>
+                      <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }}></div>
+                    </div>
+
+                    <div
+                      id="google-signin-button"
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        minHeight: '44px',
+                        marginTop: '4px'
+                      }}
+                    ></div>
+                  </>
+                )}
+
+                <div className="auth-switch-wrapper" style={{ marginTop: '1.5rem' }}>
+                  <span className="text-muted text-sm">
+                    {modalView === 'register' ? 'Đã có tài khoản?' : 
+                     modalView === 'login' ? 'Chưa có tài khoản?' : ''}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (modalView === 'register') setModalView('login');
+                      else if (modalView === 'login') setModalView('register');
+                      else setModalView('login'); // back to login from forgot/reset
+                    }}
+                    className="auth-switch-btn"
+                    style={{ marginLeft: (modalView === 'forgot' || modalView === 'reset') ? 0 : '8px' }}
+                  >
+                    {modalView === 'register' ? 'Đăng nhập' : 
+                     modalView === 'login' ? 'Đăng ký ngay' : 'Quay lại Đăng nhập'}
+                  </button>
+                </div>
+              </form>
             )}
           </div>
         </div>

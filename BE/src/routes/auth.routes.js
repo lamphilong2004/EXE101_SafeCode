@@ -1,6 +1,6 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { login, me, register, updatePayoutSettings, updateProfile, googleLogin } from "../controllers/auth.controller.js";
+import { login, me, register, updatePayoutSettings, updateProfile, googleLogin, forgotPassword, resetPassword } from "../controllers/auth.controller.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
 export const authRoutes = Router();
@@ -130,6 +130,8 @@ authRoutes.post("/register", authLimiter, register);
  */
 authRoutes.post("/login", authLimiter, login);
 authRoutes.post("/google", authLimiter, googleLogin);
+authRoutes.post("/forgot-password", authLimiter, forgotPassword);
+authRoutes.post("/reset-password", authLimiter, resetPassword);
 
 /**
  * @swagger

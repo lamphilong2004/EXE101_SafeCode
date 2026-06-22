@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Zap, Check, ArrowUpRight, ArrowDownRight, History, Banknote, Upload, Copy } from 'lucide-react';
+import { CreditCard, Zap, Check, ArrowUpRight, ArrowDownRight, History, Banknote, ShieldCheck, RefreshCw, QrCode, Crown, Diamond } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-toastify';
 import './Credits.css';
+import '../landing/Landing.css'; // Import pricing neon styles
 
 const Credits = () => {
   const { user } = useAuth();
@@ -14,30 +15,20 @@ const Credits = () => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [creditsToBuy, setCreditsToBuy] = useState(10);
+  const [creditsToBuy, setCreditsToBuy] = useState(50);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [billUrl, setBillUrl] = useState('');
-
-  const [bankConfig, setBankConfig] = useState({
-    bankName: "Loading...",
-    accountNumber: "...",
-    accountName: "...",
-    branch: "..."
-  });
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [histRes, reqRes, bankRes] = await Promise.all([
+        const [histRes, reqRes] = await Promise.all([
           api.get(`/credits/history?page=${page}&limit=10`),
-          api.get('/credits/my-requests'),
-          api.get('/credits/bank-info')
+          api.get('/credits/my-requests')
         ]);
         setHistory(histRes.data.records);
         setTotalPages(histRes.data.totalPages);
         setRequests(reqRes.data.requests);
-        setBankConfig(bankRes.data);
       } catch (err) {
         console.error("Failed to fetch credits data", err);
       } finally {
@@ -47,27 +38,20 @@ const Credits = () => {
     fetchData();
   }, [page]);
 
-  const handleRequestCredits = async () => {
-    if (creditsToBuy < 1) {
-      toast.error("Vui lòng nhập số credit hợp lệ.");
-      return;
-    }
-    if (!billUrl) {
-      toast.error("Vui lòng tải lên ảnh bill chuyển khoản.");
+  const handlePayosTopup = async () => {
+    if (creditsToBuy < 10) {
+      toast.error("Vui lòng nạp tối thiểu 10 Credit (10.000 VNĐ).");
       return;
     }
     setIsSubmitting(true);
     try {
-      const res = await api.post('/credits/request', { amount: creditsToBuy, billImageUrl: billUrl });
-      if (res.data.success) {
-        toast.success("Đã gửi yêu cầu nạp Credit thành công! Vui lòng chờ Admin duyệt.");
-        setRequests([res.data.request, ...requests]);
-        setBillUrl('');
+      const res = await api.post('/credits/buy-payos', { amount: creditsToBuy });
+      if (res.data.checkoutUrl) {
+        window.location.href = res.data.checkoutUrl;
       }
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.error || "Gửi yêu cầu thất bại.");
-    } finally {
+      toast.error(err.response?.data?.error || "Không thể tạo mã QR nạp tiền.");
       setIsSubmitting(false);
     }
   };
@@ -112,8 +96,87 @@ const Credits = () => {
           className="subscription-card glass-panel fade-in"
           title="Gói hiện tại"
           icon={<Zap size={28} className="text-warning" />}
-          value={<div className="subscription-value">Pay-per-file</div>}
+          value={<div className="subscription-value">{user?.plan || 'Gói Khởi Đầu'}</div>}
         />
+      </div>
+
+      <div className="pricing-section mb-10" style={{ padding: '2rem 0', background: 'transparent' }}>
+        <div className="pricing-intro" style={{ marginBottom: '2rem' }}>
+          <div className="pricing-icons">
+            <div className="pricing-icon-wrapper"><Crown size={20} color="#06b6d4" /></div>
+            <div className="pricing-icon-wrapper"><Zap size={20} color="#10b981" /></div>
+            <div className="pricing-icon-wrapper"><Diamond size={20} color="#d946ef" /></div>
+          </div>
+          <h2>Mở Khóa Premium</h2>
+          <p>Chọn gói phù hợp - Nâng tầm trải nghiệm</p>
+        </div>
+
+        <div className="pricing-grid">
+          {/* Cyan Card */}
+          <div className="pricing-card neon-cyan">
+            <div className="pricing-badge">Featured</div>
+            <div className="pricing-header">
+              <div className="pricing-icon"><Crown size={48} /></div>
+              <h3 className="pricing-tier">SAFECODE VIP</h3>
+              <div className="pricing-price-text">Miễn phí</div>
+            </div>
+
+            <div className="pricing-features">
+              <div className="feature-item">
+                <Check size={18} />
+                <span>Tuyệt vời để <strong>trải nghiệm thử</strong></span>
+              </div>
+              <div className="feature-item">
+                <Check size={18} />
+                <span>Tặng ngay <strong>50 Credit</strong> khi đăng ký</span>
+              </div>
+              <div className="feature-item">
+                <Check size={18} />
+                <span>Truy cập đầy đủ tính năng mã hóa</span>
+              </div>
+              <div className="feature-item">
+                <Check size={18} />
+                <span>Thanh toán Escrow an toàn</span>
+              </div>
+            </div>
+
+            <button className="pricing-btn">
+              Đang Sử Dụng
+            </button>
+          </div>
+
+          {/* Magenta Card */}
+          <div className="pricing-card neon-magenta">
+            <div className="pricing-header">
+              <div className="pricing-icon"><Diamond size={48} /></div>
+              <h3 className="pricing-tier">SAFECODE PRO</h3>
+              <div className="pricing-price-text">250,000đ cho 1 tháng</div>
+            </div>
+
+            <div className="pricing-features">
+              <div className="feature-item">
+                <Check size={18} />
+                <span>Dành cho freelancer <strong>giao dịch nhiều</strong></span>
+              </div>
+              <div className="feature-item">
+                <Check size={18} />
+                <span>Tặng <strong>250 Credit</strong> mỗi tháng</span>
+              </div>
+              <div className="feature-item">
+                <Check size={18} />
+                <span>Tặng thêm <strong>50 Credit</strong> miễn phí lần đầu</span>
+              </div>
+              <div className="feature-item">
+                <Check size={18} />
+                <span>Hỗ trợ ưu tiên <strong>24/7</strong></span>
+              </div>
+            </div>
+
+            <button className="pricing-btn" onClick={() => { setCreditsToBuy(250); toast.info("Cuộn xuống dưới và quét mã QR để nạp gói này."); }}>
+              Nâng Cấp Ngay
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="credits-layout-grid">
@@ -121,86 +184,78 @@ const Credits = () => {
           <h2 className="section-title mb-4 flex items-center gap-2">
             <Zap className="text-primary" size={20} /> Mua thêm Credit
           </h2>
-          
-          <div className="pricing-card premium-buy-card">
-            <div className="price-header">
-              <h3>Chuyển khoản Ngân hàng</h3>
-              <div className="price-tag">1,000đ<small>/Credit</small></div>
+
+          <div className="qr-topup-container">
+            <div className="topup-banner">
+              <h3><Zap fill="#fde047" color="#fde047" size={24} /> Nạp SafeCode Credit</h3>
+              <p>Nạp tiền siêu nhanh - An toàn tuyệt đối - Tự động 24/7</p>
+              <div className="topup-features">
+                <span><Zap size={14} /> Tức thì</span>
+                <span><ShieldCheck size={14} /> An toàn</span>
+                <span><RefreshCw size={14} /> Tự động</span>
+              </div>
             </div>
-            
-            <div className="form-group mb-5">
-              <label className="text-sm font-bold mb-2 block">Số Credit muốn nạp:</label>
-              <div className="credits-input-wrapper">
-                <input 
-                  type="number" 
-                  min="1" 
-                  max="10000"
-                  value={creditsToBuy} 
-                  onChange={(e) => setCreditsToBuy(Number(e.target.value))} 
-                  className="credits-input"
+
+            <div className="topup-card">
+              <div className="topup-steps">
+                <div className="topup-step active">
+                  <span className="step-num">1</span>
+                  <span>Nhập số tiền</span>
+                </div>
+                <div className="step-divider"></div>
+                <div className="topup-step">
+                  <span className="step-num">2</span>
+                  <span>Quét mã QR</span>
+                </div>
+              </div>
+
+              <h4 className="topup-title">Bạn muốn nạp bao nhiêu?</h4>
+              <p className="topup-subtitle">Nhập số tiền và chọn tạo mã QR để thanh toán tức thì</p>
+
+              <div className="topup-input-container">
+                <input
+                  type="number"
+                  className="topup-input"
+                  value={creditsToBuy * 1000}
+                  onChange={(e) => setCreditsToBuy(Math.floor(Number(e.target.value) / 1000))}
                 />
-                <span className="credits-suffix">CR</span>
+                <span className="topup-currency">VNĐ</span>
               </div>
-            </div>
+              <div className="topup-limits">
+                Tối thiểu 10.000đ - Tối đa 50.000.000đ
+              </div>
 
-            <div className="transfer-info-box mb-5">
-              <p className="box-title">Thông tin chuyển khoản</p>
-              
-              <div className="info-row">
-                <span>Ngân hàng:</span>
-                <strong>{bankConfig.bankName}</strong>
-              </div>
-              
-              <div className="info-row copyable">
-                <span>Số tài khoản:</span>
-                <div className="flex items-center gap-2">
-                  <strong className="text-primary text-lg">{bankConfig.accountNumber}</strong>
-                  <button className="icon-btn sm" onClick={() => copyToClipboard(bankConfig.accountNumber, 'Số tài khoản')} title="Copy số tài khoản">
-                    <Copy size={14} />
+              <div className="quick-options">
+                {[50, 100, 200, 500, 1000, 2000].map(val => (
+                  <button
+                    key={val}
+                    className={`quick-btn ${creditsToBuy === val ? 'active' : ''}`}
+                    onClick={() => setCreditsToBuy(val)}
+                  >
+                    {val < 1000 ? `${val}K` : `${val / 1000}M`}
                   </button>
+                ))}
+              </div>
+
+              <div className="topup-summary">
+                <div className="summary-row">
+                  <span>Bạn thanh toán</span>
+                  <strong>{(creditsToBuy * 1000).toLocaleString()} VNĐ</strong>
                 </div>
-              </div>
-              
-              <div className="info-row">
-                <span>Chủ tài khoản:</span>
-                <strong>{bankConfig.accountName}</strong>
-              </div>
-
-              <div className="info-row copyable">
-                <span>Số tiền:</span>
-                <div className="flex items-center gap-2">
-                  <strong className="text-danger text-lg">{transferAmount.toLocaleString()} VNĐ</strong>
-                  <button className="icon-btn sm" onClick={() => copyToClipboard(transferAmount.toString(), 'Số tiền')} title="Copy số tiền">
-                    <Copy size={14} />
-                  </button>
+                <div className="summary-row highlight">
+                  <span>Bạn nhận được</span>
+                  <strong>{creditsToBuy.toLocaleString()} Credit</strong>
                 </div>
               </div>
 
-              <div className="info-row copyable">
-                <span>Nội dung CK:</span>
-                <div className="flex items-center gap-2">
-                  <strong className="tracking-wide bg-yellow-100 px-2 py-1 rounded text-gray-800">{transferContent}</strong>
-                  <button className="icon-btn sm" onClick={() => copyToClipboard(transferContent, 'Nội dung CK')} title="Copy nội dung">
-                    <Copy size={14} />
-                  </button>
-                </div>
-              </div>
+              <button
+                className={`btn-generate-qr ${creditsToBuy >= 10 ? 'ready' : ''}`}
+                onClick={handlePayosTopup}
+                disabled={isSubmitting || creditsToBuy < 10}
+              >
+                <QrCode size={20} /> {isSubmitting ? 'Đang khởi tạo...' : 'Tạo mã QR nạp tiền'}
+              </button>
             </div>
-
-            <div className="form-group mb-5">
-              <label className="text-sm font-bold mb-2 block">Link ảnh Bill chuyển khoản:</label>
-              <input 
-                type="text" 
-                placeholder="Dán link ảnh bằng chứng giao dịch..." 
-                value={billUrl} 
-                onChange={(e) => setBillUrl(e.target.value)} 
-                className="form-input text-sm"
-              />
-            </div>
-
-            <Button variant="primary" className="w-full submit-credits-btn" onClick={handleRequestCredits} disabled={isSubmitting}>
-              <Upload size={18} className="mr-2" /> {isSubmitting ? 'Đang gửi...' : 'Gửi Yêu cầu Nạp'}
-            </Button>
           </div>
         </div>
 
@@ -228,7 +283,7 @@ const Credits = () => {
                         <td className="font-medium">{req.amountVND.toLocaleString()} đ</td>
                         <td>
                           <span className={`status-badge status-${req.status}`}>
-                            {req.status === 'pending' ? 'Đang chờ' : req.status === 'approved' ? 'Thành công' : 'Từ chối'}
+                            {req.status === 'pending' ? 'Chờ thanh toán' : req.status === 'approved' ? 'Thành công' : 'Từ chối'}
                           </span>
                         </td>
                       </tr>

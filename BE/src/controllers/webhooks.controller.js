@@ -5,6 +5,7 @@ import { File } from "../models/File.js";
 import { Transaction } from "../models/Transaction.js";
 import { User } from "../models/User.js";
 import { CreditHistory } from "../models/CreditHistory.js";
+import { CreditRequest } from "../models/CreditRequest.js";
 import { createNotification } from "../socket.js";
 
 export async function stripeWebhook(req, res) {
@@ -122,6 +123,36 @@ export async function payosWebhook(req, res) {
           `Khách hàng đã thanh toán qua VietQR cho file "${fileDoc.title}". Tiền đã vào tài khoản nền tảng.`,
           fileDoc._id
         );
+      }
+
+      // Check if it's a Credit Top-up
+      const creditReq = await CreditRequest.findOne({ payosOrderCode: orderCode });
+      if (creditReq && creditReq.status === "pending") {
+        creditReq.status = "approved";
+        creditReq.approvedAt = new Date();
+        await creditReq.save();
+
+        const user = await User.findById(creditReq.userId);
+        if (user) {
+          user.credits = (user.credits || 0) + creditReq.amount;
+          await user.save();
+
+          await CreditHistory.create({
+            userId: user._id,
+            type: "purchase",
+            amount: creditReq.amount,
+            description: `Nạp ${creditReq.amount} Credits qua VietQR (PayOS)`,
+            balanceAfter: user.credits,
+            fileId: null,
+          });
+
+          await createNotification(
+            user._id,
+            "credit_approved",
+            `Thanh toán thành công. ${creditReq.amount} Credit đã được cộng vào tài khoản của bạn.`,
+            null
+          );
+        }
       }
     }
     return res.json({ success: true });

@@ -5,6 +5,7 @@ import { CreditRequest } from "../models/CreditRequest.js";
 import { calculateUploadCost } from "../services/credit.service.js";
 import { httpError } from "../middleware/error.js";
 import { stripe } from "../services/stripe.service.js";
+import payos, { isPayosConfigured } from "../services/payos.service.js";
 import { env } from "../config/env.js";
 
 export const creditRoutes = Router();
@@ -101,6 +102,64 @@ creditRoutes.post("/buy", requireAuth, async (req, res, next) => {
     });
 
     res.json({ checkoutUrl: session.url, checkoutSessionId: session.id });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// [NEW] Buy credits via PayOS
+creditRoutes.post("/buy-payos", requireAuth, async (req, res, next) => {
+  try {
+    if (!isPayosConfigured) {
+      throw httpError(500, "PayOS chưa được cấu hình. Vui lòng thêm API Key vào .env");
+    }
+
+    const { amount } = req.body;
+    const creditsToBuy = parseInt(amount, 10);
+    
+    if (isNaN(creditsToBuy) || creditsToBuy <= 0) {
+      throw httpError(400, "Invalid credit amount");
+    }
+
+    // Price: 1,000 VND per credit.
+    const unitPriceVND = 1000;
+    const totalAmount = creditsToBuy * unitPriceVND;
+
+    const { successUrl, cancelUrl } = req.body || {};
+    const finalSuccessUrl = successUrl || `${env.APP_BASE_URL}/settings/credits?success=true`;
+    const finalCancelUrl = cancelUrl || `${env.APP_BASE_URL}/settings/credits?canceled=true`;
+
+    const orderCode = Number(String(Date.now()).slice(-6) + Math.floor(Math.random() * 1000));
+
+    const paymentData = {
+      orderCode,
+      amount: totalAmount,
+      description: `Nap ${creditsToBuy} Credit`,
+      items: [
+        {
+          name: `${creditsToBuy} SafeCode Credits`,
+          quantity: 1,
+          price: totalAmount
+        }
+      ],
+      returnUrl: finalSuccessUrl,
+      cancelUrl: finalCancelUrl
+    };
+
+    const paymentLinkRes = await payos.createPaymentLink(paymentData);
+
+    const request = new CreditRequest({
+      userId: req.user.id,
+      amount: creditsToBuy,
+      amountVND: totalAmount,
+      status: 'pending',
+      payosOrderCode: orderCode,
+      paymentLinkId: paymentLinkRes.paymentLinkId
+    });
+
+    await request.save();
+
+    res.json({ checkoutUrl: paymentLinkRes.checkoutUrl, orderCode });
   } catch (err) {
     next(err);
   }
