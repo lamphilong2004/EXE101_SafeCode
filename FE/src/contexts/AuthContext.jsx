@@ -70,6 +70,9 @@ export const AuthProvider = ({ children }) => {
       socket.connect();
       return { success: true };
     } catch (error) {
+      if (error.response?.status === 403 && error.response?.data?.actionRequired === 'verify_otp') {
+        return { success: false, actionRequired: 'verify_otp', email: error.response.data.email };
+      }
       const rawMsg = error.response?.data?.error || error.response?.data?.message || "Login failed";
       return { success: false, message: mapErrorMessage(rawMsg) };
     }
@@ -78,17 +81,42 @@ export const AuthProvider = ({ children }) => {
   const signup = async (role, email, password, name) => {
     try {
       const res = await api.post('/auth/register', { email, role, password, name });
-      const { token, user } = res.data;
       
-      localStorage.setItem('safecode_token', token);
-      setUser(user);
-      // Connect socket after signup
-      socket.auth = { token };
-      socket.connect();
+      if (res.status === 201 && res.data.actionRequired === 'verify_otp') {
+        return { success: true, actionRequired: 'verify_otp', email: res.data.email };
+      }
+      
+      // Fallback for any other 201 success (if any)
       return { success: true };
     } catch (error) {
       const rawMsg = error.response?.data?.error || error.response?.data?.message || "Registration failed";
       return { success: false, message: mapErrorMessage(rawMsg) };
+    }
+  };
+
+  const verifyOtp = async (email, otp) => {
+    try {
+      const res = await api.post('/auth/verify-otp', { email, otp });
+      const { token, user } = res.data;
+      
+      localStorage.setItem('safecode_token', token);
+      setUser(user);
+      socket.auth = { token };
+      socket.connect();
+      return { success: true };
+    } catch (error) {
+      const rawMsg = error.response?.data?.error || error.response?.data?.message || "Xác thực thất bại";
+      return { success: false, message: rawMsg };
+    }
+  };
+
+  const resendOtp = async (email) => {
+    try {
+      await api.post('/auth/resend-otp', { email });
+      return { success: true };
+    } catch (error) {
+      const rawMsg = error.response?.data?.error || error.response?.data?.message || "Gửi lại mã thất bại";
+      return { success: false, message: rawMsg };
     }
   };
 
@@ -124,7 +152,7 @@ export const AuthProvider = ({ children }) => {
   if (loading) return <div style={{height: '100vh', display: 'flex', alignItems: 'center', justifyContent:'center'}}>Loading...</div>;
 
   return (
-    <AuthContext.Provider value={{ user, setUser, login, signup, loginWithGoogle, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, setUser, login, signup, loginWithGoogle, logout, verifyOtp, resendOtp, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

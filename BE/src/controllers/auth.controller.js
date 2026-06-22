@@ -5,7 +5,12 @@ import { httpError } from "../middleware/error.js";
 import { signJwt } from "../middleware/auth.js";
 import { OAuth2Client } from "google-auth-library";
 import jwt from "jsonwebtoken";
-import { sendPasswordResetEmail } from "../services/email.service.js";
+import { sendPasswordResetEmail, sendVerificationEmail } from "../services/email.service.js";
+
+// Helper to generate 6-digit OTP
+function generateOtp() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 function sanitizeUser(user) {
   return {
@@ -32,20 +37,98 @@ export async function register(req, res, next) {
     if (role !== "freelancer" && role !== "client") throw httpError(400, "Invalid role");
     if (String(password).length < 6) throw httpError(400, "Password must be at least 6 characters");
 
-    const existing = await User.findOne({ email: String(email).toLowerCase().trim() });
-    if (existing) throw httpError(409, "Email already exists");
+    let existing = await User.findOne({ email: String(email).toLowerCase().trim() });
+    
+    if (existing) {
+      // If user exists and is verified, reject
+      if (existing.isVerified !== false) {
+        throw httpError(409, "Email already exists");
+      }
+      
+      // If user exists but is NOT verified, we update their details and resend OTP
+      const passwordHash = await bcrypt.hash(String(password), 10);
+      existing.passwordHash = passwordHash;
+      existing.role = role;
+      if (name) existing.name = String(name).trim();
+      existing.credits = role === 'freelancer' ? 10 : 0;
+      
+      const otp = generateOtp();
+      existing.verificationOtp = otp;
+      existing.verificationOtpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+      await existing.save();
+
+      await sendVerificationEmail(existing.email, otp);
+      return res.status(201).json({ actionRequired: 'verify_otp', email: existing.email });
+    }
 
     const passwordHash = await bcrypt.hash(String(password), 10);
+    const otp = generateOtp();
+    
     const user = await User.create({
       email: String(email).toLowerCase().trim(),
       passwordHash,
       role,
       name: name ? String(name).trim() : undefined,
-      credits: role === 'freelancer' ? 10 : 0, // Give 10 welcome credits
+      credits: role === 'freelancer' ? 10 : 0,
+      isVerified: false,
+      verificationOtp: otp,
+      verificationOtpExpires: new Date(Date.now() + 10 * 60 * 1000)
     });
 
+    await sendVerificationEmail(user.email, otp);
+    res.status(201).json({ actionRequired: 'verify_otp', email: user.email });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function verifyOtp(req, res, next) {
+  try {
+    const { email, otp } = req.body || {};
+    if (!email || !otp) throw httpError(400, "Email and OTP are required");
+
+    const user = await User.findOne({ email: String(email).toLowerCase().trim() });
+    if (!user) throw httpError(404, "User not found");
+    if (user.isVerified !== false) throw httpError(400, "User is already verified");
+
+    if (user.verificationOtp !== String(otp).trim()) {
+      throw httpError(400, "Invalid OTP");
+    }
+
+    if (user.verificationOtpExpires && user.verificationOtpExpires < new Date()) {
+      throw httpError(400, "OTP has expired. Please request a new one.");
+    }
+
+    // Mark as verified and clear OTP fields
+    user.isVerified = true;
+    user.verificationOtp = null;
+    user.verificationOtpExpires = null;
+    user.lastLoginAt = new Date();
+    await user.save();
+
     const token = signJwt(user);
-    res.status(201).json({ token, user: sanitizeUser(user) });
+    res.json({ token, user: sanitizeUser(user) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function resendOtp(req, res, next) {
+  try {
+    const { email } = req.body || {};
+    if (!email) throw httpError(400, "Email is required");
+
+    const user = await User.findOne({ email: String(email).toLowerCase().trim() });
+    if (!user) throw httpError(404, "User not found");
+    if (user.isVerified !== false) throw httpError(400, "User is already verified");
+
+    const otp = generateOtp();
+    user.verificationOtp = otp;
+    user.verificationOtpExpires = new Date(Date.now() + 10 * 60 * 1000);
+    await user.save();
+
+    await sendVerificationEmail(user.email, otp);
+    res.json({ success: true, message: "OTP sent successfully" });
   } catch (err) {
     next(err);
   }
@@ -61,6 +144,10 @@ export async function login(req, res, next) {
 
     const ok = await bcrypt.compare(String(password), user.passwordHash);
     if (!ok) throw httpError(401, "Invalid credentials");
+
+    if (user.isVerified === false) {
+      return res.status(403).json({ error: "Vui lòng xác thực email của bạn", actionRequired: 'verify_otp', email: user.email });
+    }
 
     user.lastLoginAt = new Date();
     await user.save();
@@ -175,7 +262,16 @@ export async function googleLogin(req, res, next) {
         role: resolvedRole,
         name: name ? String(name).trim() : email.split('@')[0],
         credits: resolvedRole === 'freelancer' ? 10 : 0,
+        isVerified: true // Google users are implicitly verified
       });
+    } else {
+      // If user exists but isn't verified (registered via email but never verified),
+      // we can mark them verified now since they proved ownership via Google
+      if (user.isVerified === false) {
+        user.isVerified = true;
+        user.verificationOtp = null;
+        user.verificationOtpExpires = null;
+      }
     }
 
     user.lastLoginAt = new Date();

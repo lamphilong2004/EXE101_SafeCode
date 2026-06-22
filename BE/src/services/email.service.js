@@ -106,3 +106,38 @@ export async function sendPasswordResetEmail(to, resetUrl) {
     console.error("[MAIL] Failed to send password reset email:", err);
   }
 }
+
+export async function sendVerificationEmail(to, otp) {
+  if (!env.SMTP_USER || !env.SMTP_PASS) {
+    console.warn("[MAIL] SMTP not configured. OTP for", to, "is:", otp);
+    return;
+  }
+
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: auto; border: 1px solid #e2e8f0; padding: 24px; border-radius: 12px;">
+      <h2 style="color: #10b981;">Xác thực tài khoản của bạn ✉️</h2>
+      <p>Cảm ơn bạn đã đăng ký tài khoản tại SafeCode.</p>
+      <p>Vui lòng sử dụng mã bảo mật gồm 6 chữ số dưới đây để xác thực địa chỉ email của bạn (mã có hiệu lực trong 10 phút):</p>
+      
+      <div style="background: #f1f5f9; padding: 20px; border-radius: 8px; font-family: monospace; font-size: 28px; font-weight: bold; text-align: center; letter-spacing: 8px; border: 2px dashed #10b981; margin: 24px 0; color: #0f172a;">
+        ${otp}
+      </div>
+
+      <p style="font-size: 13px; color: #64748b;">Lưu ý: Không chia sẻ mã này với bất kỳ ai.</p>
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+      <p style="font-size: 12px; color: #64748b;">Đây là email tự động từ SafeCode.</p>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: env.SMTP_FROM,
+      to,
+      subject: "[SafeCode] Mã xác thực tài khoản",
+      html,
+    });
+    console.log(`[MAIL] Verification OTP email sent to ${to}`);
+  } catch (err) {
+    console.error("[MAIL] Failed to send verification email:", err);
+  }
+}

@@ -17,8 +17,10 @@ const Landing = () => {
   const [scrolled, setScrolled] = useState(false);
   const [pendingGoogleToken, setPendingGoogleToken] = useState(null);
   const [resetToken, setResetToken] = useState(null);
+  const [pendingEmail, setPendingEmail] = useState('');
+  const [otp, setOtp] = useState('');
 
-  const { login, signup, loginWithGoogle } = useAuth();
+  const { login, signup, loginWithGoogle, verifyOtp, resendOtp } = useAuth();
   const roleRef = useRef(role);
 
   // Sync role to ref so callback always has latest selected role without re-rendering button
@@ -99,13 +101,50 @@ const Landing = () => {
     }
     
     if (result.success) {
+      if (result.actionRequired === 'verify_otp') {
+        toast.info('Vui lòng kiểm tra email để lấy mã xác thực.');
+        setPendingEmail(result.email || formData.email);
+        setModalView('verify');
+        setIsLoggingIn(false);
+        return;
+      }
       toast.success(modalView === 'register' ? 'Tài khoản đã được tạo!' : 'Chào mừng trở lại!');
       window.history.pushState(null, '', '/');
+      window.location.reload();
+    } else {
+      if (result.actionRequired === 'verify_otp') {
+        toast.error('Tài khoản chưa được xác thực.');
+        setPendingEmail(result.email || formData.email);
+        setModalView('verify');
+        setIsLoggingIn(false);
+        return;
+      }
+      toast.error(result.message);
+    }
+    setIsLoggingIn(false);
+    setIsLoggingIn(false);
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setIsLoggingIn(true);
+    const result = await verifyOtp(pendingEmail, otp);
+    if (result.success) {
+      toast.success('Xác thực thành công! Đang đăng nhập...');
       window.location.reload();
     } else {
       toast.error(result.message);
     }
     setIsLoggingIn(false);
+  };
+
+  const handleResendOtp = async () => {
+    const result = await resendOtp(pendingEmail);
+    if (result.success) {
+      toast.success('Đã gửi lại mã OTP. Vui lòng kiểm tra email.');
+    } else {
+      toast.error(result.message);
+    }
   };
 
   const handleGoogleCredentialResponse = async (response) => {
@@ -523,12 +562,14 @@ const Landing = () => {
               <h2>
                 {modalView === 'register' ? 'Tạo Tài Khoản' : 
                  modalView === 'login' ? 'Đăng Nhập' : 
-                 modalView === 'forgot' ? 'Quên Mật Khẩu' : 'Đặt Lại Mật Khẩu'}
+                 modalView === 'forgot' ? 'Quên Mật Khẩu' : 
+                 modalView === 'verify' ? 'Xác Thực Email' : 'Đặt Lại Mật Khẩu'}
               </h2>
               <p>
                 {modalView === 'register' ? 'Bảo vệ mã nguồn của bạn ngay hôm nay' : 
                  modalView === 'login' ? 'Truy cập vào không gian làm việc an toàn' : 
-                 modalView === 'forgot' ? 'Nhập email để nhận link khôi phục' : 'Vui lòng nhập mật khẩu mới của bạn'}
+                 modalView === 'forgot' ? 'Nhập email để nhận link khôi phục' : 
+                 modalView === 'verify' ? `Nhập mã 6 số đã gửi đến email của bạn` : 'Vui lòng nhập mật khẩu mới của bạn'}
               </p>
             </div>
 
@@ -621,6 +662,42 @@ const Landing = () => {
                   </Button>
                 </div>
               </div>
+            ) : modalView === 'verify' ? (
+              <form onSubmit={handleVerifyOtp} className="auth-form">
+                <div className="input-group">
+                  <label>Mã xác thực (OTP)</label>
+                  <div className="input-wrapper">
+                    <Key size={16} className="input-icon" />
+                    <input
+                      type="text"
+                      maxLength={6}
+                      placeholder="123456"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                      required
+                      style={{ letterSpacing: '8px', fontSize: '1.2rem', textAlign: 'center', fontWeight: 'bold' }}
+                    />
+                  </div>
+                </div>
+                
+                <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-color)' }}>
+                    Chưa nhận được mã?{' '}
+                  </span>
+                  <a href="#" onClick={(e) => { e.preventDefault(); handleResendOtp(); }} style={{ fontSize: '0.85rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 'bold' }}>
+                    Gửi lại mã
+                  </a>
+                </div>
+
+                <Button
+                  variant="primary"
+                  type="submit"
+                  className="auth-submit-btn bg-emerald-500"
+                  disabled={isLoggingIn || otp.length !== 6}
+                >
+                  {isLoggingIn ? 'Đang xử lý...' : 'Xác thực'}
+                </Button>
+              </form>
             ) : (
               <form onSubmit={handleSubmit} className="auth-form">
                 {modalView === 'register' && (
