@@ -1,7 +1,7 @@
 import { env } from "../config/env.js";
 
 // Web App URL từ Google Apps Script
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby_AJDwGGzDjInNfvpjE54K-5i6GVLyGbUGjmLFR0Jpst4b3rV-4l0iFxc75NaxTBYV/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby_AJDwGGzDjlnNfvpjE54K-5i6GVLyGbUGjmLFR0Jpst4b3rV-4l0iFxc75NaxTBYV/exec";
 
 async function sendEmailViaScript(to, subject, html) {
   try {
