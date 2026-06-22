@@ -1,22 +1,31 @@
-import nodemailer from "nodemailer";
 import { env } from "../config/env.js";
 
-const transporter = nodemailer.createTransport({
-  host: env.SMTP_HOST,
-  port: env.SMTP_PORT,
-  secure: env.SMTP_PORT === 465,
-  auth: {
-    user: env.SMTP_USER,
-    pass: env.SMTP_PASS,
-  },
-});
+// Web App URL từ Google Apps Script
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby_AJDwGGzDjInNfvpjE54K-5i6GVLyGbUGjmLFR0Jpst4b3rV-4l0iFxc75NaxTBYV/exec";
+
+async function sendEmailViaScript(to, subject, html) {
+  try {
+    const response = await fetch(SCRIPT_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8",
+      },
+      // Chú ý: Gửi bằng text/plain để tránh CORS/Preflight issue trên Google Script (dù ở Nodejs không bắt buộc)
+      body: JSON.stringify({ to, subject, html })
+    });
+    
+    const result = await response.json();
+    if (!result.success) {
+      console.error("[MAIL] Script error:", result.error);
+    } else {
+      console.log(`[MAIL] Email sent successfully to ${to}`);
+    }
+  } catch (err) {
+    console.error("[MAIL] Failed to send email via script:", err);
+  }
+}
 
 export async function sendDecryptionKeyEmail(to, { fileName, keyB64, ivB64, authTagB64, licenseKey, isV3 }) {
-  if (!env.SMTP_USER || !env.SMTP_PASS) {
-    console.warn("[MAIL] SMTP not configured. License for", fileName, "is:", licenseKey || keyB64);
-    return;
-  }
-
   const html = isV3 ? `
     <div style="font-family: sans-serif; max-width: 600px; margin: auto; border: 1px solid #e2e8f0; padding: 24px; border-radius: 12px;">
       <h2 style="color: #4f46e5;">Thanh toán hoàn tất! 🔓</h2>
@@ -51,26 +60,11 @@ export async function sendDecryptionKeyEmail(to, { fileName, keyB64, ivB64, auth
     </div>
   `;
 
-  try {
-    const subject = isV3 ? `[SafeCode] License Key cho dự án: ${fileName}` : `[SafeCode] Key giải mã cho dự án: ${fileName}`;
-    await transporter.sendMail({
-      from: env.SMTP_FROM,
-      to,
-      subject,
-      html,
-    });
-    console.log(`[MAIL] ${isV3 ? 'License' : 'Decryption key'} sent to ${to}`);
-  } catch (err) {
-    console.error("[MAIL] Failed to send email:", err);
-  }
+  const subject = isV3 ? `[SafeCode] License Key cho dự án: ${fileName}` : `[SafeCode] Key giải mã cho dự án: ${fileName}`;
+  await sendEmailViaScript(to, subject, html);
 }
 
 export async function sendPasswordResetEmail(to, resetUrl) {
-  if (!env.SMTP_USER || !env.SMTP_PASS) {
-    console.warn("[MAIL] SMTP not configured. Password reset link for", to, "is:", resetUrl);
-    return;
-  }
-
   const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: auto; border: 1px solid #e2e8f0; padding: 24px; border-radius: 12px;">
       <h2 style="color: #4f46e5;">Khôi phục mật khẩu 🔒</h2>
@@ -94,25 +88,10 @@ export async function sendPasswordResetEmail(to, resetUrl) {
     </div>
   `;
 
-  try {
-    await transporter.sendMail({
-      from: env.SMTP_FROM,
-      to,
-      subject: "[SafeCode] Khôi phục mật khẩu tài khoản",
-      html,
-    });
-    console.log(`[MAIL] Password reset email sent to ${to}`);
-  } catch (err) {
-    console.error("[MAIL] Failed to send password reset email:", err);
-  }
+  await sendEmailViaScript(to, "[SafeCode] Khôi phục mật khẩu tài khoản", html);
 }
 
 export async function sendVerificationEmail(to, otp) {
-  if (!env.SMTP_USER || !env.SMTP_PASS) {
-    console.warn("[MAIL] SMTP not configured. OTP for", to, "is:", otp);
-    return;
-  }
-
   const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: auto; border: 1px solid #e2e8f0; padding: 24px; border-radius: 12px;">
       <h2 style="color: #10b981;">Xác thực tài khoản của bạn ✉️</h2>
@@ -129,15 +108,5 @@ export async function sendVerificationEmail(to, otp) {
     </div>
   `;
 
-  try {
-    await transporter.sendMail({
-      from: env.SMTP_FROM,
-      to,
-      subject: "[SafeCode] Mã xác thực tài khoản",
-      html,
-    });
-    console.log(`[MAIL] Verification OTP email sent to ${to}`);
-  } catch (err) {
-    console.error("[MAIL] Failed to send verification email:", err);
-  }
+  await sendEmailViaScript(to, "[SafeCode] Mã xác thực tài khoản", html);
 }
