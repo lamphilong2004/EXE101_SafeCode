@@ -238,7 +238,10 @@ const PreviewModal = ({ file, onClose }) => {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => window.open(`/proxy/demo/${file.id}`, '_blank')}>
+            <Button variant="outline" size="sm" onClick={() => {
+              const token = localStorage.getItem('safecode_token');
+              window.open(`${api.defaults.baseURL}/proxy/demo/${file.id}?token=${token}`, '_blank');
+            }}>
               <ExternalLink size={16} /> Open External
             </Button>
             <button className="close-btn" onClick={onClose}><X size={20} /></button>
@@ -246,7 +249,7 @@ const PreviewModal = ({ file, onClose }) => {
         </div>
         <div className="preview-iframe-wrapper">
           <iframe
-            src={`/proxy/demo/${file.id}`}
+            src={`${api.defaults.baseURL}/proxy/demo/${file.id}?token=${localStorage.getItem('safecode_token')}`}
             title="Project Preview"
             className="preview-iframe"
           />

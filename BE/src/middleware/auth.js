@@ -13,7 +13,7 @@ export function signJwt(user) {
 
 export async function requireAuth(req, res, next) {
   try {
-    const auth = req.headers.authorization;
+    const auth = req.headers.authorization || (req.query.token ? `Bearer ${req.query.token}` : null);
     if (!auth?.startsWith("Bearer ")) throw httpError(401, "Missing token");
 
     const token = auth.slice("Bearer ".length);

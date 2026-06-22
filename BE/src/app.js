@@ -35,6 +35,7 @@ export function createApp() {
         if (isDevLocalOrigin(origin)) return cb(null, true);
         if (!origin) return cb(null, true);
         if (allowedOrigins.includes(origin)) return cb(null, true);
+        if (origin.endsWith('.vercel.app')) return cb(null, true); // Allow any Vercel deployment
         return cb(new Error("Not allowed by CORS"));
       },
       credentials: true,
