@@ -46,6 +46,12 @@ export function proxyWithHardTimeout({ targetUrl, hardTimeoutMs = 60_000, fileId
     changeOrigin: true,
     xfwd: true,
     ws: false,
+    pathRewrite: (path, req) => {
+      // path is like /proxy/demo/667... or /proxy/demo/667.../assets/main.js
+      // We want to strip the /proxy/demo/:fileId part
+      const regex = new RegExp(`^/proxy/demo/${fileId}`);
+      return path.replace(regex, '') || '/';
+    },
     proxyTimeout: hardTimeoutMs,
     timeout: hardTimeoutMs,
     on: {
