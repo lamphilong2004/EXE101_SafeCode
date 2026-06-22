@@ -6,6 +6,7 @@ import {
 import Button from '../../components/ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-toastify';
+import api from '../../services/api';
 import './Landing.css';
 
 const Landing = () => {
