@@ -217,7 +217,8 @@ const PreviewModal = ({ file, onClose }) => {
 
     return () => {
       clearInterval(interval);
-      api.post('/preview/stop', { fileId: file.id }).catch(() => { });
+      // Removed explicit /preview/stop to prevent React StrictMode race condition.
+      // Backend cleanup worker will automatically reap inactive sessions after 30s.
     };
   }, [file.id, onClose, setUser]);
 
