@@ -15,8 +15,13 @@ export function createApp() {
 
   app.set("trust proxy", 1);
 
-  // Disable CSP so Swagger UI loads styles properly in browser
-  app.use(helmet({ contentSecurityPolicy: false }));
+  // Disable CSP and X-Frame-Options so the Proxy can be embedded in iframe across different domains (Vercel, localhost)
+  app.use(helmet({ 
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: false,
+    xFrameOptions: false
+  }));
 
   const allowedOrigins = String(env.CORS_ORIGIN || "")
     .split(",")
