@@ -191,6 +191,8 @@ const PreviewModal = ({ file, onClose }) => {
   const [isFree, setIsFree] = useState(true);
   const [activeCredits, setActiveCredits] = useState(user?.credits || 0);
 
+  const [isSessionStarted, setIsSessionStarted] = useState(false);
+
   useEffect(() => {
     // Initial heartbeat to start session
     const sendHeartbeat = async () => {
@@ -201,6 +203,7 @@ const PreviewModal = ({ file, onClose }) => {
         setIsFree(sessionIsFree);
         setMinsRemaining(trialMinutesRemaining);
         setUser(prev => ({ ...prev, credits: balance }));
+        setIsSessionStarted(true);
       } catch (err) {
         if (err.response?.status === 402) {
           toast.error("Hết Credits! Đang ngắt kết nối Sandbox...");
@@ -238,21 +241,29 @@ const PreviewModal = ({ file, onClose }) => {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => {
-              const token = localStorage.getItem('safecode_token');
-              window.open(`${api.defaults.baseURL}/proxy/demo/${file.id}?token=${token}`, '_blank');
-            }}>
-              <ExternalLink size={16} /> Open External
-            </Button>
+            {isSessionStarted && (
+              <Button variant="outline" size="sm" onClick={() => {
+                const token = localStorage.getItem('safecode_token');
+                window.open(`${api.defaults.baseURL}/proxy/demo/${file.id}?token=${token}`, '_blank');
+              }}>
+                <ExternalLink size={16} /> Open External
+              </Button>
+            )}
             <button className="close-btn" onClick={onClose}><X size={20} /></button>
           </div>
         </div>
         <div className="preview-iframe-wrapper">
-          <iframe
-            src={`${api.defaults.baseURL}/proxy/demo/${file.id}?token=${localStorage.getItem('safecode_token')}`}
-            title="Project Preview"
-            className="preview-iframe"
-          />
+          {isSessionStarted ? (
+            <iframe
+              src={`${api.defaults.baseURL}/proxy/demo/${file.id}?token=${localStorage.getItem('safecode_token')}`}
+              title="Project Preview"
+              className="preview-iframe"
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full text-white">
+              Đang khởi tạo phiên Demo an toàn...
+            </div>
+          )}
         </div>
       </div>
     </div>,
