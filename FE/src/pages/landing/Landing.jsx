@@ -513,11 +513,13 @@ const Landing = () => {
           className="auth-modal-overlay"
           onClick={(e) => { if (e.target.className === 'auth-modal-overlay') setShowModal(false); }}
         >
-          <div className="auth-modal-content">
-            <button className="modal-close" onClick={() => setShowModal(false)}><X size={20} /></button>
+          <div className="auth-modal-card">
+            <button className="close-modal-btn" onClick={() => setShowModal(false)}><X size={20} /></button>
             
             <div className="auth-header">
-              <ShieldCheck size={40} className="auth-logo pulse-animation" />
+              <div className="auth-icon-wrapper pulse-animation">
+                <ShieldCheck size={32} />
+              </div>
               <h2>
                 {modalView === 'register' ? 'Tạo Tài Khoản' : 
                  modalView === 'login' ? 'Đăng Nhập' : 
