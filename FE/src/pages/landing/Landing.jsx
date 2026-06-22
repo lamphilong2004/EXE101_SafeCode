@@ -112,7 +112,11 @@ const Landing = () => {
     const idToken = response.credential;
     setIsLoggingIn(true);
     try {
-      const result = await loginWithGoogle(roleRef.current, idToken, false);
+      // If we are explicitly on the Register tab, we already know their selected role
+      // so we can pass true to `isRegisteringConfirmation` to create the account directly
+      const isConfirming = modalView === 'register';
+      const result = await loginWithGoogle(roleRef.current, idToken, isConfirming);
+      
       if (result.actionRequired === 'select_role') {
         setPendingGoogleToken(idToken);
         return;
@@ -150,11 +154,12 @@ const Landing = () => {
             window.google.accounts.id.renderButton(
               buttonParent,
               {
-                theme: "outline",
+                theme: "filled_black",
                 size: "large",
                 width: buttonParent.clientWidth || 320,
                 text: "continue_with",
-                shape: "rectangular"
+                shape: "rectangular",
+                logo_alignment: "left"
               }
             );
           }
@@ -737,10 +742,10 @@ const Landing = () => {
 
                 {(modalView === 'login' || modalView === 'register') && (
                   <>
-                    <div style={{ display: 'flex', alignItems: 'center', margin: '16px 0' }}>
-                      <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }}></div>
-                      <span style={{ margin: '0 12px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>HOẶC</span>
-                      <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }}></div>
+                    <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0' }}>
+                      <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-glass)' }}></div>
+                      <span style={{ margin: '0 12px', fontSize: '0.85rem', color: 'var(--on-surface-var)', fontWeight: 500 }}>HOẶC</span>
+                      <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-glass)' }}></div>
                     </div>
 
                     <div
@@ -750,7 +755,9 @@ const Landing = () => {
                         display: 'flex',
                         justifyContent: 'center',
                         minHeight: '44px',
-                        marginTop: '4px'
+                        marginTop: '8px',
+                        overflow: 'hidden',
+                        borderRadius: '8px'
                       }}
                     ></div>
                   </>
