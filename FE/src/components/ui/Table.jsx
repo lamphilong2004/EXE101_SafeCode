@@ -385,6 +385,34 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
     }
   };
 
+  const handleOpenVercelLiveDemo = async (fileId, url, isUploadedState) => {
+    if (!url) return;
+
+    // Open a blank tab immediately to avoid browser popup blocker
+    const newTab = window.open('about:blank', '_blank');
+
+    if (isUploadedState) {
+      try {
+        const res = await api.put(`/files/${fileId}/start-trial`);
+        updateFileStatus(fileId, 'Testing Phase', { trialEndsAt: res.data.trialEndsAt });
+        toast.success("Đã bắt đầu dùng thử!");
+        if (newTab) {
+          newTab.location.href = url;
+        }
+      } catch (err) {
+        console.error(err);
+        toast.error("Không thể bắt đầu dùng thử!");
+        if (newTab) {
+          newTab.close();
+        }
+      }
+    } else {
+      if (newTab) {
+        newTab.location.href = url;
+      }
+    }
+  };
+
   const handleFreelancerConfirm = async (id, result) => {
     const action = result === 'confirm' ? 'confirm' : 'reject';
     const msg = action === 'confirm' ? "XÁC NHẬN: Bạn đã nhận đủ tiền?" : "Bạn KHÔNG nhận được tiền?";
@@ -741,20 +769,34 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
               ) : (
                 <td>
                   {row.status === 'Uploaded' && (
-                    <Button variant="primary" className="unlock-btn" title="Kích hoạt demo" onClick={() => handleStartTrial(row.id)}>
-                      <Clock size={16} style={{ marginRight: 6 }} /> Xem Demo (Dùng thử {row.allocatedMinutes || 0} phút)
-                    </Button>
-                  )}
-                  {row.status === 'Testing Phase' && (
-                    <div className="client-actions">
-                      <Button variant="primary" className="unlock-btn" title="Launch Managed Preview" onClick={() => setActivePreviewFile(row)}>
+                    row.projectType === 'web' && row.demoType === 'url' && row.demoUrl ? (
+                      <Button variant="primary" className="unlock-btn" title="Xem Live Demo" onClick={() => handleOpenVercelLiveDemo(row.id, row.demoUrl, true)}>
                         <ExternalLink size={16} style={{ marginRight: 6 }} /> Xem Live Demo
                       </Button>
-                      <div className="mt-2 p-2 bg-blue-50 text-blue-700 rounded text-xs border border-blue-100 flex items-start gap-1">
-                        <ShieldAlert size={12} className="shrink-0 mt-0.5" />
-                        <span>Môi trường Sandbox ảo: Bạn có thể test trực tiếp, source code hoàn toàn an toàn và không bị lộ.</span>
+                    ) : (
+                      <Button variant="primary" className="unlock-btn" title="Kích hoạt demo" onClick={() => handleStartTrial(row.id)}>
+                        <Clock size={16} style={{ marginRight: 6 }} /> Xem Demo (Dùng thử {row.allocatedMinutes || 0} phút)
+                      </Button>
+                    )
+                  )}
+                  {row.status === 'Testing Phase' && (
+                    row.projectType === 'web' && row.demoType === 'url' && row.demoUrl ? (
+                      <div className="client-actions">
+                        <Button variant="primary" className="unlock-btn" title="Xem Live Demo" onClick={() => handleOpenVercelLiveDemo(row.id, row.demoUrl, false)}>
+                          <ExternalLink size={16} style={{ marginRight: 6 }} /> Xem Live Demo
+                        </Button>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="client-actions">
+                        <Button variant="primary" className="unlock-btn" title="Launch Managed Preview" onClick={() => setActivePreviewFile(row)}>
+                          <ExternalLink size={16} style={{ marginRight: 6 }} /> Xem Live Demo
+                        </Button>
+                        <div className="mt-2 p-2 bg-blue-50 text-blue-700 rounded text-xs border border-blue-100 flex items-start gap-1">
+                          <ShieldAlert size={12} className="shrink-0 mt-0.5" />
+                          <span>Môi trường Sandbox ảo: Bạn có thể test trực tiếp, source code hoàn toàn an toàn và không bị lộ.</span>
+                        </div>
+                      </div>
+                    )
                   )}
                   {row.status === 'Verifying Payment' && (
                     <div className="client-actions">

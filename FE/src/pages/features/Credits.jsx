@@ -38,14 +38,17 @@ const Credits = () => {
     fetchData();
   }, [page]);
 
-  const handlePayosTopup = async () => {
-    if (creditsToBuy < 10) {
+  const handlePayosTopup = async (overrideAmount = null) => {
+    // Check if overrideAmount is a valid number, otherwise default to creditsToBuy
+    const amountToBuy = typeof overrideAmount === 'number' ? overrideAmount : creditsToBuy;
+    
+    if (amountToBuy < 10) {
       toast.error("Vui lòng nạp tối thiểu 10 Credit (10.000 VNĐ).");
       return;
     }
     setIsSubmitting(true);
     try {
-      const res = await api.post('/credits/buy-payos', { amount: creditsToBuy });
+      const res = await api.post('/credits/buy-payos', { amount: amountToBuy });
       if (res.data.checkoutUrl) {
         window.location.href = res.data.checkoutUrl;
       }
@@ -172,8 +175,8 @@ const Credits = () => {
               </div>
             </div>
 
-            <button className="pricing-btn" onClick={() => { setCreditsToBuy(250); toast.info("Cuộn xuống dưới và quét mã QR để nạp gói này."); }}>
-              Nâng Cấp Ngay
+            <button className="pricing-btn" onClick={() => handlePayosTopup(250)} disabled={isSubmitting}>
+              {isSubmitting ? 'Đang khởi tạo...' : 'Nâng Cấp Ngay'}
             </button>
           </div>
         </div>

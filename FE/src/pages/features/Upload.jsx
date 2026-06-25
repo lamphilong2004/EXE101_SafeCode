@@ -115,7 +115,10 @@ const Upload = ({ onAddFile }) => {
         date: new Date().toLocaleDateString(),
         client: clientEmail,
         status: 'Uploaded',
-        amount: parseFloat(amount) || 0
+        amount: parseFloat(amount) || 0,
+        projectType,
+        demoType,
+        demoUrl
       });
 
       setIsSuccess(true);
@@ -190,7 +193,14 @@ const Upload = ({ onAddFile }) => {
                     </div>
                     <div className="input-group">
                       <label>Project Type</label>
-                      <select className="form-input" value={projectType} onChange={(e) => setProjectType(e.target.value)}>
+                      <select className="form-input" value={projectType} onChange={(e) => {
+                        const newType = e.target.value;
+                        setProjectType(newType);
+                        if (newType !== 'web' && demoType === 'url') {
+                          setDemoType('none');
+                          setDemoUrl('');
+                        }
+                      }}>
                         <option value="code">Pure Code (0 Extra Credits)</option>
                         <option value="web">Web Project (+2 Extra Credits)</option>
                         <option value="app">Mobile App (+5 Extra Credits)</option>
@@ -200,15 +210,17 @@ const Upload = ({ onAddFile }) => {
                       <label>Demo Type</label>
                       <select className="form-input" value={demoType} onChange={(e) => setDemoType(e.target.value)}>
                         <option value="none">No Demo</option>
-                        <option value="url">Vercel / URL Live Preview</option>
+                        {projectType === 'web' && (
+                          <option value="url">Vercel / URL Live Preview</option>
+                        )}
                         <option value="build">Build Binary (Executable/Installer)</option>
                       </select>
                     </div>
 
                     {demoType === 'url' && (
                       <div className="input-group">
-                        <label>Demo URL (Ngrok, Vercel, public IP, etc.)</label>
-                        <input type="url" value={demoUrl} onChange={(e) => setDemoUrl(e.target.value)} placeholder="https://my-demo.loca.lt" className="form-input" />
+                        <label>Link Vercel / Live URL <span className="text-danger">*</span></label>
+                        <input type="url" value={demoUrl} onChange={(e) => setDemoUrl(e.target.value)} placeholder="https://your-project.vercel.app" className="form-input" />
                       </div>
                     )}
 

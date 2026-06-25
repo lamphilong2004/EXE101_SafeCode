@@ -60,6 +60,7 @@ export async function createFileListing(req, res, next) {
     if (projectType && !["web", "app", "code"].includes(projectType)) throw httpError(400, "Invalid projectType");
 
     if (demo.type === "url") {
+      if (projectType !== "web") throw httpError(400, "Demo type URL is only allowed for Web projects");
       if (!demo.url) throw httpError(400, "demo.url is required for demo type url");
       const v = validatePublicDemoUrl(String(demo.url));
       if (!v.ok) throw httpError(400, `Invalid demo.url: ${v.reason}`);

@@ -55,6 +55,7 @@ function App() {
           amount: f.price.amount,
           allocatedMinutes: f.allocatedMinutes || 0,
           trialEndsAt: f.trialEndsAt || null,
+          projectType: f.projectType,
           demoType: f.demo.type,
           demoUrl: f.demo.url
         }));
