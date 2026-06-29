@@ -832,20 +832,24 @@ const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
                   )}
                   {row.status === 'Paid' && (
                     <div className="client-actions" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--success-color)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <ShieldCheck size={14} /> Đã cấp quyền GitHub
+                      </span>
                       <Button
                         variant="primary"
-                        className="unlock-btn"
-                        onClick={() => handleDecrypt(row.id, row.fileName)}
+                        className="unlock-btn w-full justify-center"
+                        style={{ backgroundColor: 'var(--success-color)', borderColor: 'var(--success-color)' }}
+                        onClick={() => window.open(row.githubRepoUrl || 'https://github.com', '_blank')}
                       >
-                        <Unlock size={16} /> Unlock & Download
+                        <ExternalLink size={16} style={{ marginRight: 6 }} /> Mở Repository
                       </Button>
                       <Button
                         variant="outline"
-                        style={{ fontSize: '0.8rem', padding: '6px 10px', borderColor: '#ea4335', color: '#ea4335' }}
-                        title="Mở hòm thư Gmail để lấy mã Serial"
-                        onClick={() => window.open('https://mail.google.com/mail/u/0/#search/SafeCode', '_blank')}
+                        className="w-full justify-center"
+                        style={{ fontSize: '0.8rem', padding: '6px 10px' }}
+                        onClick={() => setActiveChatFile(row.id)}
                       >
-                        <Mail size={14} style={{ marginRight: 4 }} /> Mở Email (Lấy Key)
+                        <MessageCircle size={14} style={{ marginRight: 4 }} /> Nhắn tin
                       </Button>
                     </div>
                   )}
