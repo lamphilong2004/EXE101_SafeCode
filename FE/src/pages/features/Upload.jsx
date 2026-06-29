@@ -111,12 +111,12 @@ const Upload = ({ onAddFile }) => {
     try {
       // Step 1: Create File Listing Record in MongoDB
       const createRes = await api.post('/files', {
-        fileName: githubRepoUrl.split('/').pop() || 'GitHub Repository',
-        clientEmail,
-        amount: parseFloat(amount),
+        title: githubRepoUrl.split('/').pop() || 'GitHub Repository',
+        description: "Source code upload",
+        price: { amount: parseFloat(amount) || 0, currency: 'vnd' },
+        intendedClientEmail: clientEmail,
+        demo: { type: demoType, url: demoUrl },
         projectType,
-        demoType,
-        demoUrl,
         trialMinutes: parseInt(trialMinutes) || 15,
         deliveryMethod: 'github_repo',
         githubRepoUrl,
