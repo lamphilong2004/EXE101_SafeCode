@@ -212,7 +212,6 @@ const Upload = ({ onAddFile }) => {
                     </Button>
                   </div>
                 </div>
-              </>
             
             <div className="selected-file mt-6">
 
