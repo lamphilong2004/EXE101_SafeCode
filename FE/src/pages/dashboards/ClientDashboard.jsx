@@ -86,9 +86,9 @@ const ClientDashboard = ({ files, updateFileStatus, pagination }) => {
 
       {/* Received Files Table */}
       <div className="dashboard-section">
-        <div className="section-header">
-          <h2 className="section-title">
-            <span className="section-title-dot" />
+        <div className="dashboard-section-header">
+          <h2 className="dashboard-section-title">
+            <span className="dashboard-section-title-dot" />
             File Vừa Nhận
           </h2>
           <Link to="/files" className="view-all-link">
@@ -96,7 +96,7 @@ const ClientDashboard = ({ files, updateFileStatus, pagination }) => {
           </Link>
         </div>
         {recentFiles.length > 0 ? (
-          <Table data={recentFiles} columns={columns} userRole="client" updateFileStatus={updateFileStatus} />
+          <Table data={recentFiles} columns={columns} userRole="client" updateFileStatus={updateFileStatus} hideFilter={true} />
         ) : (
           <div className="empty-state">
             <div className="empty-state-icon">

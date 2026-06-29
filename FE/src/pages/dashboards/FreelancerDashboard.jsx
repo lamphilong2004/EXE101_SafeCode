@@ -96,9 +96,9 @@ const FreelancerDashboard = ({ files, updateFileStatus, pagination }) => {
 
       {/* Recent Deliveries Table */}
       <div className="dashboard-section">
-        <div className="section-header">
-          <h2 className="section-title">
-            <span className="section-title-dot" />
+        <div className="dashboard-section-header">
+          <h2 className="dashboard-section-title">
+            <span className="dashboard-section-title-dot" />
             Bàn Giao Gần Đây
           </h2>
           <Link to="/files" className="view-all-link">
@@ -106,7 +106,7 @@ const FreelancerDashboard = ({ files, updateFileStatus, pagination }) => {
           </Link>
         </div>
         {recentFiles.length > 0 ? (
-          <Table data={recentFiles} columns={columns} userRole="freelancer" updateFileStatus={updateFileStatus} />
+          <Table data={recentFiles} columns={columns} userRole="freelancer" updateFileStatus={updateFileStatus} hideFilter={true} />
         ) : (
           <div className="empty-state">
             <div className="empty-state-icon">

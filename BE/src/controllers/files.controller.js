@@ -48,12 +48,81 @@ class ByteCounter extends Transform {
   }
 }
 
+async function fetchWithTimeout(url, timeoutMs = 5000) {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+    if (!res.ok) return null;
+    const text = await res.text();
+    return text.trim();
+  } catch (err) {
+    return null;
+  }
+}
+
+export async function verifyRepo(req, res, next) {
+  try {
+    const { githubRepoUrl, demoUrl, token } = req.body;
+    if (!githubRepoUrl || !demoUrl || !token) {
+      return res.status(400).json({ verified: false, message: "Missing parameters" });
+    }
+
+    // 1. Check Vercel Demo
+    const cleanDemoUrl = demoUrl.replace(/\/$/, "");
+    const vercelCheckUrl = `${cleanDemoUrl}/safecode.txt`;
+    const vercelContent = await fetchWithTimeout(vercelCheckUrl);
+    
+    // We check if the token exists within the response, just in case the server wraps it in HTML.
+    if (!vercelContent || !vercelContent.includes(token)) {
+      return res.status(200).json({ verified: false, message: "Verification token not found on Demo URL. Please ensure safecode.txt is accessible." });
+    }
+
+    // 2. Check GitHub Repo
+    let rawBase = githubRepoUrl.replace("github.com", "raw.githubusercontent.com").replace(/\.git$/, "");
+    
+    const pathsToCheck = [
+      `${rawBase}/main/public/safecode.txt`,
+      `${rawBase}/master/public/safecode.txt`,
+      `${rawBase}/main/safecode.txt`,
+      `${rawBase}/master/safecode.txt`,
+      `${rawBase}/main/web/public/safecode.txt`,
+      `${rawBase}/master/web/public/safecode.txt`,
+      `${rawBase}/main/frontend/public/safecode.txt`,
+      `${rawBase}/master/frontend/public/safecode.txt`,
+      `${rawBase}/main/client/public/safecode.txt`,
+      `${rawBase}/master/client/public/safecode.txt`
+    ];
+
+    let githubFound = false;
+    for (const p of pathsToCheck) {
+      const ghContent = await fetchWithTimeout(p);
+      if (ghContent && ghContent.includes(token)) {
+        githubFound = true;
+        break;
+      }
+    }
+
+    if (!githubFound) {
+      return res.status(200).json({ verified: false, message: "Verification token not found on GitHub Repo. Please commit safecode.txt." });
+    }
+
+    res.json({ verified: true });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function createFileListing(req, res, next) {
   try {
-    const { title, description, price, intendedClientEmail, demo, projectType, trialMinutes } = req.body || {};
+    const { title, description, price, intendedClientEmail, demo, projectType, trialMinutes, deliveryMethod, githubRepoUrl, verificationToken } = req.body || {};
 
     if (!title || !price?.amount || !price?.currency || !intendedClientEmail || !demo?.type) {
       throw httpError(400, "title, price{amount,currency}, intendedClientEmail, demo{type} are required");
+    }
+
+    const finalDeliveryMethod = deliveryMethod === "github_repo" ? "github_repo" : "zip_upload";
+    if (finalDeliveryMethod === "github_repo") {
+      if (!githubRepoUrl) throw httpError(400, "githubRepoUrl is required when delivery method is GitHub Repo");
+      if (!verificationToken) throw httpError(400, "verificationToken is required to prove ownership");
     }
 
     if (!["none", "url", "build"].includes(demo.type)) throw httpError(400, "Invalid demo type");
@@ -80,7 +149,12 @@ export async function createFileListing(req, res, next) {
         type: demo.type,
         url: demo.type === "url" ? String(demo.url) : null,
       },
-      status: "Draft",
+      deliveryMethod: finalDeliveryMethod,
+      github: {
+        repoUrl: finalDeliveryMethod === "github_repo" ? githubRepoUrl : null,
+      },
+      status: finalDeliveryMethod === "github_repo" ? "Uploaded" : "Draft", // Github doesn't need file upload step
+      uploadedAt: finalDeliveryMethod === "github_repo" ? new Date() : null,
       allocatedMinutes: Number(trialMinutes) || 0,
       s3: {
         bucket: null,
@@ -170,9 +244,9 @@ export async function startTrial(req, res, next) {
     if (fileDoc.intendedClientEmail !== req.user.email) throw httpError(403, "Forbidden");
     if (fileDoc.status !== "Uploaded") throw httpError(409, "File must be in Uploaded state to start trial");
 
-    // DEMO MODE: 15 seconds total trial
+    const mins = fileDoc.allocatedMinutes > 0 ? fileDoc.allocatedMinutes : 15;
     fileDoc.status = "Testing Phase";
-    fileDoc.trialEndsAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    fileDoc.trialEndsAt = new Date(Date.now() + mins * 60 * 1000); // Use actual minutes
     await fileDoc.save();
 
     res.json({ success: true, status: fileDoc.status, trialEndsAt: fileDoc.trialEndsAt });
@@ -641,32 +715,46 @@ export async function confirmPayment(req, res, next) {
         console.error("[CREDIT] Failed to reward credits:", creditErr);
       }
 
-      // === NEW V3 DRM: Issue License Serial ===
+      // === NEW V3 DRM / GITHUB DELIVERY ===
       let serial = null;
       try {
         const clientUser = await User.findOne({ email: fileDoc.intendedClientEmail });
         const clientId = clientUser ? clientUser._id : fileDoc.freelancerId;
         
-        const { key: licenseSerial } = await issueLicense(clientId, fileDoc._id);
-        serial = licenseSerial;
-        
-        await sendDecryptionKeyEmail(fileDoc.intendedClientEmail, {
-          fileName: fileDoc.title,
-          licenseKey: serial,
-          isV3: true,
-        });
+        if (fileDoc.deliveryMethod === "github_repo") {
+          // Simulate GitHub API Invite
+          console.log(`[GITHUB] Automatically inviting ${fileDoc.intendedClientEmail} to repo ${fileDoc.github?.repoUrl}`);
+          
+          if (clientUser) {
+            createNotification(
+              String(clientUser._id),
+              "Đã cấp quyền GitHub thành công! 🎉",
+              `Freelancer đã xác nhận thanh toán. Bạn đã được thêm làm Collaborator vào kho chứa mã nguồn: ${fileDoc.github?.repoUrl}`,
+              { type: "payment", relatedFileId: fileDoc._id }
+            );
+          }
+        } else {
+          // Standard ZIP DRM
+          const { key: licenseSerial } = await issueLicense(clientId, fileDoc._id);
+          serial = licenseSerial;
+          
+          await sendDecryptionKeyEmail(fileDoc.intendedClientEmail, {
+            fileName: fileDoc.title,
+            licenseKey: serial,
+            isV3: true,
+          });
 
-        // Notify the Client that payment is confirmed and license is ready
-        if (clientUser) {
-          createNotification(
-            String(clientUser._id),
-            "Thanh toán được xác nhận! 🎉",
-            `Freelancer đã xác nhận thanh toán cho "${fileDoc.title}". Khóa giải mã đã được gửi vào email của bạn.`,
-            { type: "payment", relatedFileId: fileDoc._id }
-          );
+          if (clientUser) {
+            createNotification(
+              String(clientUser._id),
+              "Thanh toán được xác nhận! 🎉",
+              `Freelancer đã xác nhận thanh toán cho "${fileDoc.title}". Khóa giải mã đã được gửi vào email của bạn.`,
+              { type: "payment", relatedFileId: fileDoc._id }
+            );
+          }
         }
       } catch (drmErr) {
-        console.error("[DRM] Failed to issue/send license:", drmErr);
+        console.error("[DRM/GITHUB] Failed to issue license or invite:", drmErr);
       }
 
       return res.json({ success: true, status: fileDoc.status, creditsEarned });

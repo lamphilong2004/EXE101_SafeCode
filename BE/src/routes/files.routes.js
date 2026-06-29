@@ -15,6 +15,7 @@ import {
   confirmPayment,
   disputePayment,
   getFileStatus,
+  verifyRepo,
 } from "../controllers/files.controller.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
@@ -29,6 +30,7 @@ const licenseLimiter = rateLimit({
 export const filesRoutes = Router();
 
 // Freelancer
+filesRoutes.post("/verify-repo", requireAuth, requireRole("freelancer"), verifyRepo);
 filesRoutes.post("/", requireAuth, requireRole("freelancer"), createFileListing);
 filesRoutes.get("/mine", requireAuth, requireRole("freelancer"), getMyFiles);
 filesRoutes.post("/:fileId/upload", requireAuth, requireRole("freelancer"), uploadEncryptedZip);

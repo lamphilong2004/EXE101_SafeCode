@@ -272,7 +272,7 @@ const PreviewModal = ({ file, onClose }) => {
   );
 };
 
-const Table = ({ data, columns, userRole, updateFileStatus }) => {
+const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
   const [checkoutFile, setCheckoutFile] = useState(null);
   const [receiptPreview, setReceiptPreview] = useState(null);
   const [receiptFile, setReceiptFile] = useState(null);
@@ -698,17 +698,19 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
         document.body
       )}
       
-      <div className="filter-tabs">
-        {filterTabs.map(tab => (
-          <button 
-            key={tab.label}
-            className={`filter-tab ${activeFilter === tab.label ? 'active' : ''}`}
-            onClick={() => setActiveFilter(tab.label)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {!hideFilter && (
+        <div className="filter-tabs">
+          {filterTabs.map(tab => (
+            <button 
+              key={tab.label}
+              className={`filter-tab ${activeFilter === tab.label ? 'active' : ''}`}
+              onClick={() => setActiveFilter(tab.label)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="table-container">
         <table className="data-table">
         <thead>
@@ -769,34 +771,49 @@ const Table = ({ data, columns, userRole, updateFileStatus }) => {
               ) : (
                 <td>
                   {row.status === 'Uploaded' && (
-                    row.projectType === 'web' && row.demoType === 'url' && row.demoUrl ? (
-                      <Button variant="primary" className="unlock-btn" title="Xem Live Demo" onClick={() => handleOpenVercelLiveDemo(row.id, row.demoUrl, true)}>
-                        <ExternalLink size={16} style={{ marginRight: 6 }} /> Xem Live Demo
-                      </Button>
-                    ) : (
-                      <Button variant="primary" className="unlock-btn" title="Kích hoạt demo" onClick={() => handleStartTrial(row.id)}>
-                        <Clock size={16} style={{ marginRight: 6 }} /> Xem Demo (Dùng thử {row.allocatedMinutes || 0} phút)
-                      </Button>
-                    )
+                    <div className="client-actions" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                        {row.projectType === 'web' && row.demoType === 'url' && row.demoUrl ? (
+                          <Button variant="primary" style={{ flex: 1, padding: '8px' }} className="unlock-btn text-xs justify-center" title="Xem Live Demo" onClick={() => handleOpenVercelLiveDemo(row.id, row.demoUrl, true)}>
+                            <ExternalLink size={14} style={{ marginRight: 4 }} /> Demo
+                          </Button>
+                        ) : (
+                          <Button variant="primary" style={{ flex: 1, padding: '8px' }} className="unlock-btn text-xs justify-center" title="Kích hoạt demo" onClick={() => handleStartTrial(row.id)}>
+                            <Clock size={14} style={{ marginRight: 4 }} /> Kích hoạt ({row.allocatedMinutes || 0}p)
+                          </Button>
+                        )}
+                        <Button variant="outline" style={{ flex: 1, padding: '8px' }} className="text-xs justify-center" onClick={() => setActiveChatFile(row.id)}>
+                          <MessageCircle size={14} style={{ marginRight: 4 }} /> Nhắn tin
+                        </Button>
+                      </div>
+                    </div>
                   )}
                   {row.status === 'Testing Phase' && (
-                    row.projectType === 'web' && row.demoType === 'url' && row.demoUrl ? (
-                      <div className="client-actions">
-                        <Button variant="primary" className="unlock-btn" title="Xem Live Demo" onClick={() => handleOpenVercelLiveDemo(row.id, row.demoUrl, false)}>
-                          <ExternalLink size={16} style={{ marginRight: 6 }} /> Xem Live Demo
+                    <div className="client-actions" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                        {row.projectType === 'web' && row.demoType === 'url' && row.demoUrl ? (
+                          <Button variant="primary" style={{ flex: 1, padding: '8px' }} className="unlock-btn text-xs justify-center" title="Xem Live Demo" onClick={() => handleOpenVercelLiveDemo(row.id, row.demoUrl, false)}>
+                            <ExternalLink size={14} style={{ marginRight: 4 }} /> Xem Demo
+                          </Button>
+                        ) : (
+                          <Button variant="primary" style={{ flex: 1, padding: '8px' }} className="unlock-btn text-xs justify-center" title="Launch Managed Preview" onClick={() => setActivePreviewFile(row)}>
+                            <ExternalLink size={14} style={{ marginRight: 4 }} /> Xem Demo
+                          </Button>
+                        )}
+                        <Button variant="outline" style={{ flex: 1, padding: '8px' }} className="text-xs justify-center" onClick={() => setActiveChatFile(row.id)}>
+                          <MessageCircle size={14} style={{ marginRight: 4 }} /> Nhắn tin
                         </Button>
                       </div>
-                    ) : (
-                      <div className="client-actions">
-                        <Button variant="primary" className="unlock-btn" title="Launch Managed Preview" onClick={() => setActivePreviewFile(row)}>
-                          <ExternalLink size={16} style={{ marginRight: 6 }} /> Xem Live Demo
-                        </Button>
-                        <div className="mt-2 p-2 bg-blue-50 text-blue-700 rounded text-xs border border-blue-100 flex items-start gap-1">
+                      <Button variant="outline" className="pay-btn premium-border w-full justify-center" style={{ padding: '10px' }} onClick={() => handlePay(row.id)}>
+                        <Lock size={16} style={{ marginRight: 6 }} /> Thanh toán ({row.amount.toLocaleString()} đ)
+                      </Button>
+                      {row.demoType !== 'url' && (
+                        <div className="mt-1 p-2 bg-blue-50 text-blue-700 rounded text-xs border border-blue-100 flex items-start gap-1 w-full">
                           <ShieldAlert size={12} className="shrink-0 mt-0.5" />
-                          <span>Môi trường Sandbox ảo: Bạn có thể test trực tiếp, source code hoàn toàn an toàn và không bị lộ.</span>
+                          <span>Môi trường Sandbox ảo: Bạn có thể test trực tiếp an toàn.</span>
                         </div>
-                      </div>
-                    )
+                      )}
+                    </div>
                   )}
                   {row.status === 'Verifying Payment' && (
                     <div className="client-actions">

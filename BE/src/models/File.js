@@ -22,6 +22,11 @@ const FileSchema = new mongoose.Schema(
 
     status: { type: String, enum: FILE_STATUS, default: "Draft", index: true },
 
+    deliveryMethod: { type: String, enum: ["zip_upload", "github_repo"], default: "zip_upload" },
+    github: {
+      repoUrl: { type: String, default: null },
+    },
+
     // populated after encrypted upload completes
     s3: {
       bucket: { type: String, default: null },

@@ -19,10 +19,7 @@ const Sidebar = ({ userRole, onLogout }) => {
     <aside className="sidebar">
       {/* Logo */}
       <Link to="/" className="sidebar-logo">
-        <div className="sidebar-logo-icon">
-          <ShieldCheck size={20} />
-        </div>
-        <span className="sidebar-logo-text">Safe<span>Code</span></span>
+        <img src="/logo.png" alt="SafeCode Logo" className="sidebar-logo-image" />
       </Link>
 
       {/* Role Badge */}

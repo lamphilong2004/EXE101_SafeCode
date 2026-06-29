@@ -40,43 +40,18 @@
 .sidebar-logo {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
   padding: 4px 12px 32px 12px;
   text-decoration: none;
 }
 
-.sidebar-logo-icon {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  box-shadow: var(--shadow-glow-sm);
-  flex-shrink: 0;
-  position: relative;
-  overflow: hidden;
-}
-
-.sidebar-logo-icon::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
-}
-
-.sidebar-logo-text {
-  font-family: 'Geist', 'Outfit', sans-serif;
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--text-main);
-  letter-spacing: -0.03em;
-}
-
-.sidebar-logo-text span {
-  color: var(--primary-color);
+.sidebar-logo-image {
+  height: 85px; /* Tăng chiều cao lên nhiều lần */
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  transform: scale(1.2); /* Phóng to nhẹ để logo tràn viền đẹp hơn nếu ảnh có viền trống */
 }
 
 /* ── Role Badge ── */

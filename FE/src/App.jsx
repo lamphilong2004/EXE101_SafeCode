@@ -57,7 +57,9 @@ function App() {
           trialEndsAt: f.trialEndsAt || null,
           projectType: f.projectType,
           demoType: f.demo.type,
-          demoUrl: f.demo.url
+          demoUrl: f.demo.url,
+          deliveryMethod: f.deliveryMethod,
+          githubRepoUrl: f.github?.repoUrl || null
         }));
         setFiles(mappedFiles);
       } catch (error) {

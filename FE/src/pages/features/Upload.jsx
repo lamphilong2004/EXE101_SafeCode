@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { UploadCloud, File, X, CheckCircle, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { UploadCloud, File, X, CheckCircle, ShieldCheck, Lock, Search } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import api from '../../services/api';
@@ -7,7 +7,7 @@ import { toast } from 'react-toastify';
 import './Upload.css';
 
 const Upload = ({ onAddFile }) => {
-  const [file, setFile] = useState(null);
+  const [githubRepoUrl, setGithubRepoUrl] = useState('');
   const [clientEmail, setClientEmail] = useState('');
   const [amount, setAmount] = useState('');
   const [projectType, setProjectType] = useState('code');
@@ -17,19 +17,24 @@ const Upload = ({ onAddFile }) => {
   const [buildFile, setBuildFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [verificationToken, setVerificationToken] = useState('');
+  const [isVerified, setIsVerified] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  useEffect(() => {
+    // Generate a random token on mount for cross-check verification
+    const randomToken = `SC-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    setVerificationToken(randomToken);
+  }, []);
   const [estimatedCost, setEstimatedCost] = useState(null);
 
   // Real-time credit estimation
   React.useEffect(() => {
     const estimate = async () => {
-      if (!file) {
-        setEstimatedCost(null);
-        return;
-      }
       try {
         const res = await api.post('/credits/estimate', {
           projectType,
-          sizeBytes: file.size
+          sizeBytes: 0
         });
         setEstimatedCost(res.data.estimatedCredits);
       } catch (err) {
@@ -37,29 +42,55 @@ const Upload = ({ onAddFile }) => {
       }
     };
     estimate();
-  }, [file, projectType]);
+  }, [projectType]);
 
-  const handleDrop = (e) => {
+  const handleVerifyRepo = async () => {
+    if (!githubRepoUrl || !githubRepoUrl.includes("github.com")) {
+      toast.error("Vui lòng nhập Link GitHub hợp lệ trước.");
+      return;
+    }
+    if (demoType !== 'url' || !demoUrl) {
+      toast.error("Vui lòng chọn Demo Type là URL và nhập Link Vercel trước.");
+      return;
+    }
+    setIsVerifying(true);
+    try {
+      const res = await api.post('/files/verify-repo', {
+        githubRepoUrl,
+        demoUrl,
+        token: verificationToken
+      });
+      if (res.data.verified) {
+        setIsVerified(true);
+        toast.success("Xác minh chéo thành công! Code và Demo đã khớp nhau.");
+      } else {
+        toast.error(res.data.message || "Xác minh thất bại. Hãy kiểm tra lại file safecode.txt");
+        setIsVerified(false);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Lỗi khi gọi API xác minh.");
+      setIsVerified(false);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+
+
+  const handleUpload = async (e) => {
     e.preventDefault();
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setFile(e.dataTransfer.files[0]);
-    }
-  };
-
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!file) {
-      toast.error("Please select a file to upload.");
+    if (!clientEmail || !amount) {
+      toast.error("Vui lòng điền đầy đủ email và giá bán.");
       return;
     }
 
-    if (!clientEmail) {
-      toast.error("Please enter the client's email.");
+    if (!githubRepoUrl || !githubRepoUrl.includes("github.com")) {
+      toast.error("Vui lòng nhập Link GitHub hợp lệ.");
+      return;
+    }
+    if (!isVerified) {
+      toast.error("Vui lòng bấm 'Quét Xác Minh' để chứng minh quyền sở hữu Repo trước khi Đăng Bán.");
       return;
     }
 
@@ -77,41 +108,28 @@ const Upload = ({ onAddFile }) => {
 
     setIsUploading(true);
 
-    if (file.size === 0) {
-      toast.error("File is empty. Please select a non-empty file.");
-      setIsUploading(false);
-      return;
-    }
-
     try {
       // Step 1: Create File Listing Record in MongoDB
       const createRes = await api.post('/files', {
-        title: file.name,
-        description: "Source code upload",
-        price: { amount: parseFloat(amount) || 0, currency: 'vnd' },
-        intendedClientEmail: clientEmail,
-        demo: { type: demoType, url: demoUrl },
+        fileName: githubRepoUrl.split('/').pop() || 'GitHub Repository',
+        clientEmail,
+        amount: parseFloat(amount),
         projectType,
-        trialMinutes: parseInt(trialMinutes) || 0
+        demoType,
+        demoUrl,
+        trialMinutes: parseInt(trialMinutes) || 15,
+        deliveryMethod: 'github_repo',
+        githubRepoUrl,
+        verificationToken
       });
 
       const fileId = createRes.data.fileId;
-
-      // Step 2: Upload actual binary to S3 via Backend
-      const formData = new FormData();
-      formData.append('archive', file); // Field name MUST be 'archive' to match BE busboy
-      if (demoType === 'build' && buildFile) {
-        formData.append('buildBinary', buildFile);
-      }
-
-      await api.post(`/files/${fileId}/upload`, formData);
-
-      toast.success("File securely encrypted and sent to database!");
+      toast.success("GitHub repository linked successfully!");
 
       // Notify parent to refresh list
       onAddFile({
         id: fileId,
-        fileName: file.name,
+        fileName: githubRepoUrl.split('/').pop(),
         date: new Date().toLocaleDateString(),
         client: clientEmail,
         status: 'Uploaded',
@@ -148,39 +166,56 @@ const Upload = ({ onAddFile }) => {
         <Card className="upload-card">
           {!isSuccess ? (
             <>
-              <div
-                className="dropzone"
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={handleDrop}
-              >
-                <div className="dropzone-icon">
-                  <UploadCloud size={48} />
-                </div>
-                <h3>Kéo thả file mã nguồn vào đây</h3>
-                <p>hoặc</p>
-                <label className="btn btn-outline browse-btn">
-                  Duyệt File
-                  <input type="file" onChange={handleFileChange} hidden />
-                </label>
-                <p className="file-hints text-muted text-sm mt-2">Hỗ trợ: .zip, .rar, .tar.gz (Tối đa 5GB)</p>
-                <div className="mt-4 p-3 bg-indigo-50 text-indigo-700 rounded-lg text-sm flex items-start gap-2 border border-indigo-100">
-                  <ShieldCheck size={18} className="mt-0.5 shrink-0" />
-                  <span><strong>Bảo mật tuyệt đối:</strong> Source code của bạn sẽ được băm nhỏ và mã hóa đầu-cuối (End-to-End Encryption) ngay trên trình duyệt. Khách hàng không thể ăn cắp code nếu chưa thanh toán đầy đủ qua hệ thống Escrow.</span>
-                </div>
-              </div>
-
-              {file && (
-                <div className="selected-file">
-                  <div className="file-info-row">
-                    <File size={24} className="text-muted" />
-                    <div className="file-details">
-                      <span className="name">{file.name}</span>
-                      <span className="size">{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
-                    </div>
-                    <button className="remove-btn" onClick={() => setFile(null)}>
-                      <X size={20} />
-                    </button>
+                <div className="p-6 border-2 border-dashed border-indigo-200 rounded-lg bg-indigo-50/50 mb-6">
+                  <h3 className="text-lg font-semibold mb-2 text-indigo-900">Liên kết GitHub Private Repository</h3>
+                  <p className="text-sm text-indigo-700 mb-4">Không cần nén file. Hệ thống SafeCode sẽ tự động cấp quyền đọc cho khách hàng (GitHub Collaborator) ngay sau khi khách thanh toán thành công.</p>
+                  
+                  <div className="input-group">
+                    <label>GitHub Repository URL <span className="text-danger">*</span></label>
+                    <input type="url" value={githubRepoUrl} onChange={(e) => setGithubRepoUrl(e.target.value)} placeholder="https://github.com/username/my-private-repo" className="form-input" />
                   </div>
+
+                  <div className="mt-4 p-3 bg-yellow-50 text-yellow-800 rounded-lg text-sm flex items-start gap-2 border border-yellow-200">
+                    <ShieldCheck size={18} className="mt-0.5 shrink-0" />
+                    <span><strong>Quan trọng:</strong> Vui lòng cấp quyền (Invite Collaborator) cho tài khoản GitHub <strong>safecode-bot</strong> vào Repo trên để hệ thống thay mặt bạn thêm khách hàng.</span>
+                  </div>
+
+                  <div className="mt-4 p-4 border border-blue-200 bg-white rounded-lg shadow-sm">
+                    <h4 className="text-md font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                      <Lock size={16} /> Bước Xác Minh Sở Hữu (Anti-Scam)
+                    </h4>
+                    <p className="text-sm text-gray-600 mb-3">
+                      Để đảm bảo an toàn cho Client, hệ thống cần xác minh Link Demo Vercel của bạn thực sự được triển khai từ Repo GitHub này.
+                    </p>
+                    <div className="bg-gray-100 p-2 rounded text-center mb-3">
+                      Mã xác minh của bạn: <strong className="text-lg tracking-widest text-blue-700">{verificationToken}</strong>
+                    </div>
+                    <ol className="list-decimal list-inside text-sm text-gray-700 space-y-1 mb-4">
+                      <li>Tạo một file tên là <code className="bg-gray-200 px-1 rounded">safecode.txt</code></li>
+                      <li>Dán mã xác minh ở trên vào nội dung file.</li>
+                      <li>Lưu file vào thư mục <code className="bg-gray-200 px-1 rounded">public</code> của dự án (đối với React/Vite/NextJS) hoặc thư mục gốc.</li>
+                      <li>Push code lên GitHub và chờ Vercel tự động build xong.</li>
+                    </ol>
+                    <Button 
+                      variant={isVerified ? "success" : "primary"} 
+                      onClick={handleVerifyRepo} 
+                      disabled={isVerifying || isVerified} 
+                      className="w-full justify-center"
+                    >
+                      {isVerifying ? (
+                        <>Đang quét kiểm tra...</>
+                      ) : isVerified ? (
+                        <><CheckCircle size={16} className="inline mr-1" /> Đã xác minh thành công</>
+                      ) : (
+                        <><Search size={16} className="inline mr-1" /> Quét Xác Minh Vercel & GitHub</>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            
+            <div className="selected-file mt-6">
+
 
                   <div className="upload-form">
                     <div className="input-group">
@@ -249,7 +284,7 @@ const Upload = ({ onAddFile }) => {
                           Chi phí hệ thống (Credit): <span className="font-bold">{estimatedCost} CR</span>
                         </p>
                         <p className="text-xs text-blue-600 mt-1">
-                          Tính toán dựa trên loại dự án {projectType.toUpperCase()} và dung lượng file {(file.size / (1024 * 1024)).toFixed(1)}MB.
+                          Tính toán dựa trên loại dự án {projectType.toUpperCase()}.
                         </p>
                       </div>
                     )}
@@ -260,18 +295,17 @@ const Upload = ({ onAddFile }) => {
                       disabled={isUploading}
                       className="w-full mt-4"
                     >
-                      {isUploading ? 'Đang Mã hóa & Gửi...' : `Mã hóa & Gửi File (${estimatedCost || 0} CR)`}
+                      {isUploading ? 'Đang Xử lý...' : 'Liên kết GitHub & Tạo Listing (0 CR)'}
                     </Button>
                   </div>
                 </div>
-              )}
             </>
           ) : (
             <div className="success-state">
               <CheckCircle size={64} className="success-icon" />
               <h2>Đã Gửi Thành Công!</h2>
               <p>Mã nguồn của bạn đã được mã hóa an toàn và đẩy lên hệ thống. Khách hàng sẽ nhận được Email thông báo thanh toán (Escrow).</p>
-              <Button variant="outline" onClick={() => { setFile(null); setIsSuccess(false); }}>
+              <Button variant="outline" onClick={() => { setIsSuccess(false); }}>
                 Gửi Thêm File Khác
               </Button>
             </div>

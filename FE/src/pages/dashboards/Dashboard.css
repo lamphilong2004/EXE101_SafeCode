@@ -193,14 +193,14 @@ body[data-role="client"] .welcome-banner {
   margin-bottom: 32px;
 }
 
-.section-header {
+.dashboard-section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
 }
 
-.section-title {
+.dashboard-section-title {
   font-size: 1.2rem;
   font-family: 'Geist', 'Outfit', sans-serif;
   font-weight: 700;
@@ -210,7 +210,7 @@ body[data-role="client"] .welcome-banner {
   gap: 10px;
 }
 
-.section-title-dot {
+.dashboard-section-title-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
