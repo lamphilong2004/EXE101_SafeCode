@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const FILE_STATUS = ["Draft", "Uploaded", "Testing Phase", "Locked", "Verifying Payment", "Paid", "Disputed", "AwaitingEvidence", "Delivered", "Canceled", "Closed"];
 const DEMO_TYPES = ["none", "url", "build"];
-const PROJECT_TYPES = ["web", "app", "code"];
+const PROJECT_TYPES = ["web", "code"];
 
 const FileSchema = new mongoose.Schema(
   {

@@ -22,8 +22,9 @@ import { PreviewSession } from "../models/PreviewSession.js";
 /**
  * V2 formula: Simple flat fee for upload.
  */
-export function calculateUploadCost() {
-  return BASE_UPLOAD_COST;
+export function calculateUploadCost({ trialMinutes = 0 } = {}) {
+  // Base cost is 1.0, plus 0.2 CR per minute of trial provided to the client
+  return BASE_UPLOAD_COST + (trialMinutes * 0.2);
 }
 
 /**
@@ -43,7 +44,10 @@ export async function consumeCreditsForUpload(userId, { fileId }) {
   const user = await User.findById(userId);
   if (!user) throw httpError(404, "User not found");
 
-  const cost = BASE_UPLOAD_COST;
+  const file = await File.findById(fileId);
+  if (!file) throw httpError(404, "File not found");
+
+  const cost = calculateUploadCost({ trialMinutes: file.allocatedMinutes });
 
   if (user.credits < cost) {
     throw httpError(402, `Insufficient credits. Need ${cost}, have ${user.credits}`);

@@ -103,84 +103,86 @@ const Credits = () => {
         />
       </div>
 
-      <div className="pricing-section mb-10" style={{ padding: '2rem 0', background: 'transparent' }}>
-        <div className="pricing-intro" style={{ marginBottom: '2rem' }}>
-          <div className="pricing-icons">
-            <div className="pricing-icon-wrapper"><Crown size={20} color="#06b6d4" /></div>
-            <div className="pricing-icon-wrapper"><Zap size={20} color="#10b981" /></div>
-            <div className="pricing-icon-wrapper"><Diamond size={20} color="#d946ef" /></div>
+      {user?.role === 'freelancer' && (
+        <div className="pricing-section mb-10" style={{ padding: '2rem 0', background: 'transparent' }}>
+          <div className="pricing-intro" style={{ marginBottom: '2rem' }}>
+            <div className="pricing-icons">
+              <div className="pricing-icon-wrapper"><Crown size={20} color="#06b6d4" /></div>
+              <div className="pricing-icon-wrapper"><Zap size={20} color="#10b981" /></div>
+              <div className="pricing-icon-wrapper"><Diamond size={20} color="#d946ef" /></div>
+            </div>
+            <h2>Mở Khóa Premium</h2>
+            <p>Chọn gói phù hợp - Nâng tầm trải nghiệm</p>
           </div>
-          <h2>Mở Khóa Premium</h2>
-          <p>Chọn gói phù hợp - Nâng tầm trải nghiệm</p>
+
+          <div className="pricing-grid">
+            {/* Cyan Card */}
+            <div className="pricing-card neon-cyan">
+              <div className="pricing-badge">Featured</div>
+              <div className="pricing-header">
+                <div className="pricing-icon"><Crown size={48} /></div>
+                <h3 className="pricing-tier">SAFECODE VIP</h3>
+                <div className="pricing-price-text">Miễn phí</div>
+              </div>
+
+              <div className="pricing-features">
+                <div className="feature-item">
+                  <Check size={18} />
+                  <span>Tuyệt vời để <strong>trải nghiệm thử</strong></span>
+                </div>
+                <div className="feature-item">
+                  <Check size={18} />
+                  <span>Tặng ngay <strong>50 Credit</strong> khi đăng ký</span>
+                </div>
+                <div className="feature-item">
+                  <Check size={18} />
+                  <span>Truy cập đầy đủ tính năng mã hóa</span>
+                </div>
+                <div className="feature-item">
+                  <Check size={18} />
+                  <span>Thanh toán Escrow an toàn</span>
+                </div>
+              </div>
+
+              <button className="pricing-btn">
+                Đang Sử Dụng
+              </button>
+            </div>
+
+            {/* Magenta Card */}
+            <div className="pricing-card neon-magenta">
+              <div className="pricing-header">
+                <div className="pricing-icon"><Diamond size={48} /></div>
+                <h3 className="pricing-tier">SAFECODE PRO</h3>
+                <div className="pricing-price-text">250,000đ cho 1 tháng</div>
+              </div>
+
+              <div className="pricing-features">
+                <div className="feature-item">
+                  <Check size={18} />
+                  <span>Dành cho freelancer <strong>giao dịch nhiều</strong></span>
+                </div>
+                <div className="feature-item">
+                  <Check size={18} />
+                  <span>Tặng <strong>250 Credit</strong> mỗi tháng</span>
+                </div>
+                <div className="feature-item">
+                  <Check size={18} />
+                  <span>Tặng thêm <strong>50 Credit</strong> miễn phí lần đầu</span>
+                </div>
+                <div className="feature-item">
+                  <Check size={18} />
+                  <span>Hỗ trợ ưu tiên <strong>24/7</strong></span>
+                </div>
+              </div>
+
+              <button className="pricing-btn" onClick={() => handlePayosTopup(250)} disabled={isSubmitting}>
+                {isSubmitting ? 'Đang khởi tạo...' : 'Nâng Cấp Ngay'}
+              </button>
+            </div>
+          </div>
         </div>
-
-        <div className="pricing-grid">
-          {/* Cyan Card */}
-          <div className="pricing-card neon-cyan">
-            <div className="pricing-badge">Featured</div>
-            <div className="pricing-header">
-              <div className="pricing-icon"><Crown size={48} /></div>
-              <h3 className="pricing-tier">SAFECODE VIP</h3>
-              <div className="pricing-price-text">Miễn phí</div>
-            </div>
-
-            <div className="pricing-features">
-              <div className="feature-item">
-                <Check size={18} />
-                <span>Tuyệt vời để <strong>trải nghiệm thử</strong></span>
-              </div>
-              <div className="feature-item">
-                <Check size={18} />
-                <span>Tặng ngay <strong>50 Credit</strong> khi đăng ký</span>
-              </div>
-              <div className="feature-item">
-                <Check size={18} />
-                <span>Truy cập đầy đủ tính năng mã hóa</span>
-              </div>
-              <div className="feature-item">
-                <Check size={18} />
-                <span>Thanh toán Escrow an toàn</span>
-              </div>
-            </div>
-
-            <button className="pricing-btn">
-              Đang Sử Dụng
-            </button>
-          </div>
-
-          {/* Magenta Card */}
-          <div className="pricing-card neon-magenta">
-            <div className="pricing-header">
-              <div className="pricing-icon"><Diamond size={48} /></div>
-              <h3 className="pricing-tier">SAFECODE PRO</h3>
-              <div className="pricing-price-text">250,000đ cho 1 tháng</div>
-            </div>
-
-            <div className="pricing-features">
-              <div className="feature-item">
-                <Check size={18} />
-                <span>Dành cho freelancer <strong>giao dịch nhiều</strong></span>
-              </div>
-              <div className="feature-item">
-                <Check size={18} />
-                <span>Tặng <strong>250 Credit</strong> mỗi tháng</span>
-              </div>
-              <div className="feature-item">
-                <Check size={18} />
-                <span>Tặng thêm <strong>50 Credit</strong> miễn phí lần đầu</span>
-              </div>
-              <div className="feature-item">
-                <Check size={18} />
-                <span>Hỗ trợ ưu tiên <strong>24/7</strong></span>
-              </div>
-            </div>
-
-            <button className="pricing-btn" onClick={() => handlePayosTopup(250)} disabled={isSubmitting}>
-              {isSubmitting ? 'Đang khởi tạo...' : 'Nâng Cấp Ngay'}
-            </button>
-          </div>
-        </div>
-      </div>
+      )}
 
       <div className="credits-layout-grid">
         <div className="credits-sidebar fade-in" style={{ animationDelay: '0.1s' }}>

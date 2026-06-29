@@ -109,7 +109,7 @@ export function proxyWithHardTimeout({ targetUrl, hardTimeoutMs = 60_000, fileId
       const isWithinTrial = totalSecondsElapsed <= allocatedSeconds;
 
       if (!isWithinTrial && user.credits < 0.1) {
-        return res.status(402).json({ error: "Insufficient credits to continue preview." });
+        return res.status(402).json({ error: "Bạn đã hết thời gian chạy thử miễn phí và không đủ Credit để gia hạn xem thêm." });
       }
     } catch (err) {
       return next(err);

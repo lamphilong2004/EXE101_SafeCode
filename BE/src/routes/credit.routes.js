@@ -34,23 +34,19 @@ creditRoutes.get("/history", requireAuth, async (req, res, next) => {
 // Estimate upload cost before committing
 creditRoutes.post("/estimate", requireAuth, async (req, res, next) => {
   try {
-    const { projectType, sizeBytes } = req.body || {};
-
-    if (!projectType || sizeBytes === undefined) {
-      throw httpError(400, "projectType and sizeBytes are required");
-    }
+    const { projectType, sizeBytes, trialMinutes } = req.body || {};
 
     const cost = calculateUploadCost({
-      projectType: projectType || "code",
+      projectType: projectType || "web",
       sizeBytes: Number(sizeBytes) || 0,
+      trialMinutes: Number(trialMinutes) || 0,
     });
 
     res.json({
       estimatedCredits: cost,
       breakdown: {
         baseCost: 1,
-        typeFactor: projectType === "web" ? 2 : projectType === "app" ? 5 : 0,
-        sizeFactor: cost - 1 - (projectType === "web" ? 2 : projectType === "app" ? 5 : 0),
+        trialCost: cost - 1,
       },
     });
   } catch (err) {

@@ -58,12 +58,10 @@ const Sidebar = ({ userRole, onLogout }) => {
               <span>{isFreelancer ? 'Sent Files' : 'Received Files'}</span>
             </NavLink>
 
-            {isFreelancer && (
-              <NavLink to="/credits" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-                <div className="sidebar-link-icon"><CreditCard size={18} /></div>
-                <span>Credits</span>
-              </NavLink>
-            )}
+            <NavLink to="/credits" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+              <div className="sidebar-link-icon"><CreditCard size={18} /></div>
+              <span>Credits</span>
+            </NavLink>
 
             <NavLink to="/settings" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
               <div className="sidebar-link-icon"><Settings size={18} /></div>
