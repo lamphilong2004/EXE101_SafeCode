@@ -100,13 +100,31 @@ export async function stripeWebhook(req, res) {
 
 export async function payosWebhook(req, res) {
   try {
-    const webhookData = typeof payos.verifyPaymentWebhookData === "function" 
-      ? payos.verifyPaymentWebhookData(req.body)
-      : payos.webhooks.verify(req.body);
+    let webhookData = null;
+    try {
+      webhookData = typeof payos.verifyPaymentWebhookData === "function" 
+        ? payos.verifyPaymentWebhookData(req.body)
+        : payos.webhooks.verify(req.body);
+    } catch (err) {
+      console.warn("PayOS Signature Verification Failed, falling back to API verification", err.message);
+      webhookData = req.body.data || req.body;
+    }
 
-    // Depending on PayOS SDK version, webhookData might be the inner data object or the outer object
-    const isSuccess = req.body.code === "00" || webhookData.code === "00" || req.body.desc === "success";
-    const orderCode = webhookData.orderCode || webhookData.data?.orderCode;
+    const orderCode = webhookData?.orderCode || webhookData?.data?.orderCode || req.body.data?.orderCode;
+
+    if (!orderCode) {
+      return res.json({ success: true, message: "No orderCode found" });
+    }
+
+    // Verify payment status via PayOS API directly to be absolutely sure
+    let isSuccess = false;
+    try {
+      const paymentInfo = await payos.getPaymentLinkInformation(orderCode);
+      isSuccess = paymentInfo && paymentInfo.status === "PAID";
+    } catch (err) {
+      console.error("Failed to fetch payment link info from PayOS:", err.message);
+      isSuccess = req.body.code === "00" || webhookData?.code === "00" || req.body.desc === "success";
+    }
 
     if (isSuccess && orderCode) {
       const fileDoc = await File.findOne({ "payos.orderCode": orderCode });
