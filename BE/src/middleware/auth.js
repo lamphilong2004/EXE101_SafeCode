@@ -21,6 +21,7 @@ export async function requireAuth(req, res, next) {
 
     const user = await User.findById(payload.sub);
     if (!user) throw httpError(401, "Invalid token");
+    if (user.isBanned) throw httpError(403, "Tài khoản của bạn đã bị khóa.");
 
     req.user = {
       id: String(user._id),

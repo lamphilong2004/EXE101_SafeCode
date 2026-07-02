@@ -113,6 +113,17 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleToggleBan = async (userId, currentStatus) => {
+    if(!window.confirm(`Bạn có chắc muốn ${currentStatus ? 'mở khóa' : 'khóa'} tài khoản này?`)) return;
+    try {
+      const res = await api.put(`/admin/users/${userId}/ban`);
+      toast.success(res.data.message);
+      fetchData(); // Reload users
+    } catch(err) {
+      toast.error(err.response?.data?.error || "Lỗi khi thao tác");
+    }
+  };
+
   const handleReviewKyc = async (userId, action) => {
     const adminNote = action === 'reject'
       ? window.prompt("Lý do từ chối (bắt buộc):", "Ảnh CCCD không rõ nét")
@@ -383,6 +394,7 @@ const AdminDashboard = () => {
                         <td>
                           <strong>{u.name}</strong><br/>
                           <small>{u.email}</small>
+                          {u.isBanned && <span className="status-badge danger" style={{marginLeft: '8px', fontSize: '11px'}}>Banned</span>}
                         </td>
                         <td><span className="status-badge">{u.role}</span></td>
                         <td>{u.credits?.toFixed(1) || 0}</td>
@@ -391,6 +403,11 @@ const AdminDashboard = () => {
                              <Button size="sm" variant="outline" title="Chỉnh sửa Credit" onClick={() => { setTargetUser(u); setShowCreditModal(true); setCreditAmount(0); }}>
                                Cộng/Trừ CR
                              </Button>
+                             {u.role !== 'admin' && (
+                               <Button size="sm" variant={u.isBanned ? "secondary" : "danger"} onClick={() => handleToggleBan(u._id, u.isBanned)}>
+                                 {u.isBanned ? 'Mở Khóa' : 'Khóa (Ban)'}
+                               </Button>
+                             )}
                            </div>
                         </td>
                       </tr>

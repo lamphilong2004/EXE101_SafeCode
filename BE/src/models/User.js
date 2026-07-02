@@ -61,6 +61,8 @@ const UserSchema = new mongoose.Schema(
       reviewedAt:  { type: Date, default: null },
       adminNote:   { type: String, default: null },
     },
+
+    isBanned: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

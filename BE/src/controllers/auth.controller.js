@@ -141,6 +141,7 @@ export async function login(req, res, next) {
 
     const user = await User.findOne({ email: String(email).toLowerCase().trim() });
     if (!user) throw httpError(401, "Invalid credentials");
+    if (user.isBanned) throw httpError(403, "Tài khoản của bạn đã bị khóa bởi Admin.");
 
     const ok = await bcrypt.compare(String(password), user.passwordHash);
     if (!ok) throw httpError(401, "Invalid credentials");

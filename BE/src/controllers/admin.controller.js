@@ -110,6 +110,22 @@ export async function getAllUsers(req, res, next) {
   }
 }
 
+export async function toggleBan(req, res, next) {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (!user) throw httpError(404, "User not found");
+    if (user.role === 'admin') throw httpError(403, "Cannot ban an admin");
+
+    user.isBanned = !user.isBanned;
+    await user.save();
+    
+    res.json({ success: true, message: user.isBanned ? "Tài khoản đã bị khóa" : "Tài khoản đã được mở khóa", isBanned: user.isBanned });
+  } catch (err) {
+    next(err);
+  }
+}
+
 /* ─── Disputes (paginated) ─── */
 
 export async function getAllDisputes(req, res, next) {

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getAllUsers, getAllDisputes, resolveDispute, getStats, manageUserCredits } from "../controllers/admin.controller.js";
+import { getAllUsers, getAllDisputes, resolveDispute, getStats, manageUserCredits, toggleBan } from "../controllers/admin.controller.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
 export const adminRoutes = Router();
@@ -9,6 +9,7 @@ adminRoutes.use(requireAuth, requireRole("admin"));
 
 adminRoutes.get("/stats", getStats);
 adminRoutes.get("/users", getAllUsers);
+adminRoutes.put("/users/:id/ban", toggleBan);
 adminRoutes.post("/users/:userId/credits", manageUserCredits);
 adminRoutes.get("/disputes", getAllDisputes);
 adminRoutes.post("/disputes/:fileId/resolve", resolveDispute);
