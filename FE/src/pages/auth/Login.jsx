@@ -33,7 +33,6 @@ const Login = () => {
       toast.success(isRegistering ? "Account created!" : "Welcome back!");
       // Reset URL to root
       window.history.pushState(null, '', '/');
-      window.location.reload(); // Force reload to trigger AuthContext refresh
     } else {
       toast.error(result.message);
     }
@@ -85,7 +84,7 @@ const Login = () => {
           </div>
 
           <div className="input-group">
-            <label>Password</label>
+            <label>Password {isRegistering && <span style={{ fontSize: '12px', color: '#666', fontWeight: 'normal', marginLeft: '8px' }}>(ít nhất 6 ký tự)</span>}</label>
             <div className="input-wrapper">
               <Lock size={18} className="input-icon" />
               <input 

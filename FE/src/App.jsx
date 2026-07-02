@@ -99,7 +99,12 @@ function App() {
   }, [files, user]);
 
   if (!isAuthenticated || !user) {
-    return <Landing />;
+    return (
+      <>
+        <Landing />
+        <ToastContainer position="bottom-right" />
+      </>
+    );
   }
 
   const getDashboard = () => {
