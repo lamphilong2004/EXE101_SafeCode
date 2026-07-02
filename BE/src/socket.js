@@ -25,6 +25,10 @@ export function initSocket(httpServer) {
         ) {
           return callback(null, true);
         }
+        // Always allow production custom domains unconditionally
+        if (origin === "https://safecode.id.vn" || origin === "https://www.safecode.id.vn") {
+          return callback(null, true);
+        }
         if (allowedOrigins.includes(origin)) return callback(null, true);
         return callback(new Error("Not allowed by CORS"));
       },

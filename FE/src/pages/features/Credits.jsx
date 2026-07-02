@@ -46,7 +46,7 @@ const Credits = () => {
       if (notif.title === 'credit_approved') {
         if (qrData) {
           setQrData(null);
-          toast.success("Thanh toán thành công! Đã nạp tiền vào tài khoản.");
+          toast.success(notif.message || "Thanh toán thành công! Đã nạp tiền vào tài khoản.");
           // Refresh user data (or just let the page reload/update)
           setTimeout(() => window.location.reload(), 1500);
         }
