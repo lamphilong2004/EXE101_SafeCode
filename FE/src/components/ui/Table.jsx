@@ -15,6 +15,7 @@ import DisputeRoom from '../../pages/features/DisputeRoom';
 import { QRCodeSVG } from 'qrcode.react';
 import socket from '../../services/socket';
 import './Table.css';
+import '../../pages/features/Credits.css'; // payos-modal styles
 
 const FreelancerViewModal = ({ file, onClose, onConfirm, onReject }) => {
   return createPortal(
@@ -344,27 +345,24 @@ const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
     if (!checkoutFile) return;
     setIsPayosLoading(true);
     try {
-      const res = await api.post(`/payments/payos/${checkoutFile.id}`, {
-        successUrl: window.location.href, // Or a dedicated success page
+      // Use new file-qr endpoint which stores freelancerId for proper credit routing
+      const res = await api.post(`/payments/file-qr/${checkoutFile.id}`, {
+        successUrl: window.location.href,
         cancelUrl: window.location.href
       });
 
-      if (res.data.mockSuccess) {
-        toast.success("✅ Thanh toán Giả lập thành công! Source code đã được mở khóa.");
+      if (res.data.alreadyPaid) {
+        toast.info('File này đã được thanh toán!');
         updateFileStatus(checkoutFile.id, 'Paid');
         setCheckoutFile(null);
       } else if (res.data.qrCode) {
         setQrData(res.data);
       } else if (res.data.checkoutUrl) {
         window.location.href = res.data.checkoutUrl;
-      } else if (res.data.alreadyPaid) {
-        toast.info("File này đã được thanh toán!");
-        updateFileStatus(checkoutFile.id, 'Paid');
-        setCheckoutFile(null);
       }
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.message || err.response?.data?.error || "Không thể tạo link thanh toán tự động.");
+      toast.error(err.response?.data?.message || err.response?.data?.error || 'Không thể tạo mã QR thanh toán.');
     } finally {
       setIsPayosLoading(false);
     }
@@ -632,59 +630,93 @@ const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
         document.body
       )}
 
-      {/* Embedded QR Modal for File Checkout */}
+      {/* Full Credits-style QR Modal for File Payment */}
       {qrData && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col">
-            <div className="bg-primary text-white p-4 text-center font-bold text-lg relative">
-              Thanh toán VietQR
-              <button 
-                onClick={() => setQrData(null)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition"
-              >
-                ✕
-              </button>
+        <div className="payos-modal-overlay fade-in">
+          <div className="payos-modal-content">
+            {/* Top Banner */}
+            <div className="payos-banner">
+              <span className="payos-banner-icon">💡</span>
+              <span>Mở App Ngân hàng bất kỳ để <strong>quét mã VietQR</strong> hoặc <strong>chuyển khoản</strong> chính xác số tiền bên dưới</span>
             </div>
-            <div className="p-6 flex flex-col items-center">
-              <p className="text-center text-gray-600 mb-4">
-                Quét mã để thanh toán cho file <strong>{checkoutFile?.fileName}</strong>
-              </p>
-              
-              <div className="bg-white p-2 rounded-xl shadow-sm border mb-6 inline-block">
-                <QRCodeSVG value={qrData.qrCode} size={220} level="M" />
+
+            <div className="payos-modal-body">
+              {/* Left Side: QR & Logos */}
+              <div className="payos-qr-section">
+                <div className="vietqr-logo-container">
+                  <span className="viet">Viet</span><span className="qr">QR</span> <span className="pro">PRO</span>
+                </div>
+                <div className="payos-qr-wrapper">
+                  <QRCodeSVG 
+                    value={qrData.qrCode} 
+                    size={240} 
+                    level="M"
+                    imageSettings={{
+                      src: "https://play-lh.googleusercontent.com/p4BaQ6Y8_NsDHpTzn26h2U8gqWHFyKNhKkG0rxSsnB3qD64Hw8HozfCDYLiZXt2L7jDot8MhsF3qFePuOW16=w256",
+                      x: undefined,
+                      y: undefined,
+                      height: 40,
+                      width: 40,
+                      excavate: true,
+                    }}
+                  />
+                </div>
+                <div className="payos-bank-logos">
+                  <span style={{ fontWeight: '800', fontStyle: 'italic', color: '#0d47a1', fontSize: '1.1rem' }}>napas <span style={{ color: '#2196f3' }}>247</span></span>
+                  <div className="payos-logo-divider"></div>
+                  <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRSMFqLbp_MUb1bOiQ92ZbMePy_Zf9tkoRrNaJFO9Hhpw&s=10" alt="Bank Logo" height="24" style={{ borderRadius: '4px' }} />
+                </div>
+                <button className="payos-cancel-btn" onClick={() => { setQrData(null); setCheckoutFile(null); }}>Huỷ giao dịch</button>
               </div>
 
-              <div className="w-full space-y-3 text-sm">
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
-                  <span className="text-gray-500">Số tài khoản:</span>
-                  <div className="flex items-center gap-2">
-                    <strong className="text-primary tracking-wider">{qrData.accountNumber}</strong>
-                  </div>
-                </div>
-                
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
-                  <span className="text-gray-500">Chủ tài khoản:</span>
-                  <strong className="uppercase">{qrData.accountName}</strong>
+              {/* Right Side: Details */}
+              <div className="payos-details-section">
+                <div style={{ background: 'rgba(99,102,241,0.08)', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', fontSize: '0.85rem', color: 'var(--text-muted)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                  <strong style={{ color: 'var(--primary-color)' }}>Thanh toán Source Code:</strong> {checkoutFile?.fileName}<br />
+                  <span>Freelancer: <strong>{checkoutFile?.freelancer}</strong></span>
                 </div>
 
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
-                  <span className="text-gray-500">Số tiền:</span>
-                  <div className="flex items-center gap-2">
-                    <strong className="text-lg text-danger">{qrData.amount.toLocaleString()} VNĐ</strong>
+                <div className="payos-bank-info">
+                  <div className="payos-bank-icon">
+                    <img src="https://play-lh.googleusercontent.com/p4BaQ6Y8_NsDHpTzn26h2U8gqWHFyKNhKkG0rxSsnB3qD64Hw8HozfCDYLiZXt2L7jDot8MhsF3qFePuOW16=w256" alt="MB" width="36" height="36" style={{ borderRadius: '50%' }} />
+                  </div>
+                  <div>
+                    <div className="payos-bank-label">Ngân hàng thụ hưởng (Admin SafeCode)</div>
+                    <div className="payos-bank-name">Ngân hàng TMCP Quân đội</div>
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
-                  <span className="text-gray-500">Nội dung:</span>
-                  <div className="flex items-center gap-2">
-                    <strong className="text-primary">{qrData.description}</strong>
+                <div className="payos-detail-item">
+                  <div className="payos-detail-title">Chủ tài khoản:</div>
+                  <div className="payos-detail-value uppercase font-bold">{qrData.accountName}</div>
+                </div>
+
+                <div className="payos-detail-item">
+                  <div className="payos-detail-title">Số tài khoản:</div>
+                  <div className="payos-detail-value-wrapper">
+                    <span className="payos-detail-value font-bold">{qrData.accountNumber}</span>
+                    <button className="payos-copy-btn" onClick={() => { navigator.clipboard.writeText(qrData.accountNumber); toast.success('Sao chép số TK!'); }}>Sao chép</button>
                   </div>
                 </div>
-              </div>
-              
-              <div className="mt-6 w-full text-center">
-                <div className="flex items-center justify-center gap-2 text-sm text-gray-500 font-medium">
-                  Hệ thống tự động mở khóa sau khi nhận tiền.
+
+                <div className="payos-detail-item">
+                  <div className="payos-detail-title">Số tiền:</div>
+                  <div className="payos-detail-value-wrapper">
+                    <span className="payos-detail-value font-bold" style={{ color: 'var(--danger-color)', fontSize: '1.1rem' }}>{qrData.amount.toLocaleString()} VNĐ</span>
+                    <button className="payos-copy-btn" onClick={() => { navigator.clipboard.writeText(String(qrData.amount)); toast.success('Sao chép số tiền!'); }}>Sao chép</button>
+                  </div>
+                </div>
+
+                <div className="payos-detail-item">
+                  <div className="payos-detail-title">Nội dung CK:</div>
+                  <div className="payos-detail-value-wrapper">
+                    <span className="payos-detail-value font-bold">{qrData.description}</span>
+                    <button className="payos-copy-btn" onClick={() => { navigator.clipboard.writeText(qrData.description); toast.success('Sao chép nội dung!'); }}>Sao chép</button>
+                  </div>
+                </div>
+
+                <div className="payos-warning">
+                  Hệ thống tự động xác nhận qua PayOS. Source code mở khóa ngay sau khi nhận tiền.
                 </div>
               </div>
             </div>

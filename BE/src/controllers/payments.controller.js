@@ -1,5 +1,6 @@
 import { File } from "../models/File.js";
 import { Transaction } from "../models/Transaction.js";
+import { CreditRequest } from "../models/CreditRequest.js";
 import { httpError } from "../middleware/error.js";
 import { stripe } from "../services/stripe.service.js";
 import payos, { isPayosConfigured } from "../services/payos.service.js";
@@ -197,6 +198,80 @@ export async function createPayosCheckout(req, res, next) {
       bin: paymentLinkRes.bin,
       amount: paymentLinkRes.amount,
       description: paymentLinkRes.description
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// === NEW: Create PayOS QR for file payment, identical flow to credit purchase ===
+// The freelancerId is stored in CreditRequest so webhook can auto-credit the right freelancer
+export async function createFilePaymentQr(req, res, next) {
+  try {
+    const { fileId } = req.params;
+    const fileDoc = await File.findById(fileId);
+    if (!fileDoc) throw httpError(404, "File not found");
+    if (fileDoc.intendedClientEmail !== req.user.email) throw httpError(403, "Forbidden");
+    if (fileDoc.status === "Paid") return res.json({ alreadyPaid: true });
+
+    if (!isPayosConfigured) {
+      throw httpError(500, "PayOS chưa được cấu hình trên server.");
+    }
+
+    // Amount in VND from the file
+    const amount = fileDoc.price.currency.toLowerCase() === 'vnd'
+      ? fileDoc.price.amount
+      : fileDoc.price.amount * 25000;
+
+    const orderCode = Number(String(Date.now()).slice(-6) + Math.floor(Math.random() * 1000));
+
+    const paymentData = {
+      orderCode,
+      amount,
+      description: `TT file ${fileId.slice(-4)}`,
+      items: [
+        {
+          name: fileDoc.title.slice(0, 50),
+          quantity: 1,
+          price: amount
+        }
+      ],
+      returnUrl: req.body.successUrl || `${env.APP_BASE_URL}/files`,
+      cancelUrl: req.body.cancelUrl || `${env.APP_BASE_URL}/files`
+    };
+
+    const paymentLinkRes = typeof payos.createPaymentLink === "function"
+      ? await payos.createPaymentLink(paymentData)
+      : await payos.paymentRequests.create(paymentData);
+
+    // Save to CreditRequest (type: file_payment) so webhook knows who to credit
+    await CreditRequest.create({
+      userId: req.user.id,          // client who pays
+      amount: Math.round(amount / 2000), // credits to give freelancer (1 CR = 2000 VND)
+      amountVND: amount,
+      status: 'pending',
+      type: 'file_payment',
+      freelancerId: fileDoc.freelancerId,
+      fileId: fileDoc._id,
+      payosOrderCode: orderCode,
+      paymentLinkId: paymentLinkRes.paymentLinkId
+    });
+
+    // Also update file status so it shows as pending payment
+    fileDoc.status = "CheckoutCreated";
+    fileDoc.payos = { orderCode, paymentLinkId: paymentLinkRes.paymentLinkId };
+    await fileDoc.save();
+
+    res.json({
+      checkoutUrl: paymentLinkRes.checkoutUrl,
+      orderCode,
+      qrCode: paymentLinkRes.qrCode,
+      accountNumber: paymentLinkRes.accountNumber,
+      accountName: paymentLinkRes.accountName,
+      bin: paymentLinkRes.bin,
+      amount: paymentLinkRes.amount,
+      description: paymentLinkRes.description,
+      freelancerId: fileDoc.freelancerId
     });
   } catch (err) {
     next(err);

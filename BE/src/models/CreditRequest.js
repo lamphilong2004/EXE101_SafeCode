@@ -49,6 +49,20 @@ const creditRequestSchema = new mongoose.Schema({
   },
   approvedAt: {
     type: Date
+  },
+  // For escrow file payments: who receives the credit and which file
+  type: {
+    type: String,
+    enum: ['credit_purchase', 'file_payment'],
+    default: 'credit_purchase'
+  },
+  freelancerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  fileId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'File'
   }
 }, { timestamps: true });
 

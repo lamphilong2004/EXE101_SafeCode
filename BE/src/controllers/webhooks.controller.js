@@ -132,33 +132,89 @@ export async function payosWebhook(req, res) {
         );
       }
 
-      // Check if it's a Credit Top-up
+      // Check if it's a Credit Top-up OR a File Payment
       const creditReq = await CreditRequest.findOne({ payosOrderCode: orderCode });
       if (creditReq && creditReq.status === "pending") {
         creditReq.status = "approved";
         creditReq.approvedAt = new Date();
         await creditReq.save();
 
-        const user = await User.findById(creditReq.userId);
-        if (user) {
-          user.credits = (user.credits || 0) + creditReq.amount;
-          await user.save();
+        if (creditReq.type === "file_payment") {
+          // === FILE PAYMENT: Credit the FREELANCER ===
+          const freelancer = await User.findById(creditReq.freelancerId);
+          if (freelancer) {
+            const creditsToAdd = creditReq.amount; // already computed (VND / 2000)
+            freelancer.credits = (freelancer.credits || 0) + creditsToAdd;
+            await freelancer.save();
 
-          await CreditHistory.create({
-            userId: user._id,
-            type: "purchase",
-            amount: creditReq.amount,
-            description: `Nạp ${creditReq.amount} Credits qua VietQR (PayOS)`,
-            balanceAfter: user.credits,
-            fileId: null,
-          });
+            await CreditHistory.create({
+              userId: freelancer._id,
+              type: "sale",
+              amount: creditsToAdd,
+              description: `Nhận ${creditsToAdd} CR từ thanh toán Source Code qua VietQR`,
+              balanceAfter: freelancer.credits,
+              fileId: creditReq.fileId,
+            });
 
-          await createNotification(
-            user._id,
-            "credit_approved",
-            `Thanh toán thành công. ${creditReq.amount} Credit đã được cộng vào tài khoản của bạn.`,
-            null
-          );
+            // Mark the file as Paid
+            const filePaid = await File.findById(creditReq.fileId);
+            if (filePaid && filePaid.status !== "Paid") {
+              filePaid.status = "Paid";
+              filePaid.paidAt = new Date();
+              await filePaid.save();
+            }
+
+            // Issue License and notify
+            try {
+              const { issueLicense } = await import("../services/license.service.js");
+              const { sendDecryptionKeyEmail } = await import("../services/email.service.js");
+              if (filePaid) {
+                const { key: licenseSerial } = await issueLicense(String(creditReq.userId), filePaid._id);
+                await sendDecryptionKeyEmail(filePaid.intendedClientEmail, {
+                  fileName: filePaid.title,
+                  licenseKey: licenseSerial,
+                  isV3: true,
+                });
+              }
+            } catch (licErr) {
+              console.error("[FILE PAYMENT WEBHOOK] License issue failed:", licErr);
+            }
+
+            await createNotification(
+              String(freelancer._id),
+              "payment_received",
+              `Khách hàng đã thanh toán qua VietQR! ${creditsToAdd} Credit đã được cộng vào tài khoản của bạn.`,
+              creditReq.fileId
+            );
+
+            // Notify client via socket room
+            import("../socket.js").then(({ emitToRoom }) => {
+              emitToRoom(String(creditReq.fileId), "file_paid", { fileId: creditReq.fileId });
+            });
+          }
+        } else {
+          // === CREDIT PURCHASE: Credit the USER ===
+          const user = await User.findById(creditReq.userId);
+          if (user) {
+            user.credits = (user.credits || 0) + creditReq.amount;
+            await user.save();
+
+            await CreditHistory.create({
+              userId: user._id,
+              type: "purchase",
+              amount: creditReq.amount,
+              description: `Nạp ${creditReq.amount} Credits qua VietQR (PayOS)`,
+              balanceAfter: user.credits,
+              fileId: null,
+            });
+
+            await createNotification(
+              user._id,
+              "credit_approved",
+              `Thanh toán thành công. ${creditReq.amount} Credit đã được cộng vào tài khoản của bạn.`,
+              null
+            );
+          }
         }
       }
     }
