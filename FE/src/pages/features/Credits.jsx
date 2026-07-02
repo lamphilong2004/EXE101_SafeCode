@@ -406,7 +406,7 @@ const Credits = () => {
                     size={240} 
                     level="M"
                     imageSettings={{
-                      src: "https://vietqr.net/portal/v1/logo/vietqr.png",
+                      src: "https://play-lh.googleusercontent.com/p4BaQ6Y8_NsDHpTzn26h2U8gqWHFyKNhKkG0rxSsnB3qD64Hw8HozfCDYLiZXt2L7jDot8MhsF3qFePuOW16=w256",
                       x: undefined,
                       y: undefined,
                       height: 40,
@@ -416,9 +416,9 @@ const Credits = () => {
                   />
                 </div>
                 <div className="payos-bank-logos">
-                  <img src="https://vietqr.net/portal/v1/logo/napas247.png" alt="Napas247" height="24" />
+                  <span style={{ fontWeight: '800', fontStyle: 'italic', color: '#0d47a1', fontSize: '1.1rem' }}>napas <span style={{ color: '#2196f3' }}>247</span></span>
                   <div className="payos-logo-divider"></div>
-                  <img src="https://api.vietqr.io/img/MB.png" alt="MB Bank" height="20" />
+                  <img src="https://play-lh.googleusercontent.com/p4BaQ6Y8_NsDHpTzn26h2U8gqWHFyKNhKkG0rxSsnB3qD64Hw8HozfCDYLiZXt2L7jDot8MhsF3qFePuOW16=w256" alt="MB Bank" height="24" style={{ borderRadius: '4px' }} />
                 </div>
                 <button className="payos-cancel-btn" onClick={() => setQrData(null)}>Huỷ</button>
               </div>
@@ -427,7 +427,7 @@ const Credits = () => {
               <div className="payos-details-section">
                 <div className="payos-bank-info">
                   <div className="payos-bank-icon">
-                    <img src="https://api.vietqr.io/img/MB.png" alt="MB" width="36" height="36" style={{ borderRadius: '50%' }} />
+                    <img src="https://play-lh.googleusercontent.com/p4BaQ6Y8_NsDHpTzn26h2U8gqWHFyKNhKkG0rxSsnB3qD64Hw8HozfCDYLiZXt2L7jDot8MhsF3qFePuOW16=w256" alt="MB" width="36" height="36" style={{ borderRadius: '50%' }} />
                   </div>
                   <div>
                     <div className="payos-bank-label">Ngân hàng</div>
