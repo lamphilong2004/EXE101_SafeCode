@@ -291,15 +291,14 @@ const AdminDashboard = () => {
                     <tr>
                       <th>Ngày & Người Yêu Cầu</th>
                       <th>Số Lượng Nạp</th>
-                      <th>Ảnh Bill CK</th>
-                      <th>AI Đề Xuất</th>
+                      <th>Mã Đơn Hàng (PayOS)</th>
                       <th>Trạng Thái</th>
                       <th>Hành Động</th>
                     </tr>
                   </thead>
                   <tbody>
                     {creditRequests.length === 0 ? (
-                      <tr><td colSpan="6" className="text-center">Chưa có yêu cầu Nạp Credit.</td></tr>
+                      <tr><td colSpan="5" className="text-center">Chưa có yêu cầu Nạp Credit.</td></tr>
                     ) : (
                       creditRequests.map(req => (
                         <tr key={req._id}>
@@ -312,30 +311,27 @@ const AdminDashboard = () => {
                           </td>
                           <td>
                             <strong className="text-success">+{req.amount} CR</strong><br />
-                            <small>{req.amountVND.toLocaleString()} VND</small>
+                            <small>{req.amountVND?.toLocaleString() || (req.amount * 1000).toLocaleString()} VND</small>
                           </td>
                           <td>
-                            <Button size="sm" variant="outline" onClick={() => window.open(req.billImageUrl, '_blank')}>Xem Bill</Button>
-                          </td>
-                          <td>
-                            {req.aiVerification?.detected ? (
-                              <div className="status-badge">
-                                {`AI: Khớp ${Math.round(req.aiVerification.confidence * 100)}%`}
-                              </div>
+                            {req.payosOrderCode ? (
+                              <div style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>#{req.payosOrderCode}</div>
+                            ) : req.billImageUrl ? (
+                              <Button size="sm" variant="outline" onClick={() => window.open(req.billImageUrl, '_blank')}>Xem Bill Cũ</Button>
                             ) : (
-                              <span className="status-badge error">Không Đọc Được</span>
+                              <span className="text-muted italic">N/A</span>
                             )}
                           </td>
                           <td>
-                             <span className={`status-badge ${req.status}`}>
-                               {req.status.toUpperCase()}
+                             <span className={`status-badge ${req.status === 'approved' ? 'success' : req.status === 'rejected' ? 'error' : 'pending'}`}>
+                               {req.status === 'approved' ? 'THÀNH CÔNG' : req.status.toUpperCase()}
                              </span>
                           </td>
                           <td>
                             {req.status === 'pending' && (
                               <div style={{ display: 'flex', gap: '8px' }}>
-                                <Button size="sm" variant="success" title="Duyệt" onClick={() => handleApproveCredit(req._id)}><CheckCircle size={14}/></Button>
-                                <Button size="sm" variant="danger" title="Từ chối" onClick={() => handleRejectCredit(req._id)}><XCircle size={14}/></Button>
+                                <Button size="sm" variant="success" title="Duyệt/Xác nhận đã nhận tiền" onClick={() => handleApproveCredit(req._id)}><CheckCircle size={14}/></Button>
+                                <Button size="sm" variant="danger" title="Từ chối/Hủy đơn" onClick={() => handleRejectCredit(req._id)}><XCircle size={14}/></Button>
                               </div>
                             )}
                           </td>
