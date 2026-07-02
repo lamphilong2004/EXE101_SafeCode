@@ -76,9 +76,34 @@ export async function verifyRepo(req, res, next) {
       return res.status(200).json({ verified: false, message: "Verification token not found on Demo URL. Please ensure safecode.txt is accessible." });
     }
 
-    // 2. Removed GitHub Repo check to allow Private Repositories
-    // Since the freelancer already deployed the demo to Vercel and we verified the token there,
-    // they have proven ownership of the codebase. We no longer strictly require the token to be public on GitHub.
+    // 2. Check GitHub Repo (Enforce Public Repo)
+    let rawBase = githubRepoUrl.replace("github.com", "raw.githubusercontent.com").replace(/\.git$/, "");
+    
+    const pathsToCheck = [
+      `${rawBase}/main/public/safecode.txt`,
+      `${rawBase}/master/public/safecode.txt`,
+      `${rawBase}/main/safecode.txt`,
+      `${rawBase}/master/safecode.txt`,
+      `${rawBase}/main/web/public/safecode.txt`,
+      `${rawBase}/master/web/public/safecode.txt`,
+      `${rawBase}/main/frontend/public/safecode.txt`,
+      `${rawBase}/master/frontend/public/safecode.txt`,
+      `${rawBase}/main/client/public/safecode.txt`,
+      `${rawBase}/master/client/public/safecode.txt`
+    ];
+
+    let githubFound = false;
+    for (const p of pathsToCheck) {
+      const ghContent = await fetchWithTimeout(p);
+      if (ghContent && ghContent.includes(token)) {
+        githubFound = true;
+        break;
+      }
+    }
+
+    if (!githubFound) {
+      return res.status(200).json({ verified: false, message: "Không thể xác thực GitHub Repo! Vui lòng đảm bảo Repository đang để chế độ Public và đã commit file safecode.txt lên nhánh chính (main/master)." });
+    }
 
     res.json({ verified: true });
   } catch (err) {
