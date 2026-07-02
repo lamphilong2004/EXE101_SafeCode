@@ -188,7 +188,16 @@ export async function createPayosCheckout(req, res, next) {
       }
     });
 
-    res.json({ checkoutUrl: paymentLinkRes.checkoutUrl });
+    res.json({
+      checkoutUrl: paymentLinkRes.checkoutUrl,
+      orderCode,
+      qrCode: paymentLinkRes.qrCode,
+      accountNumber: paymentLinkRes.accountNumber,
+      accountName: paymentLinkRes.accountName,
+      bin: paymentLinkRes.bin,
+      amount: paymentLinkRes.amount,
+      description: paymentLinkRes.description
+    });
   } catch (err) {
     next(err);
   }

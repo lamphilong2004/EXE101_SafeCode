@@ -12,6 +12,8 @@ import Button from './Button';
 import Badge from './Badge';
 import ChatBox from '../chat/ChatBox';
 import DisputeRoom from '../../pages/features/DisputeRoom';
+import { QRCodeSVG } from 'qrcode.react';
+import socket from '../../services/socket';
 import './Table.css';
 
 const FreelancerViewModal = ({ file, onClose, onConfirm, onReject }) => {
@@ -346,6 +348,27 @@ const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
     }
   };
 
+  const [qrData, setQrData] = useState(null);
+
+  useEffect(() => {
+    if (checkoutFile && qrData) {
+      socket.emit('join_room', checkoutFile.id);
+    }
+    const handleFilePaid = (data) => {
+      if (checkoutFile && data.fileId === checkoutFile.id) {
+        toast.success("✅ Thanh toán thành công! Mã nguồn đã được giao.");
+        updateFileStatus(checkoutFile.id, 'Paid');
+        setQrData(null);
+        setCheckoutFile(null);
+      }
+    };
+    socket.on('file_paid', handleFilePaid);
+    return () => {
+      if (checkoutFile) socket.emit('leave_room', checkoutFile.id);
+      socket.off('file_paid', handleFilePaid);
+    };
+  }, [checkoutFile, qrData, updateFileStatus]);
+
   const submitPayosCheckout = async () => {
     if (!checkoutFile) return;
     setIsPayosLoading(true);
@@ -359,6 +382,8 @@ const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
         toast.success("✅ Thanh toán Giả lập thành công! Source code đã được mở khóa.");
         updateFileStatus(checkoutFile.id, 'Paid');
         setCheckoutFile(null);
+      } else if (res.data.qrCode) {
+        setQrData(res.data);
       } else if (res.data.checkoutUrl) {
         window.location.href = res.data.checkoutUrl;
       } else if (res.data.alreadyPaid) {
@@ -620,7 +645,7 @@ const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
                   <h4 style={{ fontWeight: 700, marginBottom: 8 }}>Thanh Toán Tự Động</h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 16, minHeight: 40 }}>Quét VietQR qua PayOS. Nhận Code ngay lập tức không cần chờ đợi.</p>
                   <Button variant="primary" className="btn-glow w-full" onClick={submitPayosCheckout} disabled={isPayosLoading}>
-                    {isPayosLoading ? 'Đang tạo link...' : 'Thanh toán ngay'}
+                    {isPayosLoading ? 'Đang tạo mã QR...' : 'Thanh toán ngay'}
                   </Button>
                 </div>
 
@@ -692,6 +717,67 @@ const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
 
             <div className="checkout-footer" style={{ borderTop: 'none', paddingTop: 0 }}>
               <Button variant="outline" onClick={() => setCheckoutFile(null)} style={{ borderRadius: '10px', width: '100%' }}>Hủy bỏ</Button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Embedded QR Modal for File Checkout */}
+      {qrData && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col">
+            <div className="bg-primary text-white p-4 text-center font-bold text-lg relative">
+              Thanh toán VietQR
+              <button 
+                onClick={() => setQrData(null)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6 flex flex-col items-center">
+              <p className="text-center text-gray-600 mb-4">
+                Quét mã để thanh toán cho file <strong>{checkoutFile?.fileName}</strong>
+              </p>
+              
+              <div className="bg-white p-2 rounded-xl shadow-sm border mb-6 inline-block">
+                <QRCodeSVG value={qrData.qrCode} size={220} level="M" />
+              </div>
+
+              <div className="w-full space-y-3 text-sm">
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
+                  <span className="text-gray-500">Số tài khoản:</span>
+                  <div className="flex items-center gap-2">
+                    <strong className="text-primary tracking-wider">{qrData.accountNumber}</strong>
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
+                  <span className="text-gray-500">Chủ tài khoản:</span>
+                  <strong className="uppercase">{qrData.accountName}</strong>
+                </div>
+
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
+                  <span className="text-gray-500">Số tiền:</span>
+                  <div className="flex items-center gap-2">
+                    <strong className="text-lg text-danger">{qrData.amount.toLocaleString()} VNĐ</strong>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
+                  <span className="text-gray-500">Nội dung:</span>
+                  <div className="flex items-center gap-2">
+                    <strong className="text-primary">{qrData.description}</strong>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6 w-full text-center">
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-500 font-medium">
+                  Hệ thống tự động mở khóa sau khi nhận tiền.
+                </div>
+              </div>
             </div>
           </div>
         </div>,

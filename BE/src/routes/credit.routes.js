@@ -157,7 +157,16 @@ creditRoutes.post("/buy-payos", requireAuth, async (req, res, next) => {
 
     await request.save();
 
-    res.json({ checkoutUrl: paymentLinkRes.checkoutUrl, orderCode });
+    res.json({
+      checkoutUrl: paymentLinkRes.checkoutUrl, 
+      orderCode,
+      qrCode: paymentLinkRes.qrCode,
+      accountNumber: paymentLinkRes.accountNumber,
+      accountName: paymentLinkRes.accountName,
+      bin: paymentLinkRes.bin,
+      amount: paymentLinkRes.amount,
+      description: paymentLinkRes.description
+    });
   } catch (err) {
     next(err);
   }

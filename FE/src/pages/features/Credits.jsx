@@ -5,6 +5,8 @@ import Button from '../../components/ui/Button';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-toastify';
+import { QRCodeSVG } from 'qrcode.react';
+import socket from '../../services/socket';
 import './Credits.css';
 import '../landing/Landing.css'; // Import pricing neon styles
 
@@ -17,6 +19,34 @@ const Credits = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [creditsToBuy, setCreditsToBuy] = useState(50);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [qrData, setQrData] = useState(null);
+
+  // Fix bfcache hanging issue
+  useEffect(() => {
+    const handlePageShow = (e) => {
+      if (e.persisted) {
+        setIsSubmitting(false);
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, []);
+
+  // Listen to socket for automatic payment success
+  useEffect(() => {
+    const handleNotification = (notif) => {
+      if (notif.title === 'credit_approved') {
+        if (qrData) {
+          setQrData(null);
+          toast.success("Thanh toán thành công! Đã nạp tiền vào tài khoản.");
+          // Refresh user data (or just let the page reload/update)
+          setTimeout(() => window.location.reload(), 1500);
+        }
+      }
+    };
+    socket.on('new_notification', handleNotification);
+    return () => socket.off('new_notification', handleNotification);
+  }, [qrData]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -49,12 +79,15 @@ const Credits = () => {
     setIsSubmitting(true);
     try {
       const res = await api.post('/credits/buy-payos', { amount: amountToBuy });
-      if (res.data.checkoutUrl) {
+      if (res.data.qrCode) {
+        setQrData(res.data);
+      } else if (res.data.checkoutUrl) {
         window.location.href = res.data.checkoutUrl;
       }
     } catch (err) {
       console.error(err);
       toast.error(err.response?.data?.error || "Không thể tạo mã QR nạp tiền.");
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -349,6 +382,77 @@ const Credits = () => {
           </div>
         </div>
       </div>
+
+      {/* PayOS QR Modal */}
+      {qrData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col">
+            <div className="bg-primary text-white p-4 text-center font-bold text-lg relative">
+              Thanh toán qua VietQR
+              <button 
+                onClick={() => setQrData(null)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6 flex flex-col items-center">
+              <p className="text-center text-gray-600 mb-4">
+                Mở App Ngân hàng bất kỳ để quét mã VietQR hoặc chuyển khoản chính xác số tiền bên dưới
+              </p>
+              
+              <div className="bg-white p-2 rounded-xl shadow-sm border mb-6 inline-block">
+                <QRCodeSVG value={qrData.qrCode} size={220} level="M" />
+              </div>
+
+              <div className="w-full space-y-3 text-sm">
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
+                  <span className="text-gray-500">Số tài khoản:</span>
+                  <div className="flex items-center gap-2">
+                    <strong className="text-primary tracking-wider">{qrData.accountNumber}</strong>
+                    <button onClick={() => copyToClipboard(qrData.accountNumber, "Số tài khoản")} className="text-gray-400 hover:text-primary">
+                      <RefreshCw size={14} />
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
+                  <span className="text-gray-500">Chủ tài khoản:</span>
+                  <strong className="uppercase">{qrData.accountName}</strong>
+                </div>
+
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
+                  <span className="text-gray-500">Số tiền:</span>
+                  <div className="flex items-center gap-2">
+                    <strong className="text-lg text-danger">{qrData.amount.toLocaleString()} VNĐ</strong>
+                    <button onClick={() => copyToClipboard(qrData.amount, "Số tiền")} className="text-gray-400 hover:text-primary">
+                      <RefreshCw size={14} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
+                  <span className="text-gray-500">Nội dung:</span>
+                  <div className="flex items-center gap-2">
+                    <strong className="text-primary">{qrData.description}</strong>
+                    <button onClick={() => copyToClipboard(qrData.description, "Nội dung")} className="text-gray-400 hover:text-primary">
+                      <RefreshCw size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6 w-full text-center">
+                <p className="text-xs text-danger font-medium">Lưu ý: Nhập chính xác số tiền {qrData.amount.toLocaleString()}đ và Nội dung chuyển khoản.</p>
+                <div className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-500">
+                  <RefreshCw size={16} className="animate-spin" /> Hệ thống đang chờ thanh toán...
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

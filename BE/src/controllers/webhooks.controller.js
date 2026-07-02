@@ -118,6 +118,11 @@ export async function payosWebhook(req, res) {
           { $set: { status: "Succeeded" } }
         );
 
+        // Notify client via room
+        import("../socket.js").then(({ emitToRoom }) => {
+          emitToRoom(fileDoc._id.toString(), "file_paid", { fileId: fileDoc._id });
+        });
+
         // Notify Freelancer
         await createNotification(
           fileDoc.freelancerId,
