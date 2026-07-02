@@ -614,7 +614,7 @@ const Credits = () => {
                 }}>
                   <span style={{ color: '#94a3b8', fontSize: '14px' }}>Thực nhận:</span>
                   <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '18px' }}>
-                    {(withdrawAmount * 2000).toLocaleString()} VNĐ
+                    {(withdrawAmount * 1000).toLocaleString()} VNĐ
                   </span>
                 </div>
               </div>

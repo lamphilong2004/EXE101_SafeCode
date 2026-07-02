@@ -4,8 +4,8 @@ import { CreditHistory } from "../models/CreditHistory.js";
 import { httpError } from "../middleware/error.js";
 import mongoose from "mongoose";
 
-// Config: 1 Credit = 2,000 VND
-const CREDIT_CONVERSION_RATE = 2000;
+// Config: 1 Credit = 1,000 VND
+const CREDIT_CONVERSION_RATE = 1000;
 
 export async function createWithdrawRequest(req, res, next) {
   const session = await mongoose.startSession();
