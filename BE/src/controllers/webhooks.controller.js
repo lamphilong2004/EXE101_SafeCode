@@ -222,7 +222,7 @@ export async function payosWebhook(req, res) {
 
             await CreditHistory.create({
               userId: user._id,
-              type: "purchase",
+              type: "deposit",
               amount: creditReq.amount,
               description: `Nạp ${creditReq.amount} Credits qua VietQR (PayOS)`,
               balanceAfter: user.credits,
