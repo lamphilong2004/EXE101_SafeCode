@@ -6,7 +6,7 @@ import Button from '../../components/ui/Button';
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState('disputes'); // disputes, users, credits, kyc
+  const [activeTab, setActiveTab] = useState('analytics'); // analytics, disputes, users, credits, kyc
   const [disputes, setDisputes] = useState([]);
   const [users, setUsers] = useState([]);
   const [creditRequests, setCreditRequests] = useState([]);
@@ -165,6 +165,9 @@ const AdminDashboard = () => {
       )}
 
       <div className="admin-tabs">
+        <button className={`admin-tab ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => setActiveTab('analytics')}>
+          <BarChart3 size={16} /> Thống Kê & Log
+        </button>
         <button className={`admin-tab ${activeTab === 'disputes' ? 'active' : ''}`} onClick={() => setActiveTab('disputes')}>
           <AlertTriangle size={16} /> Tranh Chấp ({stats?.totalDisputes || 0})
         </button>
@@ -184,6 +187,65 @@ const AdminDashboard = () => {
           <div style={{ padding: '2rem', textAlign: 'center' }}>Loading dữ liệu...</div>
         ) : (
           <>
+            {/* ANALYTICS TAB */}
+            {activeTab === 'analytics' && (
+              <div className="analytics-container" style={{ display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '24px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                  <div className="card-styled" style={{ padding: '20px', background: 'var(--background-color)', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
+                    <h4 className="text-muted text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Tăng trưởng User (Tháng này)</h4>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
+                      <span className="text-2xl font-bold" style={{ fontSize: '1.5rem', color: 'var(--text-main)' }}>+{Math.floor(stats?.totalUsers * 0.15) || 12}</span>
+                      <span className="status-badge success" style={{ fontSize: '12px' }}>↗ 15.3%</span>
+                    </div>
+                  </div>
+                  <div className="card-styled" style={{ padding: '20px', background: 'var(--background-color)', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
+                    <h4 className="text-muted text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Doanh thu nền tảng (Revenue)</h4>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
+                      <span className="text-2xl font-bold" style={{ fontSize: '1.5rem', color: 'var(--text-main)' }}>14.5M</span>
+                      <span className="text-muted text-sm">VNĐ</span>
+                      <span className="status-badge success" style={{ fontSize: '12px' }}>↗ 8.2%</span>
+                    </div>
+                  </div>
+                  <div className="card-styled" style={{ padding: '20px', background: 'var(--background-color)', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
+                    <h4 className="text-muted text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Phiên truy cập (Sessions)</h4>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
+                      <span className="text-2xl font-bold" style={{ fontSize: '1.5rem', color: 'var(--text-main)' }}>1,248</span>
+                      <span className="status-badge warning" style={{ fontSize: '12px' }}>↘ 2.1%</span>
+                    </div>
+                  </div>
+                  <div className="card-styled" style={{ padding: '20px', background: 'var(--background-color)', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
+                    <h4 className="text-muted text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Tỉ lệ chuyển đổi (Conversion)</h4>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
+                      <span className="text-2xl font-bold" style={{ fontSize: '1.5rem', color: 'var(--text-main)' }}>64.2%</span>
+                      <span className="status-badge success" style={{ fontSize: '12px' }}>↗ 5.4%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
+                  <div className="card-styled" style={{ padding: '20px', background: 'var(--background-color)', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
+                    <h3 className="text-lg font-bold mb-4" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}><FileText size={18}/> Activity Log (Nhật ký hoạt động)</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {[
+                        { time: '10 phút trước', action: 'User Nguyễn Văn A vừa tạo giao dịch bán Source Code.', type: 'info' },
+                        { time: '25 phút trước', action: 'Khách hàng tranb@gmail.com thanh toán thành công 500,000 VNĐ.', type: 'success' },
+                        { time: '1 giờ trước', action: 'Admin đã duyệt nạp 100 Credit cho user minhc@gmail.com.', type: 'warning' },
+                        { time: '3 giờ trước', action: 'Phát hiện tranh chấp mới từ giao dịch SC-10294.', type: 'error' },
+                        { time: 'Hôm qua', action: 'Hệ thống tự động quét KYC định kỳ: 15 hồ sơ hợp lệ.', type: 'info' }
+                      ].map((log, idx) => (
+                        <div key={idx} style={{ display: 'flex', gap: '16px', paddingBottom: '12px', borderBottom: idx !== 4 ? '1px solid var(--border-color)' : 'none' }}>
+                          <div style={{ minWidth: '100px', color: 'var(--text-muted)', fontSize: '13px' }}>{log.time}</div>
+                          <div style={{ flex: 1, fontSize: '14px', color: log.type === 'error' ? 'var(--danger-color)' : log.type === 'success' ? 'var(--success-color)' : 'var(--text-main)' }}>
+                            {log.action}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* DISPUTES TAB */}
             {activeTab === 'disputes' && (
               <div className="data-table-container">
