@@ -626,90 +626,29 @@ const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
             <div className="checkout-body">
               <div className="payment-summary card-styled">
                 <div className="flex justify-between items-center mb-2">
-                  <span>Số tiền cần thanh toán:</span>
+                  <span>Số tiền an toàn (Escrow):</span>
                   <strong className="text-primary text-xl" style={{ color: 'var(--primary-color)' }}>{checkoutFile.amount.toLocaleString()} VND</strong>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>Người nhận:</span>
+                  <span>Giải ngân cho:</span>
                   <strong className="text-main">{checkoutFile.freelancer}</strong>
                 </div>
+                <div className="text-xs text-muted mt-2 pt-2" style={{ borderTop: '1px solid var(--border-color)', fontStyle: 'italic' }}>
+                  * Số tiền sẽ được SafeCode giữ an toàn và chỉ chuyển cho Freelancer khi bạn xác nhận hài lòng hoặc hết thời gian tranh chấp.
+                </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 24, marginBottom: 16 }}>
+              <div style={{ marginTop: 24, marginBottom: 16 }}>
                 {/* Auto Checkout */}
-                <div style={{ background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1))', padding: '20px', borderRadius: '16px', border: '1px solid rgba(99, 102, 241, 0.3)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                  <div style={{ width: 48, height: 48, background: 'linear-gradient(135deg, #6366f1, #a855f7)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', marginBottom: 12 }}>
-                    <Zap size={24} />
+                <div style={{ background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1))', padding: '24px', borderRadius: '16px', border: '1px solid rgba(99, 102, 241, 0.3)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                  <div style={{ width: 56, height: 56, background: 'linear-gradient(135deg, #6366f1, #a855f7)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', marginBottom: 16 }}>
+                    <Zap size={28} />
                   </div>
-                  <h4 style={{ fontWeight: 700, marginBottom: 8 }}>Thanh Toán Tự Động</h4>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 16, minHeight: 40 }}>Quét VietQR qua PayOS. Nhận Code ngay lập tức không cần chờ đợi.</p>
+                  <h4 style={{ fontWeight: 700, marginBottom: 8, fontSize: '1.1rem' }}>Thanh Toán Quét Mã VietQR</h4>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 24 }}>Hệ thống tự động tạo mã QR của Admin SafeCode. Thanh toán được xác nhận ngay lập tức qua PayOS.</p>
                   <Button variant="primary" className="btn-glow w-full" onClick={submitPayosCheckout} disabled={isPayosLoading}>
-                    {isPayosLoading ? 'Đang tạo mã QR...' : 'Thanh toán ngay'}
+                    {isPayosLoading ? 'Đang tạo mã QR...' : 'Thanh toán bảo kim (Escrow)'}
                   </Button>
-                </div>
-
-                {/* Manual Checkout */}
-                <div style={{ background: 'var(--background-alt)', padding: '20px', borderRadius: '16px', border: '1px dashed var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                  <div style={{ width: 48, height: 48, background: 'var(--background-color)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', marginBottom: 12, border: '1px solid var(--border-color)' }}>
-                    <Clock size={24} />
-                  </div>
-                  <h4 style={{ fontWeight: 700, marginBottom: 8 }}>Tải Bill Thủ Công</h4>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 16, minHeight: 40 }}>Chuyển tiền vào ví Freelancer và tải ảnh chụp màn hình lên.</p>
-                  <Button variant="outline" className="w-full" onClick={() => document.getElementById('manual-checkout-details').style.display = 'block'}>
-                    Xem thông tin
-                  </Button>
-                </div>
-              </div>
-
-              <div id="manual-checkout-details" style={{ display: 'none' }}>
-                <div className="bank-details-box premium mt-4">
-                  <div className="detail-row">
-                    <span className="label">Ngân hàng</span>
-                    <span className="value font-bold">{checkoutFile.payoutSettings?.bankName || 'Vietcombank (VCB)'}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="label">Số tài khoản</span>
-                    <span className="value font-mono text-primary" style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>{checkoutFile.payoutSettings?.accountNumber || '0123456789'}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="label">Chủ tài khoản</span>
-                    <span className="value">{checkoutFile.payoutSettings?.accountName || checkoutFile.freelancer.toUpperCase()}</span>
-                  </div>
-                </div>
-
-                {checkoutFile.payoutSettings?.qrCodeUrl && (
-                  <div className="qr-payment-display premium">
-                    <p className="qr-title">Quét mã QR để thanh toán nhanh:</p>
-                    <div className="qr-wrapper">
-                      <img src={checkoutFile.payoutSettings.qrCodeUrl} alt="Freelancer QR Code" className="qr-image" />
-                    </div>
-                  </div>
-                )}
-
-                <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 610, color: 'var(--text-main)' }}>Minh chứng chuyển khoản (Ảnh Bill)</label>
-                  <label htmlFor="receipt-image-file" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 14px', border: '2px dashed var(--border-color)', borderRadius: '12px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.9rem', background: 'var(--background-color)', transition: 'all 0.2s' }} className="upload-label-hover">
-                    <ImagePlus size={18} />
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {receiptFile ? receiptFile.name : 'Nhấn để chọn ảnh Bill...'}
-                    </span>
-                  </label>
-                  <input type="file" id="receipt-image-file" accept="image/*" onChange={handleReceiptImageChange} style={{ display: 'none' }} />
-                  {receiptPreview && (
-                    <div style={{ marginTop: '8px', position: 'relative' }}>
-                      <img src={receiptPreview} alt="Receipt Preview" style={{ width: '100%', maxHeight: '450px', objectFit: 'contain', borderRadius: '12px', border: '1px solid var(--border-color)' }} />
-                      <button onClick={() => { setReceiptPreview(null); setReceiptFile(null); }} style={{ position: 'absolute', top: '-8px', right: '-8px', background: 'var(--error-color)', color: 'white', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}><X size={14} /></button>
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 610, color: 'var(--text-main)' }}>Link Giao Dịch (Không bắt buộc)</label>
-                  <input type="url" id="tracking-link-input" placeholder="https://bank.com/tx/..." style={{ padding: '10px', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--background-color)', outline: 'none' }} />
-                </div>
-
-                <div className="checkout-footer mt-6">
-                  <Button variant="primary" className="btn-glow" onClick={submitCheckout} style={{ borderRadius: '10px', flex: 1 }}>Tôi đã thanh toán (Gửi Bill)</Button>
                 </div>
               </div>
             </div>
