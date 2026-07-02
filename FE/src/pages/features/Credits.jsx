@@ -18,7 +18,8 @@ const Credits = () => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [creditsToBuy, setCreditsToBuy] = useState(50);
+  const [topupAmount, setTopupAmount] = useState('50000');
+  const creditsToBuy = Math.floor(Number(topupAmount) / 1000);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [qrData, setQrData] = useState(null);
 
@@ -297,8 +298,8 @@ const Credits = () => {
                 <input
                   type="number"
                   className="topup-input"
-                  value={creditsToBuy * 1000}
-                  onChange={(e) => setCreditsToBuy(Math.floor(Number(e.target.value) / 1000))}
+                  value={topupAmount}
+                  onChange={(e) => setTopupAmount(e.target.value.replace(/\D/g, ''))}
                 />
                 <span className="topup-currency">VNĐ</span>
               </div>
@@ -311,7 +312,7 @@ const Credits = () => {
                   <button
                     key={val}
                     className={`quick-btn ${creditsToBuy === val ? 'active' : ''}`}
-                    onClick={() => setCreditsToBuy(val)}
+                    onClick={() => setTopupAmount(String(val * 1000))}
                   >
                     {val < 1000 ? `${val}K` : `${val / 1000}M`}
                   </button>
