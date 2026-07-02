@@ -554,65 +554,132 @@ const Credits = () => {
 
       {/* Withdraw Modal */}
       {showWithdrawModal && createPortal(
-        <div className="payos-modal-overlay fade-in">
-          <div className="payos-modal-content" style={{ maxWidth: '500px', padding: '24px' }}>
-            <h2 className="text-xl font-bold mb-2">Tạo Yêu cầu Rút Tiền</h2>
-            <p className="text-muted text-sm mb-6">Số tiền rút sẽ được quy đổi từ Credit và chuyển khoản vào tài khoản ngân hàng của bạn.</p>
+        <div className="payos-modal-overlay fade-in" style={{
+          position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(10px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
+        }}>
+          <div className="payos-modal-content" style={{
+            background: 'linear-gradient(145deg, #1e293b, #0f172a)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '24px',
+            width: '100%',
+            maxWidth: '450px',
+            padding: '32px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            position: 'relative'
+          }}>
+            <button 
+              onClick={() => setShowWithdrawModal(false)}
+              style={{ position: 'absolute', top: '24px', right: '24px', background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+            >
+              <XCircle size={24} />
+            </button>
             
-            <div className="mb-4">
-              <label className="block text-sm font-semibold mb-2">Số Credit muốn rút</label>
-              <input 
-                type="number" 
-                className="w-full p-3 border rounded-lg focus:outline-none focus:border-primary"
-                value={withdrawAmount}
-                onChange={(e) => setWithdrawAmount(Number(e.target.value))}
-                min="50"
-              />
-              <p className="text-xs text-muted mt-2 flex justify-between">
-                <span>Số dư hiện tại: {user?.credits?.toFixed(1)} CR</span>
-                <span className="font-bold text-success text-sm">Thực nhận: {(withdrawAmount * 2000).toLocaleString()} VNĐ</span>
-              </p>
+            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+              <div style={{ 
+                width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', 
+                display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' 
+              }}>
+                <Banknote size={32} color="#10b981" />
+              </div>
+              <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#f8fafc', margin: '0 0 8px 0' }}>Rút Tiền Về Bank</h2>
+              <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>Quy đổi Credit thành VNĐ (1 CR = 2,000 VNĐ)</p>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div>
+                <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#cbd5e1', marginBottom: '8px', fontWeight: '500' }}>
+                  <span>Số Credit muốn rút</span>
+                  <span style={{ color: '#06b6d4' }}>Khả dụng: {user?.credits?.toFixed(1)} CR</span>
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input 
+                    type="number" 
+                    style={{
+                      width: '100%', padding: '14px 16px 14px 44px', borderRadius: '12px',
+                      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                      color: 'white', fontSize: '16px', outline: 'none', transition: 'all 0.2s'
+                    }}
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(Number(e.target.value))}
+                    min="50"
+                  />
+                  <Zap size={18} color="#94a3b8" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
+                </div>
+                <div style={{ 
+                  marginTop: '12px', padding: '12px', borderRadius: '12px', 
+                  background: 'rgba(16, 185, 129, 0.05)', border: '1px dashed rgba(16, 185, 129, 0.2)',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                }}>
+                  <span style={{ color: '#94a3b8', fontSize: '14px' }}>Thực nhận:</span>
+                  <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '18px' }}>
+                    {(withdrawAmount * 2000).toLocaleString()} VNĐ
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', color: '#cbd5e1', marginBottom: '8px', fontWeight: '500' }}>Ngân hàng thụ hưởng</label>
+                <div style={{ position: 'relative' }}>
+                  <input 
+                    type="text" 
+                    style={{
+                      width: '100%', padding: '14px 16px', borderRadius: '12px',
+                      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                      color: 'white', fontSize: '14px', outline: 'none'
+                    }}
+                    placeholder="VD: Vietcombank, MB Bank, MoMo..."
+                    value={bankDetails.bankName}
+                    onChange={(e) => setBankDetails({...bankDetails, bankName: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '14px', color: '#cbd5e1', marginBottom: '8px', fontWeight: '500' }}>Số Tài Khoản</label>
+                  <input 
+                    type="text" 
+                    style={{
+                      width: '100%', padding: '14px 16px', borderRadius: '12px',
+                      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                      color: 'white', fontSize: '14px', outline: 'none'
+                    }}
+                    placeholder="VD: 0123456789"
+                    value={bankDetails.accountNumber}
+                    onChange={(e) => setBankDetails({...bankDetails, accountNumber: e.target.value})}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '14px', color: '#cbd5e1', marginBottom: '8px', fontWeight: '500' }}>Tên Chủ Thẻ</label>
+                  <input 
+                    type="text" 
+                    style={{
+                      width: '100%', padding: '14px 16px', borderRadius: '12px',
+                      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                      color: 'white', fontSize: '14px', outline: 'none', textTransform: 'uppercase'
+                    }}
+                    placeholder="VD: NGUYEN VAN A"
+                    value={bankDetails.accountName}
+                    onChange={(e) => setBankDetails({...bankDetails, accountName: e.target.value.toUpperCase()})}
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="mb-4">
-              <label className="block text-sm font-semibold mb-2">Tên Ngân Hàng</label>
-              <input 
-                type="text" 
-                className="w-full p-3 border rounded-lg focus:outline-none focus:border-primary"
-                placeholder="VD: Vietcombank, MB Bank, MoMo..."
-                value={bankDetails.bankName}
-                onChange={(e) => setBankDetails({...bankDetails, bankName: e.target.value})}
-              />
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-semibold mb-2">Chủ Tài Khoản</label>
-              <input 
-                type="text" 
-                className="w-full p-3 border rounded-lg focus:outline-none focus:border-primary uppercase"
-                placeholder="VD: NGUYEN VAN A"
-                value={bankDetails.accountName}
-                onChange={(e) => setBankDetails({...bankDetails, accountName: e.target.value.toUpperCase()})}
-              />
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-semibold mb-2">Số Tài Khoản</label>
-              <input 
-                type="text" 
-                className="w-full p-3 border rounded-lg focus:outline-none focus:border-primary"
-                placeholder="VD: 0123456789"
-                value={bankDetails.accountNumber}
-                onChange={(e) => setBankDetails({...bankDetails, accountNumber: e.target.value})}
-              />
-            </div>
-
-            <div className="flex gap-4">
-              <Button variant="outline" className="flex-1" onClick={() => setShowWithdrawModal(false)}>Hủy</Button>
-              <Button variant="primary" className="flex-1 btn-glow" onClick={handleWithdraw} disabled={isSubmitting}>
-                {isSubmitting ? 'Đang gửi...' : 'Gửi Yêu Cầu'}
-              </Button>
-            </div>
+            <Button 
+              variant="primary" 
+              className="w-full mt-8" 
+              style={{ 
+                padding: '16px', borderRadius: '12px', fontSize: '16px', fontWeight: 'bold',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none',
+                boxShadow: '0 4px 14px 0 rgba(16, 185, 129, 0.39)', color: '#fff'
+              }}
+              onClick={handleWithdraw} 
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Đang xử lý...' : 'Xác nhận & Gửi yêu cầu'}
+            </Button>
           </div>
         </div>,
         document.body
