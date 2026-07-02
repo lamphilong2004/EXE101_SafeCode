@@ -149,7 +149,7 @@ export async function payosWebhook(req, res) {
           fileDoc.freelancerId,
           "payment_received",
           `Khách hàng đã thanh toán qua VietQR cho file "${fileDoc.title}". Tiền đã vào tài khoản nền tảng.`,
-          fileDoc._id
+          { relatedFileId: fileDoc._id }
         );
       }
 
@@ -205,7 +205,7 @@ export async function payosWebhook(req, res) {
               String(freelancer._id),
               "payment_received",
               `Khách hàng đã thanh toán qua VietQR! ${creditsToAdd} Credit đã được cộng vào tài khoản của bạn.`,
-              creditReq.fileId
+              { relatedFileId: creditReq.fileId }
             );
 
             // Notify client via socket room
@@ -233,7 +233,7 @@ export async function payosWebhook(req, res) {
               user._id,
               "credit_approved",
               `Thanh toán thành công. ${creditReq.amount} Credit đã được cộng vào tài khoản của bạn.`,
-              null
+              {}
             );
           }
         }
