@@ -13,7 +13,7 @@ const PREVIEW_RATE_PER_MIN = 0.1;
 const FREE_PREVIEW_MINS = 5;
 
 const CREDIT_CONVERSION_RATE = 2_000; // 1 Credit = 2,000 VND
-const PLATFORM_FEE_PERCENT = 0.10;    // 10% platform fee
+const PLATFORM_FEE_PERCENT = 0.00;    // 0% platform fee (Admin takes no commission)
 
 /* ─── Public functions ─── */
 
