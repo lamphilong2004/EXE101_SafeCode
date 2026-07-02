@@ -396,12 +396,12 @@ const Credits = () => {
                 ✕
               </button>
             </div>
-            <div className="p-6 flex flex-col items-center">
+            <div className="qr-modal-body">
               <div className="qr-code-wrapper">
                 <QRCodeSVG value={qrData.qrCode} size={220} level="M" />
               </div>
 
-              <div className="w-full space-y-3 text-sm">
+              <div className="qr-details">
                 <div className="qr-detail-row">
                   <span className="qr-detail-label">Số tài khoản</span>
                   <div className="qr-detail-value">
