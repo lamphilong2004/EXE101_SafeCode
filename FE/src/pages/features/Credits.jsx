@@ -418,7 +418,7 @@ const Credits = () => {
                 <div className="payos-bank-logos">
                   <span style={{ fontWeight: '800', fontStyle: 'italic', color: '#0d47a1', fontSize: '1.1rem' }}>napas <span style={{ color: '#2196f3' }}>247</span></span>
                   <div className="payos-logo-divider"></div>
-                  <img src="https://play-lh.googleusercontent.com/p4BaQ6Y8_NsDHpTzn26h2U8gqWHFyKNhKkG0rxSsnB3qD64Hw8HozfCDYLiZXt2L7jDot8MhsF3qFePuOW16=w256" alt="MB Bank" height="24" style={{ borderRadius: '4px' }} />
+                  <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRSMFqLbp_MUb1bOiQ92ZbMePy_Zf9tkoRrNaJFO9Hhpw&s=10" alt="Bank Logo" height="24" style={{ borderRadius: '4px' }} />
                 </div>
                 <button className="payos-cancel-btn" onClick={() => setQrData(null)}>Huỷ</button>
               </div>
