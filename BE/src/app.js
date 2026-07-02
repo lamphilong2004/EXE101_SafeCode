@@ -69,6 +69,23 @@ export function createApp() {
 
   app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+  // Proxy Asset Interceptor: Fixes absolute paths (e.g. /assets/...) from Vercel SPAs
+  app.use((req, res, next) => {
+    const referer = req.get("Referer");
+    if (referer) {
+      const match = referer.match(/\/proxy\/demo\/([^/]+)/);
+      if (match) {
+        const fileId = match[1];
+        // If it doesn't match an internal API route, assume it's a proxy asset
+        const isApiRoute = ["/auth", "/billing", "/credits", "/files", "/payments", "/proxy", "/preview", "/admin", "/messages", "/notifications", "/reviews", "/kyc", "/webhooks", "/api-docs"].some(r => req.originalUrl.startsWith(r));
+        if (!isApiRoute) {
+          req.url = `/proxy/demo/${fileId}${req.url}`;
+        }
+      }
+    }
+    next();
+  });
+
   app.use(routes);
 
   app.use(notFoundHandler);

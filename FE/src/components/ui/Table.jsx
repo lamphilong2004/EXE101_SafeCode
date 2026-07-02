@@ -773,9 +773,15 @@ const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
                   {row.status === 'Uploaded' && (
                     <div className="client-actions" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                        <Button variant="primary" style={{ flex: 1, padding: '8px' }} className="unlock-btn text-xs justify-center" title="Kích hoạt demo" onClick={() => handleStartTrial(row.id)}>
-                          <Clock size={14} style={{ marginRight: 4 }} /> Kích hoạt ({row.allocatedMinutes || 0}p)
-                        </Button>
+                        {row.projectType === 'web' && row.demoType === 'url' && row.demoUrl ? (
+                          <Button variant="primary" style={{ flex: 1, padding: '8px' }} className="unlock-btn text-xs justify-center" title="Xem Live Demo" onClick={() => handleOpenVercelLiveDemo(row.id, row.demoUrl, true)}>
+                            <ExternalLink size={14} style={{ marginRight: 4 }} /> Demo
+                          </Button>
+                        ) : (
+                          <Button variant="primary" style={{ flex: 1, padding: '8px' }} className="unlock-btn text-xs justify-center" title="Kích hoạt demo" onClick={() => handleStartTrial(row.id)}>
+                            <Clock size={14} style={{ marginRight: 4 }} /> Kích hoạt ({row.allocatedMinutes || 0}p)
+                          </Button>
+                        )}
                         <Button variant="outline" style={{ flex: 1, padding: '8px' }} className="text-xs justify-center" onClick={() => setActiveChatFile(row.id)}>
                           <MessageCircle size={14} style={{ marginRight: 4 }} /> Nhắn tin
                         </Button>
@@ -785,9 +791,15 @@ const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
                   {row.status === 'Testing Phase' && (
                     <div className="client-actions" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                        <Button variant="primary" style={{ flex: 1, padding: '8px' }} className="unlock-btn text-xs justify-center" title="Launch Managed Preview" onClick={() => setActivePreviewFile(row)}>
-                          <ExternalLink size={14} style={{ marginRight: 4 }} /> Xem Demo Sandbox
-                        </Button>
+                        {row.projectType === 'web' && row.demoType === 'url' && row.demoUrl ? (
+                          <Button variant="primary" style={{ flex: 1, padding: '8px' }} className="unlock-btn text-xs justify-center" title="Xem Live Demo" onClick={() => handleOpenVercelLiveDemo(row.id, row.demoUrl, false)}>
+                            <ExternalLink size={14} style={{ marginRight: 4 }} /> Xem Demo
+                          </Button>
+                        ) : (
+                          <Button variant="primary" style={{ flex: 1, padding: '8px' }} className="unlock-btn text-xs justify-center" title="Launch Managed Preview" onClick={() => setActivePreviewFile(row)}>
+                            <ExternalLink size={14} style={{ marginRight: 4 }} /> Xem Demo Sandbox
+                          </Button>
+                        )}
                         <Button variant="outline" style={{ flex: 1, padding: '8px' }} className="text-xs justify-center" onClick={() => setActiveChatFile(row.id)}>
                           <MessageCircle size={14} style={{ marginRight: 4 }} /> Nhắn tin
                         </Button>

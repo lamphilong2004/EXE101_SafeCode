@@ -100,7 +100,9 @@ export async function stripeWebhook(req, res) {
 
 export async function payosWebhook(req, res) {
   try {
-    const webhookData = payos.verifyPaymentWebhookData(req.body);
+    const webhookData = typeof payos.verifyPaymentWebhookData === "function" 
+      ? payos.verifyPaymentWebhookData(req.body)
+      : payos.webhooks.verify(req.body);
 
     if (webhookData.code === "00") {
       const orderCode = webhookData.data.orderCode;

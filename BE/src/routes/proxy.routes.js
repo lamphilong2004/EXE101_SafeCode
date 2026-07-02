@@ -6,8 +6,8 @@ import path from "path";
 
 export const proxyRoutes = Router();
 
-// GET /proxy/demo/:fileId
-proxyRoutes.get("/demo/:fileId", requireAuth, requireRole("client"), proxyDemo);
+// USE /proxy/demo/:fileId to match all sub-paths and HTTP methods
+proxyRoutes.use("/demo/:fileId", requireAuth, requireRole("client"), proxyDemo);
 
 // GET /proxy/mock-s3
 proxyRoutes.get("/mock-s3", (req, res) => {

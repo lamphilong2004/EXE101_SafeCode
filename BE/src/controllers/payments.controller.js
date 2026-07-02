@@ -166,7 +166,9 @@ export async function createPayosCheckout(req, res, next) {
       cancelUrl: finalCancelUrl
     };
 
-    const paymentLinkRes = await payos.createPaymentLink(paymentData);
+    const paymentLinkRes = typeof payos.createPaymentLink === "function"
+      ? await payos.createPaymentLink(paymentData)
+      : await payos.paymentRequests.create(paymentData);
 
     fileDoc.status = "CheckoutCreated";
     fileDoc.payos = { orderCode, paymentLinkId: paymentLinkRes.paymentLinkId };
