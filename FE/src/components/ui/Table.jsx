@@ -277,7 +277,7 @@ const PreviewModal = ({ file, onClose }) => {
 const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
   const [checkoutFile, setCheckoutFile] = useState(null);
   const [receiptPreview, setReceiptPreview] = useState(null);
-  const [receiptFile, setReceiptFile] = useState(null);
+
   const [activePreviewFile, setActivePreviewFile] = useState(null);
   const [activeChatFile, setActiveChatFile] = useState(null);
   const [activeFreelancerView, setActiveFreelancerView] = useState(null);
@@ -310,44 +310,6 @@ const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
     setReceiptFile(null);
   };
 
-  const handleReceiptImageChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setReceiptFile(file);
-    const reader = new FileReader();
-    reader.onload = (ev) => setReceiptPreview(ev.target.result);
-    reader.readAsDataURL(file);
-  };
-
-  const submitCheckout = async () => {
-    if (checkoutFile) {
-      const txLink = document.getElementById('tracking-link-input')?.value || '';
-
-      if (!receiptPreview) {
-        toast.error("Vui lòng tải ảnh Bill chuyển khoản lên!");
-        return;
-      }
-
-      try {
-        toast.info("Đang tải Bill lên cho AI kiểm tra...");
-        // Send base64 image as imageUrl for demo
-        await api.post(`/files/${checkoutFile.id}/receipt`, {
-          imageUrl: receiptPreview,
-          trackingLink: txLink
-        });
-
-        updateFileStatus(checkoutFile.id, 'Verifying Payment');
-        toast.success("AI đã xác nhận bill hợp lệ! Đang chờ Freelancer check tiền trong Bank.");
-        setCheckoutFile(null);
-        setReceiptPreview(null);
-        setReceiptFile(null);
-      } catch (err) {
-        console.error(err);
-        toast.error("Gửi Bill thất bại!");
-      }
-    }
-  };
-
   const [qrData, setQrData] = useState(null);
 
   const handleCompleteOrder = async (fileId) => {
@@ -356,10 +318,6 @@ const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
       await api.post(`/files/${fileId}/complete-order`);
       toast.success("Đã hoàn tất giao dịch! Tiền đã được chuyển cho người bán.");
       if (updateFileStatus) updateFileStatus(fileId, 'Delivered');
-      
-      // Update local data to reflect change immediately
-      const newData = data.map(f => f.id === fileId ? { ...f, status: 'Delivered' } : f);
-      setFilteredData(newData);
     } catch (error) {
       toast.error(error.response?.data?.error || 'Lỗi khi hoàn tất đơn hàng');
     }
@@ -895,7 +853,7 @@ const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
                             variant="primary"
                             className="unlock-btn w-full justify-center"
                             style={{ backgroundColor: 'var(--success-color)', borderColor: 'var(--success-color)' }}
-                            onClick={() => handleDecryptAndDownload(row.id, row.fileName)}
+                            onClick={() => _handleDecrypt(row.id, row.fileName)}
                           >
                             <Download size={16} style={{ marginRight: 6 }} /> Tải & Giải mã
                           </Button>

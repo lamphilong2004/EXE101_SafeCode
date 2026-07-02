@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { CreditCard, Zap, Check, ArrowUpRight, ArrowDownRight, History, Banknote, ShieldCheck, RefreshCw, QrCode, Crown, Diamond, Copy } from 'lucide-react';
+import { CreditCard, Zap, Check, ArrowUpRight, ArrowDownRight, History, Banknote, ShieldCheck, RefreshCw, QrCode, Crown, Diamond, Copy, XCircle } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import api from '../../services/api';
@@ -77,7 +77,7 @@ const Credits = () => {
       }
     };
     fetchData();
-  }, [page]);
+  }, [page, user?.role]);
 
   const handleWithdraw = async () => {
     if (withdrawAmount < 50) {
