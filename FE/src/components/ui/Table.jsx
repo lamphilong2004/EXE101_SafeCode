@@ -276,7 +276,6 @@ const PreviewModal = ({ file, onClose }) => {
 
 const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
   const [checkoutFile, setCheckoutFile] = useState(null);
-  const [receiptPreview, setReceiptPreview] = useState(null);
 
   const [activePreviewFile, setActivePreviewFile] = useState(null);
   const [activeChatFile, setActiveChatFile] = useState(null);
@@ -306,8 +305,6 @@ const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
   const handlePay = async (id) => {
     const file = data.find(f => f.id === id);
     setCheckoutFile(file);
-    setReceiptPreview(null);
-    setReceiptFile(null);
   };
 
   const [qrData, setQrData] = useState(null);
