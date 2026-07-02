@@ -810,3 +810,39 @@ export async function getFileStatus(req, res, next) {
     next(err);
   }
 }
+
+export async function completeOrder(req, res, next) {
+  try {
+    const fileDoc = await File.findById(req.params.fileId);
+    if (!fileDoc) throw httpError(404, "File not found");
+    if (fileDoc.intendedClientEmail !== req.user.email) throw httpError(403, "Forbidden: Only the client can complete the order");
+    if (fileDoc.status !== "Paid") throw httpError(409, "File must be Paid to complete the order");
+
+    fileDoc.status = "Delivered";
+    await fileDoc.save();
+
+    const { rewardCreditsForSale } = await import("../services/credit.service.js");
+    const { createNotification } = await import("../socket.js");
+
+    let creditsEarned = 0;
+    try {
+      creditsEarned = await rewardCreditsForSale(fileDoc.freelancerId, {
+        amountInVnd: fileDoc.price.amount,
+        fileId: fileDoc._id,
+      });
+    } catch (creditErr) {
+      console.error("[CREDIT] Failed to reward credits during completeOrder:", creditErr);
+    }
+
+    createNotification(
+      String(fileDoc.freelancerId),
+      "Đơn hàng hoàn tất! 🎉",
+      `Khách hàng đã xác nhận mã nguồn cho dự án "${fileDoc.title}". Bạn đã được cộng ${creditsEarned} Credit.`,
+      { type: "payment", relatedFileId: fileDoc._id }
+    );
+
+    res.json({ success: true, status: fileDoc.status, creditsEarned });
+  } catch (err) {
+    next(err);
+  }
+}

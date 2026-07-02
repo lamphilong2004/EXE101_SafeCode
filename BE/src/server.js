@@ -3,10 +3,12 @@ import { createApp } from "./app.js";
 import { connectDb } from "./config/db.js";
 import { env } from "./config/env.js";
 import { startCleanupWorker } from "./workers/cleanup.worker.js";
+import { startEscrowWorker } from "./workers/escrow.worker.js";
 import { initSocket } from "./socket.js";
 
 await connectDb();
 startCleanupWorker();
+startEscrowWorker();
 
 const app = createApp();
 const httpServer = http.createServer(app);

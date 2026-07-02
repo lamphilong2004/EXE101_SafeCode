@@ -11,6 +11,7 @@ import { previewRoutes } from "./preview.routes.js";
 import { messagesRoutes } from "./messages.routes.js";
 import { notificationsRoutes } from "./notifications.routes.js";
 import { reviewsRoutes } from "./reviews.routes.js";
+import { withdrawRoutes } from "./withdraw.routes.js";
 import kycRoutes from "./kyc.routes.js";
 
 export const routes = Router();
@@ -27,6 +28,7 @@ routes.use("/messages", messagesRoutes);
 routes.use("/notifications", notificationsRoutes);
 routes.use("/reviews", reviewsRoutes);
 routes.use("/kyc", kycRoutes);
+routes.use("/withdraw", withdrawRoutes);
 
 // keep webhooks separate: uses raw body
 routes.use("/webhooks", webhooksRoutes);

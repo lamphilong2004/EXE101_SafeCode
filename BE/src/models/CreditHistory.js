@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const CREDIT_TX_TYPES = ["upload", "sale", "deposit", "refund", "adjustment"];
+const CREDIT_TX_TYPES = ["upload", "sale", "deposit", "refund", "adjustment", "withdrawal"];
 
 const CreditHistorySchema = new mongoose.Schema(
   {

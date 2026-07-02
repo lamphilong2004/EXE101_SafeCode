@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
-import { Users, AlertTriangle, CheckCircle, XCircle, Phone, Mail, FileText, BarChart3, Database, DollarSign, ArrowRight, Info, PlusCircle, MinusCircle, Banknote, ShieldCheck, ShieldX } from 'lucide-react';
+import { Users, AlertTriangle, CheckCircle, XCircle, Phone, Mail, FileText, BarChart3, Database, DollarSign, ArrowRight, Info, PlusCircle, MinusCircle, Banknote, ShieldCheck, ShieldX, Clock } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import './AdminDashboard.css';
 
@@ -14,6 +14,7 @@ const AdminDashboard = () => {
   const [disputes, setDisputes] = useState([]);
   const [users, setUsers] = useState([]);
   const [creditRequests, setCreditRequests] = useState([]);
+  const [withdrawRequests, setWithdrawRequests] = useState([]);
   const [kycRequests, setKycRequests] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -50,6 +51,9 @@ const AdminDashboard = () => {
       } else if (activeTab === 'credits') {
         const res = await api.get(`/admin/credit-requests`);
         setCreditRequests(res.data.requests);
+      } else if (activeTab === 'withdraw') {
+        const res = await api.get('/withdraw/all');
+        setWithdrawRequests(res.data);
       } else if (activeTab === 'kyc') {
         const res = await api.get('/kyc/pending?status=pending');
         setKycRequests(res.data.users);
@@ -107,6 +111,34 @@ const AdminDashboard = () => {
     try {
       await api.post(`/admin/credit-requests/${reqId}/reject`, { adminNote: reason });
       toast.success("Đã từ chối yêu cầu.");
+      fetchData();
+    } catch(err) {
+      toast.error(err.response?.data?.error || "Action failed");
+    }
+  };
+
+  const handleApproveWithdraw = async (reqId) => {
+    const reason = window.prompt("Ghi chú duyệt (Tùy chọn):", "Chuyển khoản thành công");
+    if(reason === null) return;
+    try {
+      await api.post(`/withdraw/${reqId}/approve`, { adminNote: reason });
+      toast.success("Đã duyệt yêu cầu rút tiền.");
+      fetchData();
+    } catch(err) {
+      toast.error(err.response?.data?.error || "Action failed");
+    }
+  };
+
+  const handleRejectWithdraw = async (reqId) => {
+    const reason = window.prompt("Lý do từ chối (Bắt buộc):", "Sai thông tin ngân hàng");
+    if(reason === null) return;
+    if(!reason) {
+      toast.error("Bắt buộc phải nhập lý do từ chối.");
+      return;
+    }
+    try {
+      await api.post(`/withdraw/${reqId}/reject`, { adminNote: reason });
+      toast.success("Đã từ chối yêu cầu rút tiền, hoàn lại Credit.");
       fetchData();
     } catch(err) {
       toast.error(err.response?.data?.error || "Action failed");
@@ -321,9 +353,73 @@ const AdminDashboard = () => {
                           </td>
                           <td>
                             {req.status === 'pending' && (
+                              req.payosOrderCode ? (
+                                <span className="text-xs text-muted" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontStyle: 'italic' }}>
+                                  <Clock size={12}/> Đang chờ thanh toán (PayOS)...
+                                </span>
+                              ) : (
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  <Button size="sm" variant="success" title="Duyệt/Xác nhận đã nhận tiền" onClick={() => handleApproveCredit(req._id)}><CheckCircle size={14}/></Button>
+                                  <Button size="sm" variant="danger" title="Từ chối/Hủy đơn" onClick={() => handleRejectCredit(req._id)}><XCircle size={14}/></Button>
+                                </div>
+                              )
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* WITHDRAW TAB */}
+            {activeTab === 'withdraw' && (
+              <div className="data-table-container">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Ngày & Người Yêu Cầu</th>
+                      <th>Số Lượng Rút</th>
+                      <th>Thông Tin Nhận Tiền</th>
+                      <th>Trạng Thái</th>
+                      <th>Hành Động</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {withdrawRequests.length === 0 ? (
+                      <tr><td colSpan="5" className="text-center">Chưa có yêu cầu rút tiền.</td></tr>
+                    ) : (
+                      withdrawRequests.map(req => (
+                        <tr key={req._id}>
+                          <td>
+                            <div className="text-sm">
+                              <div><b>{req.userId?.name || 'User'}</b></div>
+                              <div className="text-muted">{req.userId?.email}</div>
+                              <small>{new Date(req.createdAt).toLocaleString()}</small>
+                            </div>
+                          </td>
+                          <td>
+                            <strong className="text-danger">-{req.amount} CR</strong><br />
+                            <small>{req.amountVND?.toLocaleString()} VND</small>
+                          </td>
+                          <td>
+                            <div className="text-sm">
+                              <div><b>Ngân hàng:</b> {req.bankDetails?.bankName}</div>
+                              <div><b>Chủ TK:</b> {req.bankDetails?.accountName}</div>
+                              <div><b>Số TK:</b> <span style={{fontFamily: 'monospace'}}>{req.bankDetails?.accountNumber}</span></div>
+                            </div>
+                          </td>
+                          <td>
+                             <span className={`status-badge ${req.status === 'approved' ? 'success' : req.status === 'rejected' ? 'error' : 'pending'}`}>
+                               {req.status === 'approved' ? 'ĐÃ CHUYỂN' : req.status.toUpperCase()}
+                             </span>
+                          </td>
+                          <td>
+                            {req.status === 'pending' && (
                               <div style={{ display: 'flex', gap: '8px' }}>
-                                <Button size="sm" variant="success" title="Duyệt/Xác nhận đã nhận tiền" onClick={() => handleApproveCredit(req._id)}><CheckCircle size={14}/></Button>
-                                <Button size="sm" variant="danger" title="Từ chối/Hủy đơn" onClick={() => handleRejectCredit(req._id)}><XCircle size={14}/></Button>
+                                <Button size="sm" variant="success" title="Xác nhận đã chuyển tiền" onClick={() => handleApproveWithdraw(req._id)}><CheckCircle size={14}/></Button>
+                                <Button size="sm" variant="danger" title="Từ chối/Hoàn tiền" onClick={() => handleRejectWithdraw(req._id)}><XCircle size={14}/></Button>
                               </div>
                             )}
                           </td>

@@ -350,6 +350,22 @@ const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
 
   const [qrData, setQrData] = useState(null);
 
+  const handleCompleteOrder = async (fileId) => {
+    if (!window.confirm("Xác nhận mã nguồn hoạt động tốt? Tiền sẽ được chuyển ngay cho Freelancer.")) return;
+    try {
+      await api.post(`/files/${fileId}/complete-order`);
+      toast.success("Đã hoàn tất giao dịch! Tiền đã được chuyển cho người bán.");
+      if (updateFileStatus) updateFileStatus(fileId, 'Delivered');
+      
+      // Update local data to reflect change immediately
+      const newData = data.map(f => f.id === fileId ? { ...f, status: 'Delivered' } : f);
+      setFilteredData(newData);
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Lỗi khi hoàn tất đơn hàng');
+    }
+  };
+
+  // ----- V3 Github Webhook: Wait for 'repo_verified' event from socket
   useEffect(() => {
     if (checkoutFile && qrData) {
       socket.emit('join_room', checkoutFile.id);
@@ -856,17 +872,45 @@ const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
                   )}
                   {row.status === 'Paid' && (
                     <div className="client-actions" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--success-color)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <ShieldCheck size={14} /> Đã cấp quyền GitHub
-                      </span>
+                      {row.projectType === 'web' && row.githubRepoUrl ? (
+                        <>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--success-color)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <ShieldCheck size={14} /> Đã cấp quyền GitHub
+                          </span>
+                          <Button
+                            variant="primary"
+                            className="unlock-btn w-full justify-center"
+                            style={{ backgroundColor: 'var(--success-color)', borderColor: 'var(--success-color)' }}
+                            onClick={() => window.open(row.githubRepoUrl || 'https://github.com', '_blank')}
+                          >
+                            <ExternalLink size={16} style={{ marginRight: 6 }} /> Mở Repository
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--success-color)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <ShieldCheck size={14} /> Mã nguồn đã sẵn sàng
+                          </span>
+                          <Button
+                            variant="primary"
+                            className="unlock-btn w-full justify-center"
+                            style={{ backgroundColor: 'var(--success-color)', borderColor: 'var(--success-color)' }}
+                            onClick={() => handleDecryptAndDownload(row.id, row.fileName)}
+                          >
+                            <Download size={16} style={{ marginRight: 6 }} /> Tải & Giải mã
+                          </Button>
+                        </>
+                      )}
+                      
                       <Button
                         variant="primary"
-                        className="unlock-btn w-full justify-center"
-                        style={{ backgroundColor: 'var(--success-color)', borderColor: 'var(--success-color)' }}
-                        onClick={() => window.open(row.githubRepoUrl || 'https://github.com', '_blank')}
+                        className="w-full justify-center btn-glow"
+                        style={{ padding: '8px 10px', background: 'linear-gradient(135deg, #10b981, #059669)' }}
+                        onClick={() => handleCompleteOrder(row.id)}
                       >
-                        <ExternalLink size={16} style={{ marginRight: 6 }} /> Mở Repository
+                        <CheckCircle size={16} style={{ marginRight: 4 }} /> Hoàn tất đơn hàng
                       </Button>
+
                       <Button
                         variant="outline"
                         className="w-full justify-center"
@@ -875,6 +919,13 @@ const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
                       >
                         <MessageCircle size={14} style={{ marginRight: 4 }} /> Nhắn tin
                       </Button>
+                    </div>
+                  )}
+                  {row.status === 'Delivered' && (
+                    <div className="client-actions" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--success-color)', fontWeight: 'bold' }}>
+                        ✅ Giao dịch hoàn tất
+                      </span>
                     </div>
                   )}
                   {row.status === 'Pending Payment' && (

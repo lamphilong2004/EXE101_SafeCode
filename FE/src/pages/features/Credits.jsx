@@ -22,6 +22,12 @@ const Credits = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [qrData, setQrData] = useState(null);
 
+  // Withdraw state
+  const [withdrawRequests, setWithdrawRequests] = useState([]);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState(50);
+  const [bankDetails, setBankDetails] = useState({ bankName: '', accountNumber: '', accountName: '' });
+
   // Fix bfcache hanging issue
   useEffect(() => {
     const handlePageShow = (e) => {
@@ -53,13 +59,17 @@ const Credits = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [histRes, reqRes] = await Promise.all([
+        const [histRes, reqRes, withdrawRes] = await Promise.all([
           api.get(`/credits/history?page=${page}&limit=10`),
-          api.get('/credits/my-requests')
+          api.get('/credits/my-requests'),
+          user?.role === 'freelancer' ? api.get('/withdraw') : Promise.resolve({ data: [] })
         ]);
         setHistory(histRes.data.records);
         setTotalPages(histRes.data.totalPages);
         setRequests(reqRes.data.requests);
+        if (user?.role === 'freelancer') {
+          setWithdrawRequests(withdrawRes.data);
+        }
       } catch (err) {
         console.error("Failed to fetch credits data", err);
       } finally {
@@ -68,6 +78,35 @@ const Credits = () => {
     };
     fetchData();
   }, [page]);
+
+  const handleWithdraw = async () => {
+    if (withdrawAmount < 50) {
+      toast.error("Tối thiểu rút 50 Credit (100.000 VNĐ).");
+      return;
+    }
+    if (withdrawAmount > user.credits) {
+      toast.error("Số dư Credit không đủ.");
+      return;
+    }
+    if (!bankDetails.bankName || !bankDetails.accountNumber || !bankDetails.accountName) {
+      toast.error("Vui lòng nhập đầy đủ thông tin ngân hàng.");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      await api.post('/withdraw', { amount: withdrawAmount, bankDetails });
+      toast.success("Gửi yêu cầu rút tiền thành công!");
+      setShowWithdrawModal(false);
+      // Refresh user data
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || err.response?.data?.error || "Lỗi khi tạo yêu cầu rút tiền.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handlePayosTopup = async (overrideAmount = null) => {
     // Check if overrideAmount is a valid number, otherwise default to creditsToBuy
@@ -108,11 +147,16 @@ const Credits = () => {
 
   return (
     <div className="dashboard-wrapper">
-      <div className="dashboard-header mb-6">
+      <div className="dashboard-header mb-6" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 className="page-title">Credits & Thanh toán</h1>
           <p className="page-subtitle">Nạp tiền để tiếp tục sử dụng các dịch vụ và mua bán Source Code an toàn.</p>
         </div>
+        {user?.role === 'freelancer' && (
+          <Button variant="primary" className="btn-glow" onClick={() => setShowWithdrawModal(true)}>
+            <Banknote size={18} className="mr-2" /> Rút Tiền
+          </Button>
+        )}
       </div>
 
       <div className="dashboard-stats-grid mb-6">
@@ -331,6 +375,42 @@ const Credits = () => {
             </div>
           )}
 
+          {withdrawRequests.length > 0 && (
+            <div className="fade-in" style={{ animationDelay: '0.2s' }}>
+              <h2 className="section-title mb-4 flex items-center gap-2">
+                <Banknote size={20} className="text-primary" /> Lịch sử Yêu cầu Rút Tiền
+              </h2>
+              <Card className="p-0 overflow-hidden mb-8 glass-panel border-0">
+                <table className="credits-table premium-table">
+                  <thead>
+                    <tr>
+                      <th>Ngày yêu cầu</th>
+                      <th>Số Credit</th>
+                      <th>Số tiền rút (VNĐ)</th>
+                      <th>Trạng thái</th>
+                      <th>Ghi chú</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {withdrawRequests.map(req => (
+                      <tr key={req._id}>
+                        <td className="text-sm text-muted">{new Date(req.createdAt).toLocaleString()}</td>
+                        <td className="font-bold text-danger">-{req.amount} CR</td>
+                        <td className="font-medium">{req.amountVND.toLocaleString()} đ</td>
+                        <td>
+                          <span className={`status-badge status-${req.status}`}>
+                            {req.status === 'pending' ? 'Chờ duyệt' : req.status === 'approved' ? 'Đã chuyển' : 'Từ chối'}
+                          </span>
+                        </td>
+                        <td className="text-sm">{req.adminNote || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Card>
+            </div>
+          )}
+
           <div className="fade-in" style={{ animationDelay: '0.3s' }}>
             <h2 className="section-title mb-4 flex items-center gap-2">
               <History size={20} className="text-primary" /> Biến động Số dư
@@ -466,6 +546,72 @@ const Credits = () => {
                   Lưu ý : Nhập chính xác số tiền <strong>{qrData.amount.toLocaleString()}</strong> khi chuyển khoản
                 </div>
               </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Withdraw Modal */}
+      {showWithdrawModal && createPortal(
+        <div className="payos-modal-overlay fade-in">
+          <div className="payos-modal-content" style={{ maxWidth: '500px', padding: '24px' }}>
+            <h2 className="text-xl font-bold mb-2">Tạo Yêu cầu Rút Tiền</h2>
+            <p className="text-muted text-sm mb-6">Số tiền rút sẽ được quy đổi từ Credit và chuyển khoản vào tài khoản ngân hàng của bạn.</p>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-semibold mb-2">Số Credit muốn rút</label>
+              <input 
+                type="number" 
+                className="w-full p-3 border rounded-lg focus:outline-none focus:border-primary"
+                value={withdrawAmount}
+                onChange={(e) => setWithdrawAmount(Number(e.target.value))}
+                min="50"
+              />
+              <p className="text-xs text-muted mt-2 flex justify-between">
+                <span>Số dư hiện tại: {user?.credits?.toFixed(1)} CR</span>
+                <span className="font-bold text-success text-sm">Thực nhận: {(withdrawAmount * 2000).toLocaleString()} VNĐ</span>
+              </p>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-semibold mb-2">Tên Ngân Hàng</label>
+              <input 
+                type="text" 
+                className="w-full p-3 border rounded-lg focus:outline-none focus:border-primary"
+                placeholder="VD: Vietcombank, MB Bank, MoMo..."
+                value={bankDetails.bankName}
+                onChange={(e) => setBankDetails({...bankDetails, bankName: e.target.value})}
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-semibold mb-2">Chủ Tài Khoản</label>
+              <input 
+                type="text" 
+                className="w-full p-3 border rounded-lg focus:outline-none focus:border-primary uppercase"
+                placeholder="VD: NGUYEN VAN A"
+                value={bankDetails.accountName}
+                onChange={(e) => setBankDetails({...bankDetails, accountName: e.target.value.toUpperCase()})}
+              />
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-semibold mb-2">Số Tài Khoản</label>
+              <input 
+                type="text" 
+                className="w-full p-3 border rounded-lg focus:outline-none focus:border-primary"
+                placeholder="VD: 0123456789"
+                value={bankDetails.accountNumber}
+                onChange={(e) => setBankDetails({...bankDetails, accountNumber: e.target.value})}
+              />
+            </div>
+
+            <div className="flex gap-4">
+              <Button variant="outline" className="flex-1" onClick={() => setShowWithdrawModal(false)}>Hủy</Button>
+              <Button variant="primary" className="flex-1 btn-glow" onClick={handleWithdraw} disabled={isSubmitting}>
+                {isSubmitting ? 'Đang gửi...' : 'Gửi Yêu Cầu'}
+              </Button>
             </div>
           </div>
         </div>,

@@ -16,6 +16,7 @@ import {
   disputePayment,
   getFileStatus,
   verifyRepo,
+  completeOrder,
 } from "../controllers/files.controller.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
@@ -49,3 +50,4 @@ filesRoutes.post("/decrypt", requireAuth, requireRole("client"), decryptUploaded
 filesRoutes.post("/:fileId/receipt", requireAuth, requireRole("client"), uploadReceipt);
 filesRoutes.post("/:fileId/confirm", requireAuth, requireRole("freelancer"), confirmPayment);
 filesRoutes.post("/:fileId/dispute", requireAuth, requireRole("client"), disputePayment);
+filesRoutes.post("/:fileId/complete-order", requireAuth, requireRole("client"), completeOrder);
