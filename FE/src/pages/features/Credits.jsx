@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Zap, Check, ArrowUpRight, ArrowDownRight, History, Banknote, ShieldCheck, RefreshCw, QrCode, Crown, Diamond } from 'lucide-react';
+import { CreditCard, Zap, Check, ArrowUpRight, ArrowDownRight, History, Banknote, ShieldCheck, RefreshCw, QrCode, Crown, Diamond, Copy } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import api from '../../services/api';
