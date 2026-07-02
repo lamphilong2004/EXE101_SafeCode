@@ -28,6 +28,54 @@ export async function getStats(req, res, next) {
     ]);
     const totalCreditsInCirculation = creditAgg[0]?.totalCredits || 0;
 
+    // Build real chart data (last 7 days)
+    const today = new Date();
+    const chartData = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(today.getDate() - i);
+      const start = new Date(d.setHours(0, 0, 0, 0));
+      const end = new Date(d.setHours(23, 59, 59, 999));
+      
+      const dayName = start.toLocaleDateString('vi-VN', { weekday: 'short' }).replace('Th ', 'T');
+      chartData.push({ name: dayName, doanhThu: 0, users: 0, start, end });
+    }
+
+    const txLast7Days = await Transaction.aggregate([
+      { $match: { status: "Succeeded", createdAt: { $gte: chartData[0].start } } },
+      { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: "+07:00" } }, dailyRevenue: { $sum: "$amount" } } }
+    ]);
+
+    const usersLast7Days = await User.aggregate([
+      { $match: { createdAt: { $gte: chartData[0].start } } },
+      { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: "+07:00" } }, dailyUsers: { $sum: 1 } } }
+    ]);
+
+    chartData.forEach(day => {
+      const dateStr = new Date(day.start.getTime() + 7*3600*1000).toISOString().split('T')[0];
+      const tx = txLast7Days.find(t => t._id === dateStr);
+      const usr = usersLast7Days.find(u => u._id === dateStr);
+      day.doanhThu = tx ? tx.dailyRevenue : 0;
+      day.users = usr ? usr.dailyUsers : 0;
+    });
+
+    // Recent Activities (Mix of recent users and transactions)
+    const recentUsers = await User.find({ role: { $ne: 'admin' } }).sort({ createdAt: -1 }).limit(3);
+    const recentTx = await Transaction.find({ status: "Succeeded" }).sort({ createdAt: -1 }).limit(3);
+    
+    let recentActivities = [
+      ...recentUsers.map(u => ({ time: u.createdAt, action: `User ${u.name || u.email} vừa đăng ký tài khoản.`, type: 'info' })),
+      ...recentTx.map(t => ({ time: t.createdAt, action: `Giao dịch ${t.amount.toLocaleString()} VNĐ vừa thanh toán thành công.`, type: 'success' }))
+    ].sort((a, b) => b.time - a.time).slice(0, 5);
+
+    // map time to string
+    recentActivities = recentActivities.map(a => {
+      const mins = Math.floor((new Date() - a.time) / 60000);
+      let timeStr = mins < 60 ? `${mins} phút trước` : (mins < 1440 ? `${Math.floor(mins/60)} giờ trước` : `${Math.floor(mins/1440)} ngày trước`);
+      if (mins === 0) timeStr = 'Mới đây';
+      return { ...a, time: timeStr };
+    });
+
     res.json({
       totalUsers,
       totalFiles,
@@ -35,6 +83,8 @@ export async function getStats(req, res, next) {
       totalRevenue,
       totalTransactions,
       totalCreditsInCirculation,
+      chartData,
+      recentActivities
     });
   } catch (err) {
     next(err);

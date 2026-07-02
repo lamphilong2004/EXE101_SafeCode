@@ -183,15 +183,7 @@ const AdminDashboard = () => {
                   </h3>
                   <div style={{ flex: 1, minHeight: 0 }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={[
-                        { name: 'T2', doanhThu: (stats?.totalRevenue || 0) * 0.1, users: Math.floor((stats?.totalUsers || 0) * 0.1) },
-                        { name: 'T3', doanhThu: (stats?.totalRevenue || 0) * 0.15, users: Math.floor((stats?.totalUsers || 0) * 0.2) },
-                        { name: 'T4', doanhThu: (stats?.totalRevenue || 0) * 0.05, users: Math.floor((stats?.totalUsers || 0) * 0.05) },
-                        { name: 'T5', doanhThu: (stats?.totalRevenue || 0) * 0.2, users: Math.floor((stats?.totalUsers || 0) * 0.3) },
-                        { name: 'T6', doanhThu: (stats?.totalRevenue || 0) * 0.15, users: Math.floor((stats?.totalUsers || 0) * 0.15) },
-                        { name: 'T7', doanhThu: (stats?.totalRevenue || 0) * 0.25, users: Math.floor((stats?.totalUsers || 0) * 0.4) },
-                        { name: 'CN', doanhThu: (stats?.totalRevenue || 0) * 0.1, users: Math.floor((stats?.totalUsers || 0) * 0.1) },
-                      ]} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                      <AreaChart data={stats?.chartData || []} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                         <defs>
                           <linearGradient id="colorDoanhThu" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
@@ -211,51 +203,17 @@ const AdminDashboard = () => {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-                  <div className="card-styled" style={{ padding: '20px', background: 'var(--background-color)', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
-                    <h4 className="text-muted text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Tăng trưởng User (Tháng này)</h4>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
-                      <span className="text-2xl font-bold" style={{ fontSize: '1.5rem', color: 'var(--text-main)' }}>+{Math.floor((stats?.totalUsers || 0) * 0.15) || 0}</span>
-                      <span className={`status-badge ${stats?.totalUsers > 1 ? 'success' : ''}`} style={{ fontSize: '12px' }}>{stats?.totalUsers > 1 ? '↗ 15.3%' : '-'}</span>
-                    </div>
-                  </div>
-                  <div className="card-styled" style={{ padding: '20px', background: 'var(--background-color)', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
-                    <h4 className="text-muted text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Doanh thu nền tảng (Revenue)</h4>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
-                      <span className="text-2xl font-bold" style={{ fontSize: '1.5rem', color: 'var(--text-main)' }}>{(stats?.totalRevenue || 0).toLocaleString()}</span>
-                      <span className="text-muted text-sm">VNĐ</span>
-                      <span className={`status-badge ${stats?.totalRevenue > 0 ? 'success' : ''}`} style={{ fontSize: '12px' }}>{stats?.totalRevenue > 0 ? '↗ 8.2%' : '-'}</span>
-                    </div>
-                  </div>
-                  <div className="card-styled" style={{ padding: '20px', background: 'var(--background-color)', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
-                    <h4 className="text-muted text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Phiên truy cập (Sessions)</h4>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
-                      <span className="text-2xl font-bold" style={{ fontSize: '1.5rem', color: 'var(--text-main)' }}>{Math.floor((stats?.totalUsers || 0) * 4.2) || 0}</span>
-                      <span className={`status-badge ${stats?.totalUsers > 1 ? 'warning' : ''}`} style={{ fontSize: '12px' }}>{stats?.totalUsers > 1 ? '↘ 2.1%' : '-'}</span>
-                    </div>
-                  </div>
-                  <div className="card-styled" style={{ padding: '20px', background: 'var(--background-color)', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
-                    <h4 className="text-muted text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Tỉ lệ chuyển đổi (Conversion)</h4>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
-                      <span className="text-2xl font-bold" style={{ fontSize: '1.5rem', color: 'var(--text-main)' }}>{stats?.totalUsers > 1 ? '64.2%' : '0%'}</span>
-                      <span className={`status-badge ${stats?.totalUsers > 1 ? 'success' : ''}`} style={{ fontSize: '12px' }}>{stats?.totalUsers > 1 ? '↗ 5.4%' : '-'}</span>
-                    </div>
-                  </div>
-                </div>
+
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
                   <div className="card-styled" style={{ padding: '20px', background: 'var(--background-color)', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
                     <h3 className="text-lg font-bold mb-4" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}><FileText size={18}/> Activity Log (Nhật ký hoạt động)</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {stats?.totalUsers <= 1 && stats?.totalRevenue === 0 ? (
+                      {!stats?.recentActivities || stats.recentActivities.length === 0 ? (
                         <p className="text-muted text-sm italic" style={{ padding: '12px 0' }}>Hệ thống trống. Chưa có hoạt động nào được ghi nhận.</p>
                       ) : (
-                        [
-                          { time: 'Mới đây', action: 'Hệ thống đã nhận được dữ liệu truy cập mới.', type: 'info' },
-                          { time: 'Vài phút trước', action: 'Một người dùng vừa có tương tác với hệ thống.', type: 'info' },
-                          { time: 'Hôm nay', action: 'Hệ thống tự động quét KYC định kỳ.', type: 'info' }
-                        ].map((log, idx) => (
-                          <div key={idx} style={{ display: 'flex', gap: '16px', paddingBottom: '12px', borderBottom: idx !== 2 ? '1px solid var(--border-color)' : 'none' }}>
+                        stats.recentActivities.map((log, idx) => (
+                          <div key={idx} style={{ display: 'flex', gap: '16px', paddingBottom: '12px', borderBottom: idx !== stats.recentActivities.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
                             <div style={{ minWidth: '100px', color: 'var(--text-muted)', fontSize: '13px' }}>{log.time}</div>
                             <div style={{ flex: 1, fontSize: '14px', color: log.type === 'error' ? 'var(--danger-color)' : log.type === 'success' ? 'var(--success-color)' : 'var(--text-main)' }}>
                               {log.action}
