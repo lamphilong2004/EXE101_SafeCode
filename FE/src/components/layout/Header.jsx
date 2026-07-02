@@ -70,10 +70,14 @@ const Header = ({ notifications: propNotifications = [] }) => {
 
   return (
     <header className="header">
-      <div className="header-search">
-        <Search size={16} className="search-icon" />
-        <input type="text" placeholder="Tìm kiếm file, client..." className="search-input" />
-      </div>
+      {userRole !== 'admin' ? (
+        <div className="header-search">
+          <Search size={16} className="search-icon" />
+          <input type="text" placeholder="Tìm kiếm file, client..." className="search-input" />
+        </div>
+      ) : (
+        <div className="header-search-placeholder"></div>
+      )}
 
       <div className="header-actions">
         {(userRole === 'freelancer') && (
