@@ -207,6 +207,7 @@ const Landing = () => {
       }, 150);
       return () => clearTimeout(timer);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showModal, modalView]);
 
   return (

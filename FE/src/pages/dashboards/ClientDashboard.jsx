@@ -8,18 +8,16 @@ import './Dashboard.css';
 const ClientDashboard = ({ files, updateFileStatus, pagination }) => {
   const { user } = useAuth();
   const { totalFiles } = pagination || {};
-  const clientFiles = files || [];
-
-  const recentFiles = clientFiles.slice(0, 5);
+  const recentFiles = (files || []).slice(0, 5);
 
   const testingCount = useMemo(() =>
-    clientFiles.filter(f => f.status === 'Testing Phase').length, [clientFiles]);
+    (files || []).filter(f => f.status === 'Testing Phase').length, [files]);
 
   const lockedCount = useMemo(() =>
-    clientFiles.filter(f => f.status === 'Locked').length, [clientFiles]);
+    (files || []).filter(f => f.status === 'Locked').length, [files]);
 
   const paidCount = useMemo(() =>
-    clientFiles.filter(f => f.status === 'Paid' || f.status === 'Delivered').length, [clientFiles]);
+    (files || []).filter(f => f.status === 'Paid' || f.status === 'Delivered').length, [files]);
 
   const columns = ['File Details', 'Freelancer', 'Status'];
 
@@ -52,7 +50,7 @@ const ClientDashboard = ({ files, updateFileStatus, pagination }) => {
             <Inbox size={22} />
           </div>
           <div className="stat-card-label">Files Đã Nhận</div>
-          <div className="stat-card-value">{totalFiles ?? clientFiles.length}</div>
+          <div className="stat-card-value">{totalFiles ?? (files || []).length}</div>
           <div className="stat-card-sub">Tổng từ freelancer</div>
         </div>
 
