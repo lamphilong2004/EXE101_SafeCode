@@ -31,6 +31,7 @@ const Sidebar = ({ userRole, onLogout }) => {
       {/* Nav */}
       <nav className="sidebar-nav">
         {isAdmin ? (
+          <>
             <span className="sidebar-nav-section">Admin Panel</span>
             <NavLink to="/?tab=analytics" className={({ isActive }) => `sidebar-link ${window.location.search === '?tab=analytics' || !window.location.search ? 'active' : ''}`}>
               <div className="sidebar-link-icon"><LayoutDashboard size={18} /></div>
