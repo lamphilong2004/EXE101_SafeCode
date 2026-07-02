@@ -60,7 +60,7 @@ export async function getStats(req, res, next) {
     });
 
     // Recent Activities (Mix of recent users and transactions)
-    const recentUsers = await User.find({ role: { $ne: 'admin' } }).sort({ createdAt: -1 }).limit(3);
+    const recentUsers = await User.find({ role: { $ne: 'admin' }, isVerified: true }).sort({ createdAt: -1 }).limit(3);
     const recentTx = await Transaction.find({ status: "Succeeded" }).sort({ createdAt: -1 }).limit(3);
     
     let recentActivities = [
