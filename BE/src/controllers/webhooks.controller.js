@@ -144,7 +144,25 @@ export async function payosWebhook(req, res) {
           emitToRoom(fileDoc._id.toString(), "file_paid", { fileId: fileDoc._id });
         });
 
-        // Notify Freelancer
+        // Issue License and notify client
+        try {
+          const { issueLicense } = await import("../services/license.service.js");
+          const { sendDecryptionKeyEmail } = await import("../services/email.service.js");
+          // Find the checkout transaction to get the client's user ID
+          const transaction = await Transaction.findOne({ "payos.orderCode": orderCode, type: "checkout" });
+          if (transaction) {
+            const { key: licenseSerial } = await issueLicense(String(transaction.userId), fileDoc._id);
+            await sendDecryptionKeyEmail(fileDoc.intendedClientEmail, {
+              fileName: fileDoc.title,
+              licenseKey: licenseSerial,
+              isV3: true,
+            });
+          }
+        } catch (licErr) {
+          console.error("[FILE PAYMENT WEBHOOK] License issue failed:", licErr);
+        }
+
+        // Notify Freelancer (Escrow - money in platform)
         await createNotification(
           fileDoc.freelancerId,
           "payment_received",
@@ -153,69 +171,15 @@ export async function payosWebhook(req, res) {
         );
       }
 
-      // Check if it's a Credit Top-up OR a File Payment
+      // Check if it's a Credit Top-up
       const creditReq = await CreditRequest.findOne({ payosOrderCode: orderCode });
       if (creditReq && creditReq.status === "pending") {
         creditReq.status = "approved";
         creditReq.approvedAt = new Date();
         await creditReq.save();
 
-        if (creditReq.type === "file_payment") {
-          // === FILE PAYMENT: Credit the FREELANCER ===
-          const freelancer = await User.findById(creditReq.freelancerId);
-          if (freelancer) {
-            const creditsToAdd = creditReq.amount; // already computed (VND / 2000)
-            freelancer.credits = (freelancer.credits || 0) + creditsToAdd;
-            await freelancer.save();
-
-            await CreditHistory.create({
-              userId: freelancer._id,
-              type: "sale",
-              amount: creditsToAdd,
-              description: `Nhận ${creditsToAdd} CR từ thanh toán Source Code qua VietQR`,
-              balanceAfter: freelancer.credits,
-              fileId: creditReq.fileId,
-            });
-
-            // Mark the file as Paid
-            const filePaid = await File.findById(creditReq.fileId);
-            if (filePaid && filePaid.status !== "Paid") {
-              filePaid.status = "Paid";
-              filePaid.paidAt = new Date();
-              await filePaid.save();
-            }
-
-            // Issue License and notify
-            try {
-              const { issueLicense } = await import("../services/license.service.js");
-              const { sendDecryptionKeyEmail } = await import("../services/email.service.js");
-              if (filePaid) {
-                const { key: licenseSerial } = await issueLicense(String(creditReq.userId), filePaid._id);
-                await sendDecryptionKeyEmail(filePaid.intendedClientEmail, {
-                  fileName: filePaid.title,
-                  licenseKey: licenseSerial,
-                  isV3: true,
-                });
-              }
-            } catch (licErr) {
-              console.error("[FILE PAYMENT WEBHOOK] License issue failed:", licErr);
-            }
-
-            await createNotification(
-              String(freelancer._id),
-              "payment_received",
-              `Khách hàng đã thanh toán qua VietQR! ${creditsToAdd} Credit đã được cộng vào tài khoản của bạn.`,
-              { relatedFileId: creditReq.fileId }
-            );
-
-            // Notify client via socket room
-            import("../socket.js").then(({ emitToRoom }) => {
-              emitToRoom(String(creditReq.fileId), "file_paid", { fileId: creditReq.fileId });
-            });
-          }
-        } else {
-          // === CREDIT PURCHASE: Credit the USER ===
-          const user = await User.findById(creditReq.userId);
+        // === CREDIT PURCHASE: Credit the USER ===
+        const user = await User.findById(creditReq.userId);
           if (user) {
             user.credits = (user.credits || 0) + creditReq.amount;
             await user.save();
@@ -238,7 +202,6 @@ export async function payosWebhook(req, res) {
           }
         }
       }
-    }
     return res.json({ success: true });
   } catch (err) {
     console.error("PayOS webhook handler failed", err);

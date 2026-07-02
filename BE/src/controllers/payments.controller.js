@@ -244,19 +244,6 @@ export async function createFilePaymentQr(req, res, next) {
       ? await payos.createPaymentLink(paymentData)
       : await payos.paymentRequests.create(paymentData);
 
-    // Save to CreditRequest (type: file_payment) so webhook knows who to credit
-    await CreditRequest.create({
-      userId: req.user.id,          // client who pays
-      amount: Math.round(amount / 1000), // credits to give freelancer (1 CR = 1000 VND)
-      amountVND: amount,
-      status: 'pending',
-      type: 'file_payment',
-      freelancerId: fileDoc.freelancerId,
-      fileId: fileDoc._id,
-      payosOrderCode: orderCode,
-      paymentLinkId: paymentLinkRes.paymentLinkId
-    });
-
     // Keep original file status (e.g. Locked) so freelancer doesn't see "Khách đã gửi Bill" prematurely
     // Only webhook will change status to "Paid"
     fileDoc.payos = { orderCode, paymentLinkId: paymentLinkRes.paymentLinkId };
