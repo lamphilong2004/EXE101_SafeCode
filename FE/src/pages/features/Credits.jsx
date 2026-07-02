@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { CreditCard, Zap, Check, ArrowUpRight, ArrowDownRight, History, Banknote, ShieldCheck, RefreshCw, QrCode, Crown, Diamond, Copy } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -384,72 +385,93 @@ const Credits = () => {
       </div>
 
       {/* PayOS QR Modal */}
-      {qrData && (
-        <div className="qr-modal-overlay fade-in">
-          <div className="qr-modal-content">
-            <div className="qr-modal-header">
-              Thanh Toán Bằng Mã QR
-              <button
-                onClick={() => setQrData(null)}
-                className="qr-modal-close"
-              >
-                ✕
-              </button>
+      {qrData && createPortal(
+        <div className="payos-modal-overlay fade-in">
+          <div className="payos-modal-content">
+            {/* Top Banner */}
+            <div className="payos-banner">
+              <span className="payos-banner-icon">💡</span>
+              <span>Mở App Ngân hàng bất kỳ để <strong>quét mã VietQR</strong> hoặc <strong>chuyển khoản</strong> chính xác số tiền bên dưới</span>
             </div>
-            <div className="qr-modal-body">
-              <div className="qr-code-wrapper">
-                <QRCodeSVG value={qrData.qrCode} size={220} level="M" />
+
+            <div className="payos-modal-body">
+              {/* Left Side: QR & Logos */}
+              <div className="payos-qr-section">
+                <div className="vietqr-logo-container">
+                  <span className="viet">Viet</span><span className="qr">QR</span> <span className="pro">PRO</span>
+                </div>
+                <div className="payos-qr-wrapper">
+                  <QRCodeSVG 
+                    value={qrData.qrCode} 
+                    size={240} 
+                    level="M"
+                    imageSettings={{
+                      src: "https://vietqr.net/portal/v1/logo/vietqr.png",
+                      x: undefined,
+                      y: undefined,
+                      height: 40,
+                      width: 40,
+                      excavate: true,
+                    }}
+                  />
+                </div>
+                <div className="payos-bank-logos">
+                  <img src="https://vietqr.net/portal/v1/logo/napas247.png" alt="Napas247" height="24" />
+                  <div className="payos-logo-divider"></div>
+                  <img src="https://api.vietqr.io/img/MB.png" alt="MB Bank" height="20" />
+                </div>
+                <button className="payos-cancel-btn" onClick={() => setQrData(null)}>Huỷ</button>
               </div>
 
-              <div className="qr-details">
-                <div className="qr-detail-row">
-                  <span className="qr-detail-label">Số tài khoản</span>
-                  <div className="qr-detail-value">
-                    <strong>{qrData.accountNumber}</strong>
-                    <button className="qr-copy-btn" onClick={() => copyToClipboard(qrData.accountNumber, "Số tài khoản")}><Copy size={16} /></button>
+              {/* Right Side: Details */}
+              <div className="payos-details-section">
+                <div className="payos-bank-info">
+                  <div className="payos-bank-icon">
+                    <img src="https://api.vietqr.io/img/MB.png" alt="MB" width="36" height="36" style={{ borderRadius: '50%' }} />
                   </div>
-                </div>
-                
-                <div className="qr-detail-row">
-                  <span className="qr-detail-label">Chủ tài khoản</span>
-                  <strong className="uppercase">{qrData.accountName}</strong>
-                </div>
-
-                <div className="qr-detail-row">
-                  <span className="qr-detail-label">Số tiền</span>
-                  <div className="qr-detail-value">
-                    <strong className="text-danger">{qrData.amount.toLocaleString()} VNĐ</strong>
-                    <button className="qr-copy-btn" onClick={() => copyToClipboard(qrData.amount, "Số tiền")}><Copy size={16} /></button>
+                  <div>
+                    <div className="payos-bank-label">Ngân hàng</div>
+                    <div className="payos-bank-name">Ngân hàng TMCP Quân đội</div>
                   </div>
                 </div>
 
-                <div className="qr-detail-row">
-                  <span className="qr-detail-label">Nội dung CK</span>
-                  <div className="qr-detail-value">
-                    <strong className="uppercase">{qrData.description}</strong>
-                    <button
-                      className="qr-copy-btn"
-                      onClick={() => copyToClipboard(qrData.description, 'Nội dung chuyển khoản')}
-                      title="Copy nội dung"
-                    >
-                      <Copy size={16} />
-                    </button>
+                <div className="payos-detail-item">
+                  <div className="payos-detail-title">Chủ tài khoản:</div>
+                  <div className="payos-detail-value uppercase font-bold">{qrData.accountName}</div>
+                </div>
+
+                <div className="payos-detail-item">
+                  <div className="payos-detail-title">Số tài khoản:</div>
+                  <div className="payos-detail-value-wrapper">
+                    <span className="payos-detail-value font-bold">{qrData.accountNumber}</span>
+                    <button className="payos-copy-btn" onClick={() => copyToClipboard(qrData.accountNumber, "Số tài khoản")}>Sao chép</button>
                   </div>
                 </div>
-              </div>
-              
-              <div className="qr-modal-footer">
-                <p className="qr-note">
-                  * Bắt buộc nhập chính xác nội dung chuyển khoản để được cộng Credit tự động.
-                </p>
-                <div className="qr-waiting">
-                  <RefreshCw className="animate-spin" size={16} />
-                  Đang chờ thanh toán...
+
+                <div className="payos-detail-item">
+                  <div className="payos-detail-title">Số tiền:</div>
+                  <div className="payos-detail-value-wrapper">
+                    <span className="payos-detail-value font-bold">{qrData.amount.toLocaleString()} vnđ</span>
+                    <button className="payos-copy-btn" onClick={() => copyToClipboard(qrData.amount, "Số tiền")}>Sao chép</button>
+                  </div>
+                </div>
+
+                <div className="payos-detail-item">
+                  <div className="payos-detail-title">Nội dung:</div>
+                  <div className="payos-detail-value-wrapper">
+                    <span className="payos-detail-value font-bold">{qrData.description}</span>
+                    <button className="payos-copy-btn" onClick={() => copyToClipboard(qrData.description, "Nội dung")}>Sao chép</button>
+                  </div>
+                </div>
+
+                <div className="payos-warning">
+                  Lưu ý : Nhập chính xác số tiền <strong>{qrData.amount.toLocaleString()}</strong> khi chuyển khoản
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>
