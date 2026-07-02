@@ -249,6 +249,17 @@ export async function createFilePaymentQr(req, res, next) {
     fileDoc.payos = { orderCode, paymentLinkId: paymentLinkRes.paymentLinkId };
     await fileDoc.save();
 
+    await Transaction.create({
+      fileId: fileDoc._id,
+      freelancerId: fileDoc.freelancerId,
+      clientEmail: req.user.email,
+      userId: req.user.id, // Make sure we track the client id
+      amount: amount,
+      status: "Pending",
+      type: "checkout",
+      payos: { orderCode, paymentLinkId: paymentLinkRes.paymentLinkId }
+    });
+
     res.json({
       checkoutUrl: paymentLinkRes.checkoutUrl,
       orderCode,

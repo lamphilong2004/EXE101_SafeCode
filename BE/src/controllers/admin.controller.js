@@ -2,6 +2,7 @@ import { User } from "../models/User.js";
 import { File } from "../models/File.js";
 import { Transaction } from "../models/Transaction.js";
 import { CreditHistory } from "../models/CreditHistory.js";
+import { CreditRequest } from "../models/CreditRequest.js";
 import { httpError } from "../middleware/error.js";
 import { adjustCredits } from "../services/credit.service.js";
 
@@ -9,7 +10,7 @@ import { adjustCredits } from "../services/credit.service.js";
 
 export async function getStats(req, res, next) {
   try {
-    const [totalUsers, totalFiles, totalDisputes, transactions] = await Promise.all([
+    const [totalUsers, totalFiles, totalDisputes, transactions, topups] = await Promise.all([
       User.countDocuments(),
       File.countDocuments(),
       File.countDocuments({ status: { $in: ["Disputed", "AwaitingEvidence"] } }),
@@ -17,10 +18,14 @@ export async function getStats(req, res, next) {
         { $match: { status: "Succeeded" } },
         { $group: { _id: null, totalRevenue: { $sum: "$amount" }, count: { $sum: 1 } } },
       ]),
+      CreditRequest.aggregate([
+        { $match: { status: "approved" } },
+        { $group: { _id: null, totalRevenue: { $sum: "$amountVND" }, count: { $sum: 1 } } },
+      ]),
     ]);
 
-    const totalRevenue = transactions[0]?.totalRevenue || 0;
-    const totalTransactions = transactions[0]?.count || 0;
+    const totalRevenue = (transactions[0]?.totalRevenue || 0) + (topups[0]?.totalRevenue || 0);
+    const totalTransactions = (transactions[0]?.count || 0) + (topups[0]?.count || 0);
 
     // Count total credits in circulation
     const creditAgg = await User.aggregate([
@@ -45,6 +50,11 @@ export async function getStats(req, res, next) {
       { $match: { status: "Succeeded", createdAt: { $gte: chartData[0].start } } },
       { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: "+07:00" } }, dailyRevenue: { $sum: "$amount" } } }
     ]);
+    
+    const topupLast7Days = await CreditRequest.aggregate([
+      { $match: { status: "approved", createdAt: { $gte: chartData[0].start } } },
+      { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: "+07:00" } }, dailyRevenue: { $sum: "$amountVND" } } }
+    ]);
 
     const usersLast7Days = await User.aggregate([
       { $match: { createdAt: { $gte: chartData[0].start } } },
@@ -54,8 +64,9 @@ export async function getStats(req, res, next) {
     chartData.forEach(day => {
       const dateStr = new Date(day.start.getTime() + 7*3600*1000).toISOString().split('T')[0];
       const tx = txLast7Days.find(t => t._id === dateStr);
+      const tu = topupLast7Days.find(t => t._id === dateStr);
       const usr = usersLast7Days.find(u => u._id === dateStr);
-      day.doanhThu = tx ? tx.dailyRevenue : 0;
+      day.doanhThu = (tx ? tx.dailyRevenue : 0) + (tu ? tu.dailyRevenue : 0);
       day.users = usr ? usr.dailyUsers : 0;
     });
 
