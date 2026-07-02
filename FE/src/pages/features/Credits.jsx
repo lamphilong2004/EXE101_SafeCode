@@ -12,13 +12,14 @@ import './Credits.css';
 import '../landing/Landing.css'; // Import pricing neon styles
 
 const Credits = () => {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const [history, setHistory] = useState([]);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [topupAmount, setTopupAmount] = useState('50000');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const creditsToBuy = Math.floor(Number(topupAmount) / 1000);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [qrData, setQrData] = useState(null);
@@ -31,9 +32,12 @@ const Credits = () => {
 
   // Fix bfcache hanging issue
   useEffect(() => {
-    const handlePageShow = (e) => {
-      if (e.persisted) {
-        setIsSubmitting(false);
+    // Scroll to top on mount
+    window.scrollTo(0, 0);
+    // Refresh page when navigating via back/forward cache
+    const handlePageShow = (event) => {
+      if (event.persisted) {
+        window.location.reload();
       }
     };
     window.addEventListener('pageshow', handlePageShow);
@@ -47,14 +51,22 @@ const Credits = () => {
         if (qrData) {
           setQrData(null);
           toast.success(notif.message || "Thanh toán thành công! Đã nạp tiền vào tài khoản.");
-          // Refresh user data (or just let the page reload/update)
-          setTimeout(() => window.location.reload(), 1500);
+          
+          // Refresh user data silently without reloading the page
+          api.get('/auth/me').then(res => {
+            if (res.data && res.data.user) {
+              setUser(res.data.user);
+            }
+          }).catch(err => console.error(err));
+          
+          // Trigger history re-fetch
+          setRefreshTrigger(prev => prev + 1);
         }
       }
     };
     socket.on('new_notification', handleNotification);
     return () => socket.off('new_notification', handleNotification);
-  }, [qrData]);
+  }, [qrData, setUser]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -78,7 +90,7 @@ const Credits = () => {
       }
     };
     fetchData();
-  }, [page, user?.role]);
+  }, [page, user?.role, refreshTrigger]);
 
   const handleWithdraw = async () => {
     if (withdrawAmount < 50) {
