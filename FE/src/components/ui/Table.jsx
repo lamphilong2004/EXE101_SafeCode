@@ -373,14 +373,14 @@ const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
     if (!checkoutFile) return;
     setIsPayosLoading(true);
     try {
-      const res = await api.post(`/payments/payos/${checkoutFile.id}`, {
+      const res = await api.post(`/payments/payos/${checkoutFile._id}`, {
         successUrl: window.location.href, // Or a dedicated success page
         cancelUrl: window.location.href
       });
 
       if (res.data.mockSuccess) {
         toast.success("✅ Thanh toán Giả lập thành công! Source code đã được mở khóa.");
-        updateFileStatus(checkoutFile.id, 'Paid');
+        updateFileStatus(checkoutFile._id, 'Paid');
         setCheckoutFile(null);
       } else if (res.data.qrCode) {
         setQrData(res.data);
@@ -388,7 +388,7 @@ const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
         window.location.href = res.data.checkoutUrl;
       } else if (res.data.alreadyPaid) {
         toast.info("File này đã được thanh toán!");
-        updateFileStatus(checkoutFile.id, 'Paid');
+        updateFileStatus(checkoutFile._id, 'Paid');
         setCheckoutFile(null);
       }
     } catch (err) {
