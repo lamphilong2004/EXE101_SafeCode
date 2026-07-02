@@ -1,438 +1,293 @@
-.admin-dashboard {
-  padding: 32px;
-  max-width: 1200px;
-  margin: 0 auto;
+/* =========================================================================
+   PREMIUM ADMIN DASHBOARD - GLASSMORPHISM & MODERN UI REDESIGN
+   ========================================================================= */
+
+:root {
+  --admin-accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  --admin-surface-light: rgba(255, 255, 255, 0.7);
+  --admin-surface-dark: rgba(30, 41, 59, 0.7);
+  --admin-border-light: rgba(255, 255, 255, 0.3);
+  --admin-border-dark: rgba(255, 255, 255, 0.08);
+  --admin-shadow-glow: 0 10px 40px -10px rgba(99, 102, 241, 0.3);
+  --admin-shadow-card: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
 }
 
+.admin-dashboard {
+  padding: 40px;
+  max-width: 1300px;
+  margin: 0 auto;
+  font-family: 'Inter', -apple-system, sans-serif;
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* =========================================================================
+   1. HEADER AREA
+   ========================================================================= */
 .admin-header {
-  margin-bottom: 32px;
+  margin-bottom: 40px;
+  position: relative;
 }
 
 .admin-header h1 {
-  font-size: 2.2rem;
+  font-size: 2.5rem;
   font-family: 'Outfit', sans-serif;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   color: var(--text-main);
-  background: linear-gradient(135deg, var(--text-main) 0%, var(--primary-dark) 100%);
+  background: var(--admin-accent-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  display: inline-block;
+  margin-bottom: 8px;
 }
 
 .admin-header p {
   color: var(--text-muted);
-  margin-top: 8px;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
+  font-weight: 500;
 }
 
-/* Stats Grid */
+/* =========================================================================
+   2. STATS GRID (KPI CARDS)
+   ========================================================================= */
 .admin-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 24px;
-  margin-bottom: 32px;
+  margin-bottom: 40px;
 }
 
 .stat-card {
   background: var(--surface-color);
-  backdrop-filter: var(--backdrop-blur);
-  -webkit-backdrop-filter: var(--backdrop-blur);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 24px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 20px;
+  padding: 28px;
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  box-shadow: var(--shadow-md);
-  transition: transform 0.3s, box-shadow 0.3s;
+  align-items: center;
+  gap: 20px;
+  box-shadow: var(--admin-shadow-card);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 4px;
+  background: var(--admin-accent-gradient);
+  opacity: 0;
+  transition: opacity 0.3s;
 }
 
 .stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
+  transform: translateY(-8px);
+  box-shadow: var(--admin-shadow-glow);
+  border-color: rgba(99, 102, 241, 0.3);
 }
 
-.stat-header {
+.stat-card:hover::before {
+  opacity: 1;
+}
+
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  color: var(--text-muted);
+  justify-content: center;
+  color: #fff;
+  font-size: 24px;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+.stat-icon.warning { background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%); box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
+.stat-icon.processing { background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3); }
+.stat-icon.success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
+
+.stat-info h3 {
   font-size: 0.95rem;
   font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
 }
 
-.stat-value {
-  font-size: 2rem;
-  font-weight: 700;
+.stat-info p {
+  font-size: 2.2rem;
+  font-weight: 800;
   color: var(--text-main);
   font-family: 'Outfit', sans-serif;
+  line-height: 1;
 }
 
+/* =========================================================================
+   3. MODERN TABS (MACOS STYLE)
+   ========================================================================= */
 .admin-tabs {
-  display: flex;
-  gap: 12px;
+  display: inline-flex;
+  gap: 8px;
   margin-bottom: 32px;
-  border-bottom: 2px solid var(--border-color);
-  padding-bottom: 0;
+  padding: 6px;
+  background: rgba(148, 163, 184, 0.1);
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  backdrop-filter: blur(12px);
 }
 
 .admin-tab {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   padding: 12px 24px;
-  background: none;
+  background: transparent;
   border: none;
-  border-bottom: 3px solid transparent;
-  margin-bottom: -2px;
+  border-radius: 12px;
   cursor: pointer;
   color: var(--text-muted);
   font-size: 1rem;
   font-weight: 600;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
 }
 
 .admin-tab:hover {
-  color: var(--primary-hover);
-  background: rgba(99, 102, 241, 0.05);
-  border-radius: 8px 8px 0 0;
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .admin-tab.active {
-  color: var(--primary-color);
-  border-bottom-color: var(--primary-color);
-}
-
-.admin-loading, .admin-empty {
-  text-align: center;
-  padding: 80px 20px;
-  color: var(--text-muted);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  background: var(--surface-color);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px dashed var(--border-color);
-}
-
-/* Dispute Cards */
-.dispute-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-  gap: 24px;
-}
-
-.dispute-card {
-  background: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: var(--shadow-sm);
-}
-
-.dispute-card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-4px);
-  border-color: rgba(245, 158, 11, 0.3);
-}
-
-.dispute-card-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 20px;
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, rgba(245, 158, 11, 0.15) 100%);
-  border-bottom: 1px solid var(--border-color);
-}
-
-.dispute-title {
-  flex: 1;
-  font-weight: 600;
-  font-size: 1rem;
-  color: var(--text-main);
-}
-
-.dispute-badge {
-  font-size: 0.8rem;
-  padding: 4px 10px;
-  border-radius: 20px;
-  background: #fee2e2;
-  color: #dc2626;
-  font-weight: 700;
-  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.1);
-}
-
-.dispute-card-body {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  font-size: 0.95rem;
-  color: var(--text-muted);
-}
-
-.dispute-card-body div {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.dispute-card-footer {
-  padding: 16px 20px;
-  display: flex;
-  gap: 12px;
-  border-top: 1px solid var(--border-color);
-  background: rgba(249, 250, 251, 0.5);
-}
-
-/* Resolve Buttons */
-.btn-resolve {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.btn-resolve:hover { 
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-sm);
-}
-
-.btn-resolve.confirm {
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
-  color: white;
-  flex: 1;
+  color: #fff;
+  background: var(--admin-accent-gradient);
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
-.btn-resolve.reject {
-  background: #fee2e2;
-  color: #dc2626;
-  border: 1px solid rgba(220, 38, 38, 0.2);
-}
-
-.btn-resolve.info {
-  background: #dbeafe;
-  color: #1e40af;
-  border: 1px solid rgba(30, 64, 175, 0.2);
-}
-
-/* Pagination */
-.pagination-controls {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 16px;
-  margin-top: 32px;
-  padding: 24px;
-  border-top: 1px solid var(--border-color);
-}
-
-/* Dispute Detail Modal */
-.dispute-detail-modal {
-  background: var(--surface-solid);
-  border-radius: var(--radius-lg);
-  padding: 36px;
-  width: 680px;
-  max-width: 95vw;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
-  animation: modalSlideUp 0.3s ease-out;
-}
-
-.dispute-detail-modal h3 {
-  font-size: 1.5rem;
-  font-family: 'Outfit', sans-serif;
-  font-weight: 700;
-  margin-bottom: 24px;
-  color: var(--text-main);
-  border-bottom: 2px solid var(--primary-light);
-  padding-bottom: 12px;
-}
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin-bottom: 24px;
-}
-
-.detail-section {
-  background: var(--background-color);
-  padding: 20px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-color);
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
-}
-
-.detail-section h4 {
-  margin-bottom: 12px;
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--text-main);
-}
-
-.detail-section p {
-  font-size: 0.95rem;
-  color: var(--text-muted);
-  margin-bottom: 8px;
-}
-
-.receipt-preview {
-  margin-bottom: 24px;
-  background: var(--background-color);
-  padding: 20px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-color);
-}
-
-.receipt-preview h4 {
-  font-size: 1rem;
-  font-weight: 700;
-  margin-bottom: 12px;
-}
-
-.receipt-preview img {
-  width: 100%;
-  max-height: 320px;
-  object-fit: contain;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-color);
-  background: white;
-  padding: 8px;
-  box-shadow: var(--shadow-sm);
-}
-
-.receipt-preview a {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 12px;
-  color: var(--primary-color);
-  font-size: 0.95rem;
-  font-weight: 600;
-  transition: opacity 0.2s;
-}
-.receipt-preview a:hover { opacity: 0.8; }
-
-.dispute-detail-actions {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  padding-top: 24px;
-  border-top: 1px solid var(--border-color);
-}
-
-/* Credit Modal */
-.credit-modal {
-  background: var(--surface-solid);
-  border-radius: var(--radius-lg);
-  padding: 32px;
-  width: 440px;
-  max-width: 90vw;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
-  animation: modalSlideUp 0.3s ease-out;
-}
-
-.credit-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  margin-top: 24px;
-}
-
-/* Users Table */
-.users-search {
-  margin-bottom: 24px;
-}
-
-.users-search input {
-  width: 100%;
-  padding: 14px 20px;
-  border: 2px solid transparent;
-  border-radius: var(--radius-full);
+/* =========================================================================
+   4. DATA TABLES (Premium Look)
+   ========================================================================= */
+.data-table-container {
   background: var(--surface-color);
-  color: var(--text-main);
-  font-size: 1rem;
-  box-shadow: var(--shadow-sm);
-  transition: all 0.3s ease;
-}
-.users-search input:focus {
-  border-color: var(--primary-light);
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
-  outline: none;
+  border-radius: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  box-shadow: var(--admin-shadow-card);
+  overflow: hidden;
+  backdrop-filter: blur(20px);
 }
 
-.admin-users-table {
+.admin-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 0.95rem;
-  background: var(--surface-color);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border-color);
 }
 
-.admin-users-table th {
+.admin-table th {
   text-align: left;
-  padding: 16px 20px;
-  border-bottom: 2px solid var(--border-color);
+  padding: 20px 24px;
   color: var(--text-muted);
   font-weight: 700;
   font-size: 0.85rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  background: rgba(249, 250, 251, 0.5);
+  letter-spacing: 0.1em;
+  background: rgba(148, 163, 184, 0.05);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
 }
 
-.admin-users-table td {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color);
+.admin-table td {
+  padding: 20px 24px;
   color: var(--text-main);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  font-size: 0.95rem;
+  vertical-align: middle;
   transition: background 0.2s;
 }
 
-.admin-users-table tr:hover td {
-  background: rgba(249, 250, 251, 0.8);
+.admin-table tbody tr:hover td {
+  background: rgba(99, 102, 241, 0.03);
 }
 
-.admin-users-table tr:last-child td {
+.admin-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.role-badge {
-  padding: 6px 14px;
-  border-radius: var(--radius-full);
-  font-size: 0.85rem;
-  font-weight: 700;
-  display: inline-block;
-}
-
-.role-freelancer { background: #e0e7ff; color: #4338ca; }
-.role-client { background: #dcfce7; color: #166534; }
-.role-admin { background: #fef3c7; color: #b45309; }
-
-/* Status Badges */
+/* =========================================================================
+   5. BADGES & CHIPS
+   ========================================================================= */
 .status-badge {
-  font-size: 0.8rem;
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  padding: 6px 12px;
+  border-radius: 30px;
   font-weight: 700;
   text-transform: uppercase;
-  display: inline-block;
+  letter-spacing: 0.05em;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
 }
-.status-awaiting { background: #ffedd5; color: #c2410c; }
-.status-disputed { background: #fee2e2; color: #b91c1c; }
+
+.status-badge.warning, .status-badge.pending { background: rgba(245, 158, 11, 0.15); color: #d97706; border-color: rgba(245, 158, 11, 0.3); }
+.status-badge.success, .status-badge.paid, .status-badge.approved { background: rgba(16, 185, 129, 0.15); color: #059669; border-color: rgba(16, 185, 129, 0.3); }
+.status-badge.error, .status-badge.reject, .status-badge.rejected { background: rgba(239, 68, 68, 0.15); color: #dc2626; border-color: rgba(239, 68, 68, 0.3); }
+.status-badge.info { background: rgba(59, 130, 246, 0.15); color: #2563eb; border-color: rgba(59, 130, 246, 0.3); }
+
+/* =========================================================================
+   6. CARDS & ANALYTICS (Analytics Tab styling)
+   ========================================================================= */
+.card-styled {
+  background: var(--surface-color);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 20px !important;
+  padding: 24px !important;
+  box-shadow: var(--admin-shadow-card);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.card-styled:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+}
+
+/* =========================================================================
+   7. MODAL STYLING OVERRIDES (For Admin Modals)
+   ========================================================================= */
+.modal-overlay {
+  backdrop-filter: blur(8px);
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.premium-ui {
+  background: var(--surface-color);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.premium-ui .checkout-header {
+  background: rgba(148, 163, 184, 0.05);
+}
+
+.premium-ui .checkout-footer {
+  background: rgba(148, 163, 184, 0.05);
+}
+
+/* Custom Scrollbar for Admin */
+.admin-content::-webkit-scrollbar { width: 8px; }
+.admin-content::-webkit-scrollbar-track { background: transparent; }
+.admin-content::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 10px; }
+.admin-content::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.5); }
