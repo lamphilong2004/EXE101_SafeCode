@@ -31,11 +31,26 @@ const Sidebar = ({ userRole, onLogout }) => {
       {/* Nav */}
       <nav className="sidebar-nav">
         {isAdmin ? (
-          <>
             <span className="sidebar-nav-section">Admin Panel</span>
-            <NavLink to="/" end className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+            <NavLink to="/?tab=analytics" className={({ isActive }) => `sidebar-link ${window.location.search === '?tab=analytics' || !window.location.search ? 'active' : ''}`}>
               <div className="sidebar-link-icon"><LayoutDashboard size={18} /></div>
-              <span>Bảng Điều Khiển</span>
+              <span>Thống Kê & Log</span>
+            </NavLink>
+            <NavLink to="/?tab=disputes" className={({ isActive }) => `sidebar-link ${window.location.search === '?tab=disputes' ? 'active' : ''}`}>
+              <div className="sidebar-link-icon"><AlertTriangle size={18} /></div>
+              <span>Tranh Chấp</span>
+            </NavLink>
+            <NavLink to="/?tab=credits" className={({ isActive }) => `sidebar-link ${window.location.search === '?tab=credits' ? 'active' : ''}`}>
+              <div className="sidebar-link-icon"><CreditCard size={18} /></div>
+              <span>Nạp Credit</span>
+            </NavLink>
+            <NavLink to="/?tab=kyc" className={({ isActive }) => `sidebar-link ${window.location.search === '?tab=kyc' ? 'active' : ''}`}>
+              <div className="sidebar-link-icon"><ShieldCheck size={18} /></div>
+              <span>KYC Danh Tính</span>
+            </NavLink>
+            <NavLink to="/?tab=users" className={({ isActive }) => `sidebar-link ${window.location.search === '?tab=users' ? 'active' : ''}`}>
+              <div className="sidebar-link-icon"><Settings size={18} /></div>
+              <span>Quản lý User</span>
             </NavLink>
           </>
         ) : (
