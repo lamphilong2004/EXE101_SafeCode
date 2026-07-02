@@ -105,8 +105,6 @@ const Credits = () => {
 
   const formatAmount = (amt) => (amt > 0 ? `+${amt}` : amt);
 
-  const transferAmount = creditsToBuy * 1000;
-  const transferContent = `NAP SAFE ${user?.email?.split('@')[0] || user?.id?.slice(-4)}`;
 
   return (
     <div className="dashboard-wrapper">

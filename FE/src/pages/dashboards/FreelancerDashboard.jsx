@@ -17,14 +17,6 @@ const FreelancerDashboard = ({ files, updateFileStatus, pagination }) => {
   const paidCount = useMemo(() =>
     files.filter(f => f.status === 'Paid' || f.status === 'Delivered').length, [files]);
 
-  const activeCount = useMemo(() =>
-    files.filter(f => f.status === 'Testing Phase').length, [files]);
-
-  const pendingRevenue = useMemo(() =>
-    files
-      .filter(f => ['Testing Phase', 'Locked', 'Verifying Payment'].includes(f.status))
-      .reduce((sum, f) => sum + (f.amount || 0), 0), [files]);
-
   const greeting = () => {
     const h = new Date().getHours();
     if (h < 12) return 'Chào buổi sáng';

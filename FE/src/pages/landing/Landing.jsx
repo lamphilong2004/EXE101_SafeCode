@@ -66,7 +66,7 @@ const Landing = () => {
         const res = await api.post('/auth/forgot-password', { email: formData.email });
         toast.success(res.data.message || 'Đã gửi link khôi phục nếu email tồn tại.');
         setModalView('login');
-      } catch (err) {
+      } catch {
         toast.error('Lỗi khi gửi yêu cầu quên mật khẩu.');
       }
       setIsLoggingIn(false);

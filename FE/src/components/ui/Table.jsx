@@ -471,7 +471,8 @@ const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
     }
   };
 
-  const handleDecrypt = async (fileId, fileName) => {
+  // eslint-disable-next-line no-unused-vars
+  const _handleDecrypt = async (fileId, fileName) => {
     try {
       if (userRole !== 'client') return;
 

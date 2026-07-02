@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React from 'react';
 import Table from '../../components/ui/Table';
 import Button from '../../components/ui/Button';
 import { Filter, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -7,7 +7,6 @@ import '../dashboards/Dashboard.css';
 const STATUSES = ['All', 'Uploaded', 'Testing Phase', 'Locked', 'Verifying Payment', 'Paid', 'Disputed'];
 
 const Files = ({ userRole, files = [], updateFileStatus, pagination }) => {
-  const [activeFilter, setActiveFilter] = useState('All');
   const { page, totalPages, setPage } = pagination || {};
 
   const columns = ['File Details', userRole === 'freelancer' ? 'Client' : 'Freelancer', 'Status'];
