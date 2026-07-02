@@ -257,8 +257,8 @@ export async function createFilePaymentQr(req, res, next) {
       paymentLinkId: paymentLinkRes.paymentLinkId
     });
 
-    // Also update file status so it shows as pending payment
-    fileDoc.status = "Verifying Payment";
+    // Keep original file status (e.g. Locked) so freelancer doesn't see "Khách đã gửi Bill" prematurely
+    // Only webhook will change status to "Paid"
     fileDoc.payos = { orderCode, paymentLinkId: paymentLinkRes.paymentLinkId };
     await fileDoc.save();
 
