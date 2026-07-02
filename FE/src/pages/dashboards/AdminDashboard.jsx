@@ -137,28 +137,28 @@ const AdminDashboard = () => {
             <Users className="stat-icon" />
             <div className="stat-info">
               <h3>Tổng User</h3>
-              <p>{stats.totalUsers}</p>
+              <p>{stats.totalUsers || 0}</p>
             </div>
           </div>
           <div className="stat-card">
             <AlertTriangle className="stat-icon warning" />
             <div className="stat-info">
               <h3>Tranh Chấp Mở</h3>
-              <p>{stats.totalDisputes}</p>
+              <p>{stats.totalDisputes || 0}</p>
             </div>
           </div>
           <div className="stat-card">
             <Database className="stat-icon processing" />
             <div className="stat-info">
-              <h3>Dữ Liệu Hệ Thống</h3>
-              <p>{(stats.totalStorage / 1024 / 1024 / 1024).toFixed(2)} GB</p>
+              <h3>Tổng Source Code</h3>
+              <p>{stats.totalFiles || 0}</p>
             </div>
           </div>
           <div className="stat-card">
             <DollarSign className="stat-icon success" />
             <div className="stat-info">
-              <h3>GD Phân Xử</h3>
-              <p>{stats.resolvedDisputes || 0}</p>
+              <h3>Doanh Thu Hệ Thống</h3>
+              <p>{(stats.totalRevenue || 0).toLocaleString()} đ</p>
             </div>
           </div>
         </div>
