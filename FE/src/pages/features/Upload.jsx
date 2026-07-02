@@ -156,100 +156,106 @@ const Upload = ({ onAddFile }) => {
       <div className="upload-content">
         <Card className="upload-card">
           {!isSuccess ? (
-            <>
-              <div className="p-6 border-2 border-dashed border-indigo-200 rounded-lg bg-indigo-50/50 mb-6">
-                <h3 className="text-lg font-semibold mb-2 text-indigo-900">Liên kết GitHub Private Repository</h3>
-                <p className="text-sm text-indigo-700 mb-4">Không cần nén file. Hệ thống SafeCode sẽ tự động cấp quyền đọc cho khách hàng (GitHub Collaborator) ngay sau khi khách thanh toán thành công.</p>
-
-                <div className="input-group">
-                  <label>GitHub Repository URL <span className="text-danger">*</span></label>
-                  <input type="url" value={githubRepoUrl} onChange={(e) => setGithubRepoUrl(e.target.value)} placeholder="https://github.com/username/my-private-repo" className="form-input" />
-                </div>
-
-                <div className="mt-4 p-3 bg-yellow-50 text-yellow-800 rounded-lg text-sm flex items-start gap-2 border border-yellow-200">
-                  <ShieldCheck size={18} className="mt-0.5 shrink-0" />
-                  <span><strong>Quan trọng:</strong> Vui lòng cấp quyền (Invite Collaborator) cho tài khoản GitHub <strong>safecode-bot</strong> vào Repo trên để hệ thống thay mặt bạn thêm khách hàng.</span>
-                </div>
-
-                <div className="mt-4 p-4 border border-blue-200 bg-white rounded-lg shadow-sm">
-                  <h4 className="text-md font-semibold text-blue-900 mb-2 flex items-center gap-2">
-                    <Lock size={16} /> Bước Xác Minh Sở Hữu (Anti-Scam)
-                  </h4>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Để đảm bảo an toàn cho Client, hệ thống cần xác minh Link Demo Vercel của bạn thực sự được triển khai từ Repo GitHub này.
-                  </p>
-                  <div className="bg-gray-100 p-2 rounded text-center mb-3">
-                    Mã xác minh của bạn: <strong className="text-lg tracking-widest text-blue-700">{verificationToken}</strong>
-                  </div>
-                  <ol className="list-decimal list-inside text-sm text-gray-700 space-y-1 mb-4">
-                    <li>Tạo một file tên là <code className="bg-gray-200 px-1 rounded">safecode.txt</code></li>
-                    <li>Dán mã xác minh ở trên vào nội dung file.</li>
-                    <li>Lưu file vào thư mục <code className="bg-gray-200 px-1 rounded">public</code> của dự án (đối với React/Vite/NextJS) hoặc thư mục gốc.</li>
-                    <li>Push code lên GitHub và chờ Vercel tự động build xong.</li>
-                  </ol>
-                  <Button
-                    variant={isVerified ? "success" : "primary"}
-                    onClick={handleVerifyRepo}
-                    disabled={isVerifying || isVerified}
-                    className="w-full justify-center"
-                  >
-                    {isVerifying ? (
-                      <>Đang quét kiểm tra...</>
-                    ) : isVerified ? (
-                      <><CheckCircle size={16} className="inline mr-1" /> Đã xác minh thành công</>
-                    ) : (
-                      <><Search size={16} className="inline mr-1" /> Quét Xác Minh Vercel & GitHub</>
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="selected-file mt-6">
-
-
-                <div className="upload-form">
-                  <div className="input-group">
+            <div className="upload-form p-2">
+              {/* Step 1: Info */}
+              <div className="mb-8 pb-6 border-b border-gray-100">
+                <h3 className="text-xl font-bold mb-2 text-indigo-900">1. Thông tin Dự án & Mã nguồn</h3>
+                <p className="text-sm text-gray-500 mb-5">Vui lòng điền đầy đủ thông tin để tạo giao dịch bàn giao mã nguồn an toàn.</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="input-group md:col-span-1">
                     <label>Email Khách hàng <span className="text-danger">*</span></label>
                     <input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} placeholder="khachhang@email.com" className="form-input" />
                   </div>
-                  <div className="input-group">
+                  
+                  <div className="input-group md:col-span-1">
                     <label>Giá bán (VNĐ) <span className="text-danger">*</span></label>
                     <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="VD: 5000000" className="form-input" />
                   </div>
-                  <div className="input-group">
-                    <label>Link Vercel / Live URL <span className="text-danger">*</span></label>
+
+                  <div className="input-group md:col-span-2">
+                    <label>Link GitHub Public Repository <span className="text-danger">*</span></label>
+                    <input type="url" value={githubRepoUrl} onChange={(e) => setGithubRepoUrl(e.target.value)} placeholder="https://github.com/username/my-public-repo" className="form-input" />
+                  </div>
+
+                  <div className="input-group md:col-span-2">
+                    <label>Link Vercel / Live Demo <span className="text-danger">*</span></label>
                     <input type="url" value={demoUrl} onChange={(e) => setDemoUrl(e.target.value)} placeholder="https://your-project.vercel.app" className="form-input" />
                   </div>
-                  <div className="input-group">
-                    <label>Thời gian dùng thử Sandbox (Phút)</label>
+                  
+                  <div className="input-group md:col-span-2">
+                    <label>Thời gian dùng thử (Phút) <span className="text-gray-400 text-xs font-normal ml-2">Khách hàng được test demo trong bao lâu?</span></label>
                     <input type="number" value={trialMinutes} onChange={(e) => setTrialMinutes(e.target.value)} placeholder="VD: 15, 30, 60..." className="form-input" />
                   </div>
-                  <div className="input-group">
-                    <label>Description (Optional)</label>
-                    <textarea placeholder="e.g. Frontend React Files" className="form-input" rows={2}></textarea>
-                  </div>
-
-                  {estimatedCost !== null && (
-                    <div className="credit-estimate mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md">
-                      <p className="text-sm font-medium text-blue-800">
-                        Chi phí hệ thống (Credit): <span className="font-bold">{estimatedCost} CR</span>
-                      </p>
-                      <p className="text-xs text-blue-600 mt-1">
-                      </p>
-                    </div>
-                  )}
-
-                  <Button
-                    variant="primary"
-                    onClick={handleUpload}
-                    disabled={isUploading}
-                    className="w-full mt-4"
-                  >
-                    {isUploading ? 'Đang Xử lý...' : 'Liên kết GitHub & Tạo Listing (0 CR)'}
-                  </Button>
                 </div>
               </div>
-            </>
+
+              {/* Step 2: Verification */}
+              <div className="mb-8">
+                <h3 className="text-xl font-bold mb-2 text-indigo-900">2. Xác minh Sở hữu (Bắt buộc)</h3>
+                <p className="text-sm text-gray-500 mb-4">Hệ thống cần kiểm tra bạn thực sự sở hữu mã nguồn GitHub và bản Demo Vercel này.</p>
+                
+                <div className="p-6 border-2 border-dashed border-blue-200 bg-blue-50/40 rounded-xl">
+                  <div className="flex flex-col lg:flex-row gap-8 items-center">
+                    <div className="flex-1 w-full">
+                      <div className="bg-white border border-blue-100 p-4 rounded-lg shadow-sm text-center mb-5">
+                        <span className="text-sm text-gray-500 block mb-1">Mã xác minh của bạn</span>
+                        <strong className="text-2xl tracking-widest text-blue-600">{verificationToken}</strong>
+                      </div>
+                      
+                      <div className="space-y-2 text-sm text-gray-700">
+                        <p className="font-semibold text-gray-900 mb-2">Làm theo 3 bước sau:</p>
+                        <ol className="list-decimal list-inside space-y-2 ml-1">
+                          <li>Tạo một file text tên là <code className="bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded text-red-500 font-semibold">safecode.txt</code></li>
+                          <li>Dán đoạn <strong>Mã xác minh</strong> màu xanh ở trên vào nội dung file.</li>
+                          <li>Lưu file vào thư mục <code className="bg-gray-100 px-1.5 py-0.5 border border-gray-200 rounded">public/</code> của dự án (hoặc thư mục gốc), sau đó Push code lên GitHub.</li>
+                        </ol>
+                      </div>
+                    </div>
+                    
+                    <div className="w-full lg:w-1/3 flex flex-col justify-center">
+                      <Button
+                        variant={isVerified ? "success" : "primary"}
+                        onClick={handleVerifyRepo}
+                        disabled={isVerifying || isVerified}
+                        className="w-full justify-center py-3.5 shadow-md hover:shadow-lg transition-all"
+                      >
+                        {isVerifying ? (
+                          <>Đang quét kiểm tra...</>
+                        ) : isVerified ? (
+                          <><CheckCircle size={18} className="inline mr-2" /> Xác minh thành công</>
+                        ) : (
+                          <><Search size={18} className="inline mr-2" /> Quét Xác Minh Ngay</>
+                        )}
+                      </Button>
+                      
+                      {!isVerified && (
+                         <p className="text-xs text-center text-gray-500 mt-3">* Vui lòng đợi Vercel build xong code mới nhất trước khi bấm Quét.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Submit Section */}
+              <div className="mt-8 pt-6 border-t border-gray-100">
+                {estimatedCost !== null && (
+                  <div className="mb-4 p-4 bg-indigo-50 border border-indigo-100 rounded-lg flex items-center justify-between">
+                    <span className="text-sm font-medium text-indigo-900">Chi phí nền tảng (Trừ vào Credit)</span>
+                    <span className="font-bold text-lg text-indigo-700">{estimatedCost} CR</span>
+                  </div>
+                )}
+
+                <Button
+                  variant="primary"
+                  onClick={handleUpload}
+                  disabled={isUploading}
+                  className="w-full py-4 text-lg shadow-md"
+                >
+                  {isUploading ? 'Đang Xử lý...' : 'Tạo Giao Dịch Giao Code'}
+                </Button>
+              </div>
+            </div>
           ) : (
             <div className="success-state">
               <CheckCircle size={64} className="success-icon" />
