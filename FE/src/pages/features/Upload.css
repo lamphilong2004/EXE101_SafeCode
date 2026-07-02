@@ -167,3 +167,124 @@ textarea.form-input {
   margin-bottom: 32px;
   max-width: 400px;
 }
+
+/* Custom Verification Layout */
+.verification-box {
+  padding: 24px;
+  border: 2px dashed rgba(59, 130, 246, 0.4);
+  background-color: rgba(59, 130, 246, 0.05);
+  border-radius: var(--radius-lg);
+  margin-top: 16px;
+}
+
+.verification-flex {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: center;
+}
+
+@media (min-width: 992px) {
+  .verification-flex {
+    flex-direction: row;
+  }
+}
+
+.verification-content {
+  flex: 1;
+  width: 100%;
+}
+
+.verification-code-display {
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-color);
+  padding: 16px;
+  border-radius: var(--radius-md);
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.verification-code-display span {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.verification-code-display strong {
+  font-size: 1.5rem;
+  letter-spacing: 0.1em;
+  color: #3b82f6;
+}
+
+.verification-action {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+@media (min-width: 992px) {
+  .verification-action {
+    width: 30%;
+  }
+}
+
+.verification-instructions {
+  font-size: 0.9rem;
+  color: var(--text-main);
+  margin-left: 16px;
+}
+
+.verification-instructions p {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-main);
+}
+
+.verification-instructions code {
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-main);
+}
+
+.verification-instructions code.text-red-500 {
+  color: #ef4444;
+}
+
+.cost-box {
+  margin-bottom: 16px;
+  padding: 16px;
+  background-color: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cost-box span:first-child {
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
+
+.cost-box span:last-child {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #818cf8;
+}
+
+.step-title {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: var(--text-main);
+  margin-bottom: 8px;
+}
+
+.step-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
