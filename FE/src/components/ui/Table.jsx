@@ -303,9 +303,33 @@ const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
   const [decryptState, setDecryptState] = useState(null); // null | { stage, percent, label, error }
   const [isPayosLoading, setIsPayosLoading] = useState(false);
 
+  // Clicking "Thanh toán" directly calls API → shows QR immediately
   const handlePay = async (id) => {
     const file = data.find(f => f.id === id);
     setCheckoutFile(file);
+    setIsPayosLoading(true);
+    try {
+      const res = await api.post(`/payments/file-qr/${id}`, {
+        successUrl: window.location.href,
+        cancelUrl: window.location.href
+      });
+
+      if (res.data.alreadyPaid) {
+        toast.info('File này đã được thanh toán!');
+        updateFileStatus(id, 'Paid');
+        setCheckoutFile(null);
+      } else if (res.data.qrCode) {
+        setQrData(res.data);
+      } else if (res.data.checkoutUrl) {
+        window.location.href = res.data.checkoutUrl;
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || err.response?.data?.error || 'Không thể tạo mã QR thanh toán.');
+      setCheckoutFile(null);
+    } finally {
+      setIsPayosLoading(false);
+    }
   };
 
   const [qrData, setQrData] = useState(null);
@@ -341,32 +365,7 @@ const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
     };
   }, [checkoutFile, qrData, updateFileStatus]);
 
-  const submitPayosCheckout = async () => {
-    if (!checkoutFile) return;
-    setIsPayosLoading(true);
-    try {
-      // Use new file-qr endpoint which stores freelancerId for proper credit routing
-      const res = await api.post(`/payments/file-qr/${checkoutFile.id}`, {
-        successUrl: window.location.href,
-        cancelUrl: window.location.href
-      });
 
-      if (res.data.alreadyPaid) {
-        toast.info('File này đã được thanh toán!');
-        updateFileStatus(checkoutFile.id, 'Paid');
-        setCheckoutFile(null);
-      } else if (res.data.qrCode) {
-        setQrData(res.data);
-      } else if (res.data.checkoutUrl) {
-        window.location.href = res.data.checkoutUrl;
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || err.response?.data?.error || 'Không thể tạo mã QR thanh toán.');
-    } finally {
-      setIsPayosLoading(false);
-    }
-  };
 
   const handleStartTrial = async (id) => {
     try {
@@ -584,51 +583,7 @@ const Table = ({ data, columns, userRole, updateFileStatus, hideFilter }) => {
         />,
         document.body
       )}
-      {checkoutFile && createPortal(
-        <div className="modal-overlay">
-          <div className="checkout-modal premium-ui">
-            <div className="checkout-header">
-              <h3 className="text-xl font-bold">Thanh Toán An Toàn</h3>
-              <p className="text-sm">Giao dịch được bảo vệ bởi SafeCode</p>
-            </div>
 
-            <div className="checkout-body">
-              <div className="payment-summary card-styled">
-                <div className="flex justify-between items-center mb-2">
-                  <span>Số tiền an toàn (Escrow):</span>
-                  <strong className="text-primary text-xl" style={{ color: 'var(--primary-color)' }}>{checkoutFile.amount.toLocaleString()} VND</strong>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>Giải ngân cho:</span>
-                  <strong className="text-main">{checkoutFile.freelancer}</strong>
-                </div>
-                <div className="text-xs text-muted mt-2 pt-2" style={{ borderTop: '1px solid var(--border-color)', fontStyle: 'italic' }}>
-                  * Số tiền sẽ được SafeCode giữ an toàn và chỉ chuyển cho Freelancer khi bạn xác nhận hài lòng hoặc hết thời gian tranh chấp.
-                </div>
-              </div>
-
-              <div style={{ marginTop: 24, marginBottom: 16 }}>
-                {/* Auto Checkout */}
-                <div style={{ background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1))', padding: '24px', borderRadius: '16px', border: '1px solid rgba(99, 102, 241, 0.3)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                  <div style={{ width: 56, height: 56, background: 'linear-gradient(135deg, #6366f1, #a855f7)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', marginBottom: 16 }}>
-                    <Zap size={28} />
-                  </div>
-                  <h4 style={{ fontWeight: 700, marginBottom: 8, fontSize: '1.1rem' }}>Thanh Toán Quét Mã VietQR</h4>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 24 }}>Hệ thống tự động tạo mã QR của Admin SafeCode. Thanh toán được xác nhận ngay lập tức qua PayOS.</p>
-                  <Button variant="primary" className="btn-glow w-full" onClick={submitPayosCheckout} disabled={isPayosLoading}>
-                    {isPayosLoading ? 'Đang tạo mã QR...' : 'Thanh toán bảo kim (Escrow)'}
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <div className="checkout-footer" style={{ borderTop: 'none', paddingTop: 0 }}>
-              <Button variant="outline" onClick={() => setCheckoutFile(null)} style={{ borderRadius: '10px', width: '100%' }}>Hủy bỏ</Button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
 
       {/* Full Credits-style QR Modal for File Payment */}
       {qrData && createPortal(

@@ -19,7 +19,7 @@ export async function createCheckout(req, res, next) {
       return res.json({ alreadyPaid: true });
     }
 
-    if (fileDoc.status !== "Uploaded" && fileDoc.status !== "CheckoutCreated") {
+    if (fileDoc.status !== "Uploaded" && fileDoc.status !== "Verifying Payment") {
       throw httpError(409, "File is not ready for checkout");
     }
 
@@ -52,7 +52,7 @@ export async function createCheckout(req, res, next) {
       cancel_url: finalCancelUrl,
     });
 
-    fileDoc.status = "CheckoutCreated";
+    fileDoc.status = "Verifying Payment";
     fileDoc.stripe.checkoutSessionId = session.id;
     await fileDoc.save();
 
@@ -83,7 +83,7 @@ export async function createPayosCheckout(req, res, next) {
     if (!fileDoc) throw httpError(404, "File not found");
     if (fileDoc.intendedClientEmail !== req.user.email) throw httpError(403, "Forbidden");
     if (fileDoc.status === "Paid") return res.json({ alreadyPaid: true });
-    if (fileDoc.status !== "Uploaded" && fileDoc.status !== "CheckoutCreated" && fileDoc.status !== "Locked" && fileDoc.status !== "Testing Phase") {
+    if (fileDoc.status !== "Uploaded" && fileDoc.status !== "Verifying Payment" && fileDoc.status !== "Locked" && fileDoc.status !== "Testing Phase") {
       throw httpError(409, "File is not ready for checkout");
     }
 
@@ -171,7 +171,7 @@ export async function createPayosCheckout(req, res, next) {
       ? await payos.createPaymentLink(paymentData)
       : await payos.paymentRequests.create(paymentData);
 
-    fileDoc.status = "CheckoutCreated";
+    fileDoc.status = "Verifying Payment";
     fileDoc.payos = { orderCode, paymentLinkId: paymentLinkRes.paymentLinkId };
     await fileDoc.save();
 
@@ -258,7 +258,7 @@ export async function createFilePaymentQr(req, res, next) {
     });
 
     // Also update file status so it shows as pending payment
-    fileDoc.status = "CheckoutCreated";
+    fileDoc.status = "Verifying Payment";
     fileDoc.payos = { orderCode, paymentLinkId: paymentLinkRes.paymentLinkId };
     await fileDoc.save();
 
