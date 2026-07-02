@@ -247,7 +247,7 @@ export async function createFilePaymentQr(req, res, next) {
     // Save to CreditRequest (type: file_payment) so webhook knows who to credit
     await CreditRequest.create({
       userId: req.user.id,          // client who pays
-      amount: Math.round(amount / 2000), // credits to give freelancer (1 CR = 2000 VND)
+      amount: Math.round(amount / 1000), // credits to give freelancer (1 CR = 1000 VND)
       amountVND: amount,
       status: 'pending',
       type: 'file_payment',
