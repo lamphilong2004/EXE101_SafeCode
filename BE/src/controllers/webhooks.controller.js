@@ -104,8 +104,11 @@ export async function payosWebhook(req, res) {
       ? payos.verifyPaymentWebhookData(req.body)
       : payos.webhooks.verify(req.body);
 
-    if (webhookData.code === "00") {
-      const orderCode = webhookData.data.orderCode;
+    // Depending on PayOS SDK version, webhookData might be the inner data object or the outer object
+    const isSuccess = req.body.code === "00" || webhookData.code === "00" || req.body.desc === "success";
+    const orderCode = webhookData.orderCode || webhookData.data?.orderCode;
+
+    if (isSuccess && orderCode) {
       const fileDoc = await File.findOne({ "payos.orderCode": orderCode });
 
       if (fileDoc && fileDoc.status !== "Paid") {
