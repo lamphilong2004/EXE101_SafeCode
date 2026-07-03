@@ -17,10 +17,15 @@ const TransactionSchema = new mongoose.Schema(
     currency: { type: String, required: true, default: "usd", lowercase: true },
 
     stripe: {
-      eventId: { type: String, default: null, index: true, unique: true, sparse: true },
+      eventId: { type: String, index: true, unique: true, sparse: true },
       checkoutSessionId: { type: String, default: null, index: true },
       paymentIntentId: { type: String, default: null, index: true },
       customerId: { type: String, default: null, index: true },
+    },
+
+    payos: {
+      orderCode: { type: Number, index: true },
+      paymentLinkId: { type: String },
     },
 
     failureReason: { type: String, default: null },

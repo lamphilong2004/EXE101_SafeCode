@@ -147,9 +147,10 @@ export async function createPayosCheckout(req, res, next) {
 
     const orderCode = Number(String(Date.now()).slice(-6) + Math.floor(Math.random() * 1000));
     
-    // Amount in VND. Assuming fileDoc.price.amount is already VND if we are using VietQR.
-    const amount = fileDoc.price.currency.toLowerCase() === 'vnd' 
-      ? fileDoc.price.amount 
+    // Amount in VND from the file
+    const currency = (fileDoc.price.currency || 'usd').toLowerCase();
+    const amount = currency === 'vnd'
+      ? fileDoc.price.amount
       : fileDoc.price.amount * 25000; // rough fallback
 
     const paymentData = {
@@ -219,7 +220,8 @@ export async function createFilePaymentQr(req, res, next) {
     }
 
     // Amount in VND from the file
-    const amount = fileDoc.price.currency.toLowerCase() === 'vnd'
+    const currency = (fileDoc.price.currency || 'usd').toLowerCase();
+    const amount = currency === 'vnd'
       ? fileDoc.price.amount
       : fileDoc.price.amount * 25000;
 
