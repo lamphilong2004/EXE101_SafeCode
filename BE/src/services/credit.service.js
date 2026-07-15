@@ -7,7 +7,7 @@ import { httpError } from "../middleware/error.js";
 
 /* ─── Credit calculation constants V2 ─── */
 
-const BASE_UPLOAD_COST = 1.0;
+const BASE_UPLOAD_COST = 5.0;
 const BUILD_FEE = 2.0;
 const PREVIEW_RATE_PER_MIN = 0.1;
 const FREE_PREVIEW_MINS = 5;

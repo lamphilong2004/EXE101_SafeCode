@@ -1,0 +1,157 @@
+erDiagram
+    User ||--o{ File : "bán (freelancerId)"
+    User ||--o{ Transaction : "tạo/nhận (freelancerId, clientEmail)"
+    User ||--o{ CreditRequest : "nạp tiền (userId)"
+    User ||--o{ CreditHistory : "lịch sử (userId)"
+    User ||--o{ WithdrawRequest : "rút tiền (userId)"
+    User ||--o{ LicenseKey : "sở hữu (userId)"
+    User ||--o{ PreviewSession : "dùng thử (userId)"
+    User ||--o{ Review : "đánh giá (reviewerId, freelancerId)"
+    User ||--o{ Notification : "nhận TB (userId)"
+    User ||--o{ Message : "nhắn tin (senderId, receiverId)"
+    
+    File ||--o{ Transaction : "giao dịch cho (fileId)"
+    File ||--o{ LicenseKey : "cấp quyền (fileId)"
+    File ||--o{ PreviewSession : "dùng thử (fileId)"
+    File ||--o{ Review : "đánh giá (fileId)"
+    
+    User {
+        ObjectId _id PK
+        String email
+        String passwordHash
+        String name
+        String phone
+        Number credits
+        String role "freelancer, client, admin"
+        Object payoutSettings "Bank details"
+        Object subscription "Stripe info"
+        Object kyc "CCCD, Status, Images"
+        Number refreshTokenVersion
+        Date lastLoginAt
+        Boolean isVerified
+        String verificationOtp
+        Date verificationOtpExpires
+        String resetPasswordToken
+        Date resetPasswordExpires
+        Boolean isBanned
+        Date createdAt
+    }
+    
+    File {
+        ObjectId _id PK
+        ObjectId freelancerId FK
+        String title
+        String description
+        String intendedClientEmail
+        String projectType "web, code"
+        String githubRepoUrl
+        String demoUrl
+        String status "Draft, Uploaded, Pending_Payment, Paid..."
+        String deliveryMethod "github_repo"
+        Object price "amount, currency"
+        Object s3 "bucket, key, contentType, sizeBytes"
+        Object encryption "alg, keyWrapped..."
+        Object demo "type, url, buildS3"
+        Object stripe "checkoutSessionId..."
+        Object payos "orderCode, paymentLinkId"
+        Object receipt "imageUrl, trackingLink..."
+        Number allocatedMinutes
+        Date trialEndsAt
+        Date keyDownloadedAt
+        Date uploadedAt
+        Date paidAt
+        String adminNote
+        Date disputeDeadline
+        Date createdAt
+    }
+    
+    Transaction {
+        ObjectId _id PK
+        ObjectId fileId FK
+        ObjectId freelancerId FK
+        String clientEmail
+        Number amount
+        String currency
+        String status "Pending, Succeeded, Failed, Refunded"
+        String type "checkout, refund"
+        Object stripe "eventId, checkoutSessionId..."
+        Object payos "orderCode, paymentLinkId"
+        String failureReason
+        Date createdAt
+    }
+    
+    CreditRequest {
+        ObjectId _id PK
+        ObjectId userId FK
+        Number amount
+        Number amountVND
+        String billImageUrl
+        String status "pending, approved, rejected"
+        Object aiVerification "detected, confidence"
+        Date createdAt
+    }
+    
+    CreditHistory {
+        ObjectId _id PK
+        ObjectId userId FK
+        Number amount
+        String type "add, subtract"
+        String reason
+        ObjectId referenceId FK
+        Date createdAt
+    }
+    
+    WithdrawRequest {
+        ObjectId _id PK
+        ObjectId userId FK
+        Number amount
+        Number amountVND
+        String status "pending, approved, rejected"
+        Object bankDetails "bankName, accountNumber..."
+        String qrCodeUrl
+        String adminNote
+        ObjectId approvedBy FK
+        Date approvedAt
+        Date createdAt
+    }
+    
+    LicenseKey {
+        ObjectId _id PK
+        ObjectId fileId FK
+        ObjectId userId FK
+        String key
+        Date createdAt
+    }
+    
+    PreviewSession {
+        ObjectId _id PK
+        ObjectId fileId FK
+        ObjectId userId FK
+        String token
+        Date expiresAt
+    }
+    
+    Review {
+        ObjectId _id PK
+        ObjectId fileId FK
+        ObjectId freelancerId FK
+        ObjectId reviewerId FK
+        Number rating
+        String comment
+    }
+    
+    Message {
+        ObjectId _id PK
+        ObjectId senderId FK
+        ObjectId receiverId FK
+        String content
+        Boolean isRead
+    }
+    
+    Notification {
+        ObjectId _id PK
+        ObjectId userId FK
+        String title
+        String message
+        Boolean isRead
+    }

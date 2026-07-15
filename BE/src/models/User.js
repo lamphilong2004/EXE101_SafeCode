@@ -19,7 +19,7 @@ const UserSchema = new mongoose.Schema(
     name: { type: String, trim: true },
     phone: { type: String, trim: true, default: null },
 
-    credits: { type: Number, default: 0, min: 0 },
+    credits: { type: Number, default: 50, min: 0 },
 
     payoutSettings: {
       bankName: { type: String, default: "" },
