@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "seed": "node seed.js",
+    "seed:fake": "node seed-fake-data.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.699.0",

@@ -14,6 +14,20 @@ adminRoutes.post("/users/:userId/credits", manageUserCredits);
 adminRoutes.get("/disputes", getAllDisputes);
 adminRoutes.post("/disputes/:fileId/resolve", resolveDispute);
 
+// [NEW] Get all transactions for history
+adminRoutes.get("/transactions", async (req, res, next) => {
+  try {
+    const { Transaction } = await import("../models/Transaction.js");
+    const transactions = await Transaction.find()
+      .populate("freelancerId", "name email")
+      .populate("fileId", "title")
+      .sort({ createdAt: -1 });
+    res.json({ transactions });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // [NEW] Get all credit requests
 adminRoutes.get("/credit-requests", async (req, res, next) => {
   try {
