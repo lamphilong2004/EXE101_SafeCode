@@ -25,6 +25,10 @@ export async function createWithdrawRequest(req, res, next) {
       throw httpError(400, "Insufficient credits for withdrawal");
     }
 
+    if (user.credits - amount < 50) {
+      throw httpError(400, "Bạn không thể rút phần 50 Credit được tặng mặc định (Tài khoản phải duy trì tối thiểu 50 CR).");
+    }
+
     // Deduct credits immediately
     user.credits -= amount;
     await user.save({ session });
