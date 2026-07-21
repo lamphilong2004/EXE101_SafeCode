@@ -70,6 +70,14 @@ async function runSeed() {
           bankName: "MBBANK",
           accountNumber: "0" + Math.floor(Math.random() * 1000000000),
           accountName: name.toUpperCase()
+        },
+        kyc: {
+          status: 'pending',
+          fullName: name.toUpperCase(),
+          cccdNumber: "079099" + Math.floor(Math.random() * 1000000).toString().padStart(6, '0'),
+          cccdFront: "https://cdn.tuoitre.vn/471584752817336320/2023/1/14/z4030616148386c913501a355606d0fa75908b8b0e895c-16736691459731057416954.jpg",
+          cccdBack: "https://cdn.tuoitre.vn/471584752817336320/2023/1/14/z4030616148386c913501a355606d0fa75908b8b0e895c-16736691459731057416954.jpg",
+          submittedAt: getRandomDate(2)
         }
       });
       freelancers.push(user);

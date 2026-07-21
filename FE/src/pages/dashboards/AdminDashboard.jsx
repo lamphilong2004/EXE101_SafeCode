@@ -13,6 +13,7 @@ const AdminDashboard = () => {
 
   const [disputes, setDisputes] = useState([]);
   const [users, setUsers] = useState([]);
+  const [transactions, setTransactions] = useState([]);
   const [creditRequests, setCreditRequests] = useState([]);
   const [withdrawRequests, setWithdrawRequests] = useState([]);
   const [kycRequests, setKycRequests] = useState([]);
@@ -48,6 +49,9 @@ const AdminDashboard = () => {
       } else if (activeTab === 'users') {
         const res = await api.get(`/admin/users?page=${uPage}&limit=15`);
         setUsers(res.data.users);
+      } else if (activeTab === 'transactions') {
+        const res = await api.get(`/admin/transactions`);
+        setTransactions(res.data.transactions);
       } else if (activeTab === 'credits') {
         const res = await api.get(`/admin/credit-requests`);
         setCreditRequests(res.data.requests);
@@ -266,6 +270,50 @@ const AdminDashboard = () => {
                       )}
                     </div>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* TRANSACTIONS TAB */}
+            {activeTab === 'transactions' && (
+              <div className="card-styled p-6" style={{ background: 'var(--background-color)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                <h3 className="text-xl font-bold mb-6" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
+                  <DollarSign className="text-primary" size={24} /> Lịch sử Giao dịch (Doanh Thu)
+                </h3>
+                <div className="table-responsive">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Mã / Tên File</th>
+                        <th>Client Mua (Tiền Vào)</th>
+                        <th>Cộng Credit Freelancer</th>
+                        <th>Doanh Thu (VNĐ)</th>
+                        <th>Trạng Thái</th>
+                        <th>Thời Gian</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {transactions.length === 0 ? (
+                        <tr><td colSpan="6" className="text-center">Chưa có giao dịch nào.</td></tr>
+                      ) : transactions.map(tx => (
+                        <tr key={tx._id}>
+                          <td>{tx.fileId?.title || tx._id.toString().substring(0,8)}</td>
+                          <td>{tx.clientEmail}</td>
+                          <td>
+                            <div className="font-medium text-emerald-400">+{tx.amount / 1000} CR</div>
+                            <div className="text-xs text-gray-400">{tx.freelancerId?.email}</div>
+                          </td>
+                          <td className="font-bold text-blue-400">{(tx.amount || 0).toLocaleString()} đ</td>
+                          <td>
+                            <span className={`status-badge ${tx.status === 'Succeeded' ? 'success' : 'warning'}`}>
+                              {tx.status}
+                            </span>
+                          </td>
+                          <td className="text-gray-400">{new Date(tx.createdAt).toLocaleString('vi-VN')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}

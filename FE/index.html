@@ -8,6 +8,16 @@
     <meta name="description" content="SafeCode is a secure platform for freelancers and clients to exchange source code and payments with confidence." />
     <!-- Google Identity Services (GIS) SDK -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <!-- Google Analytics 4 (GA4) - Bắt buộc cho chấm điểm OC2 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZG8D9N7HGC"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-ZG8D9N7HGC');
+    </script>
   </head>
   <body>
     <div id="root"></div>

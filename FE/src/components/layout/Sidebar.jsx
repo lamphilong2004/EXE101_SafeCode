@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { LayoutDashboard, UploadCloud, FolderLock, CreditCard, Settings, ShieldCheck, LogOut, AlertTriangle, Banknote } from 'lucide-react';
+import { LayoutDashboard, UploadCloud, FolderLock, CreditCard, Settings, ShieldCheck, LogOut, AlertTriangle, Banknote, DollarSign } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import './Sidebar.css';
 
@@ -36,6 +36,10 @@ const Sidebar = ({ userRole, onLogout }) => {
             <NavLink to="/?tab=analytics" className={() => `sidebar-link ${window.location.search === '?tab=analytics' || !window.location.search ? 'active' : ''}`}>
               <div className="sidebar-link-icon"><LayoutDashboard size={18} /></div>
               <span>Thống Kê & Log</span>
+            </NavLink>
+            <NavLink to="/?tab=transactions" className={() => `sidebar-link ${window.location.search === '?tab=transactions' ? 'active' : ''}`}>
+              <div className="sidebar-link-icon"><DollarSign size={18} /></div>
+              <span>Lịch sử Giao dịch</span>
             </NavLink>
             <NavLink to="/?tab=disputes" className={() => `sidebar-link ${window.location.search === '?tab=disputes' ? 'active' : ''}`}>
               <div className="sidebar-link-icon"><AlertTriangle size={18} /></div>
