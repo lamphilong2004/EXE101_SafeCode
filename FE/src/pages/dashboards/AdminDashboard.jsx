@@ -208,7 +208,7 @@ const AdminDashboard = () => {
           <div className="stat-card">
             <DollarSign className="stat-icon success" />
             <div className="stat-info">
-              <h3>Doanh Thu Hệ Thống</h3>
+              <h3>Dòng tiền qua sàn (GMV)</h3>
               <p>{(stats.totalRevenue || 0).toLocaleString()} đ</p>
             </div>
           </div>
@@ -226,7 +226,7 @@ const AdminDashboard = () => {
                 {/* CHART AREA */}
                 <div className="card-styled" style={{ height: '400px', display: 'flex', flexDirection: 'column', padding: '20px', background: 'var(--background-color)', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
                   <h3 className="text-lg font-bold mb-4" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
-                    <BarChart3 size={18} /> Biểu đồ Tăng trưởng Doanh thu (7 ngày)
+                    <BarChart3 size={18} /> Biểu đồ Tăng trưởng GMV (7 ngày)
                   </h3>
                   <div style={{ flex: 1, minHeight: 0 }}>
                     <ResponsiveContainer width="100%" height="100%">
@@ -278,7 +278,7 @@ const AdminDashboard = () => {
             {activeTab === 'transactions' && (
               <div className="card-styled p-6" style={{ background: 'var(--background-color)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                 <h3 className="text-xl font-bold mb-6" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
-                  <DollarSign className="text-primary" size={24} /> Lịch sử Giao dịch (Doanh Thu)
+                  <DollarSign className="text-primary" size={24} /> Lịch sử Giao dịch (Dòng tiền GMV)
                 </h3>
                 <div className="table-responsive">
                   <table className="admin-table">
@@ -287,7 +287,7 @@ const AdminDashboard = () => {
                         <th>Mã / Tên Dự Án</th>
                         <th>Client Mua (Tiền Vào)</th>
                         <th>Cộng Credit Freelancer</th>
-                        <th>Doanh Thu (VNĐ)</th>
+                        <th>Giá trị Giao dịch (VNĐ)</th>
                         <th>Trạng Thái</th>
                         <th>Thời Gian</th>
                       </tr>
