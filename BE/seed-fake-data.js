@@ -52,29 +52,55 @@ async function runSeed() {
     await WithdrawRequest.deleteMany({});
 
     console.log("1. Đang tạo các tài khoản Freelancer...");
+    const hashedPassword = await bcrypt.hash("123456", 10);
+    const users = [
+      { name: 'Admin User', email: 'admin@test.com', password: hashedPassword, role: 'admin', credits: 1000 },
+      { name: 'Demo Freelancer', email: 'demo_freelancer@test.com', password: hashedPassword, role: 'freelancer', credits: 500, kycStatus: 'approved' },
+      { name: 'Demo Client', email: 'demo_client@test.com', password: hashedPassword, role: 'client', credits: 0, kycStatus: 'pending' }
+    ];
+
+    // Generate freelancers (3-24)
+    for (let i = 1; i <= 24; i++) {
+      users.push({
+        name: `Freelancer ${i}`,
+        email: `freelancer${i}@test.com`,
+        password: hashedPassword,
+        role: 'freelancer',
+        credits: 50 + Math.floor(Math.random() * 200), // Random starting credits
+        kycStatus: i % 2 === 0 ? 'approved' : 'pending' // 50% approved KYC
+      });
+    }
+
+    // Generate clients (1-10)
+    for (let i = 1; i <= 10; i++) {
+      users.push({
+        name: `Client ${i}`,
+        email: `client${i}@test.com`,
+        password: hashedPassword,
+        role: 'client',
+        credits: 0,
+        kycStatus: 'pending'
+      });
+    }
+    
     const freelancers = [];
-    const passwordHash = await bcrypt.hash("123456", 10);
-    for (let i = 0; i < 24; i++) {
-      const name = getRandomName();
-      const email = getRandomEmail(name);
-      // Tạo 1 KYC bị từ chối cho freelancer thứ 5
-      const kycStatus = i === 4 ? 'rejected' : 'pending';
+    for (const userData of users) {
       const user = await User.create({
-        role: "freelancer",
-        email,
-        passwordHash,
-        name,
+        role: userData.role,
+        email: userData.email,
+        passwordHash: userData.password,
+        name: userData.name,
         isVerified: true,
         createdAt: getRandomDate(),
-        credits: 50,
+        credits: userData.credits,
         payoutSettings: {
           bankName: "MBBANK",
           accountNumber: "0" + Math.floor(Math.random() * 1000000000),
-          accountName: name.toUpperCase()
+          accountName: userData.name.toUpperCase()
         },
         kyc: {
-          status: kycStatus,
-          fullName: name.toUpperCase(),
+          status: userData.kycStatus || 'pending',
+          fullName: userData.name.toUpperCase(),
           cccdNumber: "079099" + Math.floor(Math.random() * 1000000).toString().padStart(6, '0'),
           cccdFront: "https://cdn.tuoitre.vn/471584752817336320/2023/1/14/z4030616148386c913501a355606d0fa75908b8b0e895c-16736691459731057416954.jpg",
           cccdBack: "https://cdn.tuoitre.vn/471584752817336320/2023/1/14/z4030616148386c913501a355606d0fa75908b8b0e895c-16736691459731057416954.jpg",
@@ -93,7 +119,7 @@ async function runSeed() {
       const user = await User.create({
         role: "client",
         email,
-        passwordHash,
+        passwordHash: hashedPassword,
         name,
         isVerified: true,
         createdAt: getRandomDate(),

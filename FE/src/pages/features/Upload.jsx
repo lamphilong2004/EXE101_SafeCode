@@ -11,7 +11,6 @@ const Upload = ({ onAddFile }) => {
   const [clientEmail, setClientEmail] = useState('');
   const [amount, setAmount] = useState('');
   const [demoUrl, setDemoUrl] = useState('');
-  const [trialMinutes, setTrialMinutes] = useState(15);
   const [isUploading, setIsUploading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [verificationToken, setVerificationToken] = useState('');
@@ -31,7 +30,7 @@ const Upload = ({ onAddFile }) => {
         const res = await api.post('/credits/estimate', {
           projectType: 'web',
           sizeBytes: 0,
-          trialMinutes: parseInt(trialMinutes) || 0
+          trialMinutes: 15
         });
         setEstimatedCost(res.data.estimatedCredits);
       } catch (err) {
@@ -39,7 +38,7 @@ const Upload = ({ onAddFile }) => {
       }
     };
     estimate();
-  }, [trialMinutes]);
+  }, []);
 
   const handleVerifyRepo = async () => {
     if (!githubRepoUrl || !githubRepoUrl.includes("github.com")) {
@@ -108,7 +107,7 @@ const Upload = ({ onAddFile }) => {
         intendedClientEmail: clientEmail,
         demo: { type: 'url', url: demoUrl },
         projectType: 'web',
-        trialMinutes: parseInt(trialMinutes) || 15,
+        trialMinutes: 15, // Hardcoded to 15 mins by default
         deliveryMethod: 'github_repo',
         githubRepoUrl,
         verificationToken
@@ -183,10 +182,7 @@ const Upload = ({ onAddFile }) => {
                     <input type="url" value={demoUrl} onChange={(e) => setDemoUrl(e.target.value)} placeholder="https://your-project.vercel.app" className="form-input" />
                   </div>
                   
-                  <div className="input-group">
-                    <label>Thời gian dùng thử (Phút) <span style={{ color: 'var(--text-muted)', fontSize: '12px', fontWeight: 'normal', marginLeft: '8px' }}>Khách hàng được test demo trong bao lâu?</span></label>
-                    <input type="number" value={trialMinutes} onChange={(e) => setTrialMinutes(e.target.value)} placeholder="VD: 15, 30, 60..." className="form-input" />
-                  </div>
+
                 </div>
               </div>
 

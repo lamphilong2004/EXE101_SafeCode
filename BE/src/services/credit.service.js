@@ -23,8 +23,8 @@ import { PreviewSession } from "../models/PreviewSession.js";
  * V2 formula: Simple flat fee for upload.
  */
 export function calculateUploadCost({ trialMinutes = 0 } = {}) {
-  // Base cost is 1.0, plus 0.2 CR per minute of trial provided to the client
-  return BASE_UPLOAD_COST + (trialMinutes * 0.2);
+  // Base cost is 10.0 CR flat fee (10,000 VND)
+  return BASE_UPLOAD_COST;
 }
 
 /**
