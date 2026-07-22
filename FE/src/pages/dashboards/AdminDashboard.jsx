@@ -31,19 +31,50 @@ const AdminDashboard = () => {
   const [creditAmount, setCreditAmount] = useState(0);
   const [creditReason, setCreditReason] = useState('');
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState('All');
+
   const [tableFilters, setTableFilters] = useState({
     transactions: 'All', disputes: 'All', credits: 'All', withdrawals: 'All', kyc: 'All', users: 'All'
   });
 
-  const filteredTransactions = transactions.filter(t => tableFilters.transactions === 'All' || t.status === tableFilters.transactions);
-  const filteredDisputes = disputes.filter(t => tableFilters.disputes === 'All' || t.status === tableFilters.disputes);
-  const filteredCreditRequests = creditRequests.filter(t => tableFilters.credits === 'All' || t.status === tableFilters.credits);
-  const filteredWithdrawRequests = withdrawRequests.filter(t => tableFilters.withdrawals === 'All' || t.status === tableFilters.withdrawals);
-  const filteredKycRequests = kycRequests.filter(t => tableFilters.kyc === 'All' || t.status === tableFilters.kyc);
+  const lowerSearch = searchQuery.toLowerCase();
+
+  const filteredTransactions = transactions.filter(t => {
+    if (tableFilters.transactions !== 'All' && t.status !== tableFilters.transactions) return false;
+    if (lowerSearch && !(t.clientEmail?.toLowerCase().includes(lowerSearch) || t.freelancerId?.email?.toLowerCase().includes(lowerSearch) || t.fileId?.title?.toLowerCase().includes(lowerSearch))) return false;
+    return true;
+  });
+
+  const filteredDisputes = disputes.filter(t => {
+    if (tableFilters.disputes !== 'All' && t.status !== tableFilters.disputes) return false;
+    if (lowerSearch && !(t.intendedClientEmail?.toLowerCase().includes(lowerSearch) || t.freelancerId?.name?.toLowerCase().includes(lowerSearch) || t.freelancerId?.email?.toLowerCase().includes(lowerSearch) || t.title?.toLowerCase().includes(lowerSearch))) return false;
+    return true;
+  });
+
+  const filteredCreditRequests = creditRequests.filter(t => {
+    if (tableFilters.credits !== 'All' && t.status !== tableFilters.credits) return false;
+    if (lowerSearch && !(t.userId?.name?.toLowerCase().includes(lowerSearch) || t.userId?.email?.toLowerCase().includes(lowerSearch) || t.payosOrderCode?.toString().includes(lowerSearch))) return false;
+    return true;
+  });
+
+  const filteredWithdrawRequests = withdrawRequests.filter(t => {
+    if (tableFilters.withdrawals !== 'All' && t.status !== tableFilters.withdrawals) return false;
+    if (lowerSearch && !(t.userId?.name?.toLowerCase().includes(lowerSearch) || t.userId?.email?.toLowerCase().includes(lowerSearch))) return false;
+    return true;
+  });
+
+  const filteredKycRequests = kycRequests.filter(t => {
+    if (tableFilters.kyc !== 'All' && t.status !== tableFilters.kyc) return false;
+    if (lowerSearch && !(t.name?.toLowerCase().includes(lowerSearch) || t.email?.toLowerCase().includes(lowerSearch) || t.kyc?.fullName?.toLowerCase().includes(lowerSearch))) return false;
+    return true;
+  });
+
   const filteredUsers = users.filter(t => {
-    if (tableFilters.users === 'All') return true;
-    if (tableFilters.users === 'Banned') return t.isBanned;
-    if (tableFilters.users === 'Active') return !t.isBanned;
+    if (tableFilters.users === 'Banned' && !t.isBanned) return false;
+    if (tableFilters.users === 'Active' && t.isBanned) return false;
+    if (userRoleFilter !== 'All' && t.role !== userRoleFilter) return false;
+    if (lowerSearch && !(t.name?.toLowerCase().includes(lowerSearch) || t.email?.toLowerCase().includes(lowerSearch))) return false;
     return true;
   });
 
@@ -293,10 +324,11 @@ const AdminDashboard = () => {
             {/* TRANSACTIONS TAB */}
             {activeTab === 'transactions' && (
               <div className="card-styled p-6" style={{ background: 'var(--background-color)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                  <h3 className="text-xl font-bold" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
-                    <DollarSign className="text-primary" size={24} /> Lịch sử Giao dịch (Dòng tiền GMV)
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px', flexWrap: 'wrap' }}>
+                  <h3 className="text-xl font-bold" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)', flex: 1, minWidth: '200px' }}>
+                    <DollarSign className="text-primary" size={24} /> Lịch sử Giao dịch (GMV)
                   </h3>
+                  <input type="text" placeholder="Tìm email, mã dự án..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ flex: 1, minWidth: '200px', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)', color: 'var(--text-main)', outline: 'none' }} />
                   <select value={tableFilters.transactions} onChange={e => setTableFilters(p => ({...p, transactions: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)', color: 'var(--text-main)', cursor: 'pointer', outline: 'none' }}>
                     <option value="All">Tất cả trạng thái</option>
                     <option value="Succeeded">Thành công (Succeeded)</option>
@@ -344,8 +376,9 @@ const AdminDashboard = () => {
             {/* DISPUTES TAB */}
             {activeTab === 'disputes' && (
               <div className="data-table-container">
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px' }}>
-                  <h3 className="text-lg font-bold">Danh sách Tranh chấp</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <h3 className="text-lg font-bold" style={{ flex: 1, minWidth: '200px' }}>Danh sách Tranh chấp</h3>
+                  <input type="text" placeholder="Tìm tên, email dự án..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ flex: 1, minWidth: '200px', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)', color: 'var(--text-main)', outline: 'none' }} />
                   <select value={tableFilters.disputes} onChange={e => setTableFilters(p => ({...p, disputes: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)', color: 'var(--text-main)', cursor: 'pointer', outline: 'none' }}>
                     <option value="All">Tất cả trạng thái</option>
                     <option value="Disputed">Đang tranh chấp (Disputed)</option>
@@ -389,8 +422,9 @@ const AdminDashboard = () => {
             {/* AI CREDIT REQUESTS TAB */}
             {activeTab === 'credits' && (
               <div className="data-table-container">
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px' }}>
-                  <h3 className="text-lg font-bold">Yêu cầu Nạp Credit</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <h3 className="text-lg font-bold" style={{ flex: 1, minWidth: '200px' }}>Yêu cầu Nạp Credit</h3>
+                  <input type="text" placeholder="Tìm tên, email, mã PayOS..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ flex: 1, minWidth: '200px', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)', color: 'var(--text-main)', outline: 'none' }} />
                   <select value={tableFilters.credits} onChange={e => setTableFilters(p => ({...p, credits: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)', color: 'var(--text-main)', cursor: 'pointer', outline: 'none' }}>
                     <option value="All">Tất cả trạng thái</option>
                     <option value="pending">Chờ xử lý (Pending)</option>
@@ -464,8 +498,9 @@ const AdminDashboard = () => {
             {/* WITHDRAW TAB */}
             {activeTab === 'withdraw' && (
               <div className="data-table-container">
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px' }}>
-                  <h3 className="text-lg font-bold">Yêu cầu Rút Tiền</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <h3 className="text-lg font-bold" style={{ flex: 1, minWidth: '200px' }}>Yêu cầu Rút Tiền</h3>
+                  <input type="text" placeholder="Tìm tên, email user..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ flex: 1, minWidth: '200px', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)', color: 'var(--text-main)', outline: 'none' }} />
                   <select value={tableFilters.withdrawals} onChange={e => setTableFilters(p => ({...p, withdrawals: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)', color: 'var(--text-main)', cursor: 'pointer', outline: 'none' }}>
                     <option value="All">Tất cả trạng thái</option>
                     <option value="pending">Chờ xử lý (Pending)</option>
@@ -531,8 +566,9 @@ const AdminDashboard = () => {
             {/* KYC TAB */}
             {activeTab === 'kyc' && (
               <div className="data-table-container">
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px' }}>
-                  <h3 className="text-lg font-bold">Hồ sơ KYC</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <h3 className="text-lg font-bold" style={{ flex: 1, minWidth: '200px' }}>Hồ sơ KYC</h3>
+                  <input type="text" placeholder="Tìm tên, email..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ flex: 1, minWidth: '200px', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)', color: 'var(--text-main)', outline: 'none' }} />
                   <select value={tableFilters.kyc} onChange={e => setTableFilters(p => ({...p, kyc: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)', color: 'var(--text-main)', cursor: 'pointer', outline: 'none' }}>
                     <option value="All">Tất cả trạng thái</option>
                     <option value="pending">Chờ xử lý (Pending)</option>
@@ -581,8 +617,15 @@ const AdminDashboard = () => {
 
             {activeTab === 'users' && (
               <div className="data-table-container">
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px' }}>
-                  <h3 className="text-lg font-bold">Quản lý Người Dùng</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <h3 className="text-lg font-bold" style={{ flex: 1, minWidth: '200px' }}>Quản lý Người Dùng</h3>
+                  <input type="text" placeholder="Tìm theo tên, email..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ flex: 1, minWidth: '150px', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)', color: 'var(--text-main)', outline: 'none' }} />
+                  <select value={userRoleFilter} onChange={e => setUserRoleFilter(e.target.value)} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)', color: 'var(--text-main)', cursor: 'pointer', outline: 'none' }}>
+                    <option value="All">Tất cả vai trò</option>
+                    <option value="admin">Admin</option>
+                    <option value="freelancer">Freelancer</option>
+                    <option value="client">Client</option>
+                  </select>
                   <select value={tableFilters.users} onChange={e => setTableFilters(p => ({...p, users: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)', color: 'var(--text-main)', cursor: 'pointer', outline: 'none' }}>
                     <option value="All">Tất cả người dùng</option>
                     <option value="Active">Đang hoạt động</option>
