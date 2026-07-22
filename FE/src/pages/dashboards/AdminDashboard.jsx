@@ -201,7 +201,7 @@ const AdminDashboard = () => {
           <div className="stat-card">
             <Database className="stat-icon processing" />
             <div className="stat-info">
-              <h3>Tổng Source Code</h3>
+              <h3>Tổng Dự Án (Repo)</h3>
               <p>{stats.totalFiles || 0}</p>
             </div>
           </div>
@@ -284,7 +284,7 @@ const AdminDashboard = () => {
                   <table className="admin-table">
                     <thead>
                       <tr>
-                        <th>Mã / Tên File</th>
+                        <th>Mã / Tên Dự Án</th>
                         <th>Client Mua (Tiền Vào)</th>
                         <th>Cộng Credit Freelancer</th>
                         <th>Doanh Thu (VNĐ)</th>
@@ -324,7 +324,7 @@ const AdminDashboard = () => {
                 <table className="admin-table">
                   <thead>
                     <tr>
-                      <th>File & Trạng Thái</th>
+                      <th>Dự Án & Trạng Thái</th>
                       <th>Khách Hàng (Tạo)</th>
                       <th>Freelancer</th>
                       <th>Giá Trị</th>
