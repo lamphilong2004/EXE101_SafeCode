@@ -175,7 +175,7 @@ export async function createFileListing(req, res, next) {
       },
     });
 
-    // === V2: Deduct upload fee (1.0 CR) ===
+    // === V2: Deduct upload fee (10.0 CR) ===
     await consumeCreditsForUpload(req.user.id, { fileId: file._id });
 
     res.status(201).json({ fileId: String(file._id), status: file.status });
