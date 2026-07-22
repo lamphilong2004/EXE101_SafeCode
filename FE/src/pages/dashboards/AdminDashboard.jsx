@@ -297,7 +297,7 @@ const AdminDashboard = () => {
                   <h3 className="text-xl font-bold" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
                     <DollarSign className="text-primary" size={24} /> Lịch sử Giao dịch (Dòng tiền GMV)
                   </h3>
-                  <select value={tableFilters.transactions} onChange={e => setTableFilters(p => ({...p, transactions: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)' }}>
+                  <select value={tableFilters.transactions} onChange={e => setTableFilters(p => ({...p, transactions: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)', color: 'var(--text-main)', cursor: 'pointer', outline: 'none' }}>
                     <option value="All">Tất cả trạng thái</option>
                     <option value="Succeeded">Thành công (Succeeded)</option>
                     <option value="Failed">Thất bại (Failed)</option>
@@ -346,7 +346,7 @@ const AdminDashboard = () => {
               <div className="data-table-container">
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px' }}>
                   <h3 className="text-lg font-bold">Danh sách Tranh chấp</h3>
-                  <select value={tableFilters.disputes} onChange={e => setTableFilters(p => ({...p, disputes: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)' }}>
+                  <select value={tableFilters.disputes} onChange={e => setTableFilters(p => ({...p, disputes: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)', color: 'var(--text-main)', cursor: 'pointer', outline: 'none' }}>
                     <option value="All">Tất cả trạng thái</option>
                     <option value="Disputed">Đang tranh chấp (Disputed)</option>
                     <option value="AwaitingEvidence">Chờ bằng chứng (AwaitingEvidence)</option>
@@ -391,7 +391,7 @@ const AdminDashboard = () => {
               <div className="data-table-container">
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px' }}>
                   <h3 className="text-lg font-bold">Yêu cầu Nạp Credit</h3>
-                  <select value={tableFilters.credits} onChange={e => setTableFilters(p => ({...p, credits: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)' }}>
+                  <select value={tableFilters.credits} onChange={e => setTableFilters(p => ({...p, credits: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)', color: 'var(--text-main)', cursor: 'pointer', outline: 'none' }}>
                     <option value="All">Tất cả trạng thái</option>
                     <option value="pending">Chờ xử lý (Pending)</option>
                     <option value="approved">Đã duyệt (Approved)</option>
@@ -466,7 +466,7 @@ const AdminDashboard = () => {
               <div className="data-table-container">
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px' }}>
                   <h3 className="text-lg font-bold">Yêu cầu Rút Tiền</h3>
-                  <select value={tableFilters.withdrawals} onChange={e => setTableFilters(p => ({...p, withdrawals: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)' }}>
+                  <select value={tableFilters.withdrawals} onChange={e => setTableFilters(p => ({...p, withdrawals: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)', color: 'var(--text-main)', cursor: 'pointer', outline: 'none' }}>
                     <option value="All">Tất cả trạng thái</option>
                     <option value="pending">Chờ xử lý (Pending)</option>
                     <option value="approved">Đã duyệt (Approved)</option>
@@ -533,7 +533,7 @@ const AdminDashboard = () => {
               <div className="data-table-container">
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px' }}>
                   <h3 className="text-lg font-bold">Hồ sơ KYC</h3>
-                  <select value={tableFilters.kyc} onChange={e => setTableFilters(p => ({...p, kyc: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)' }}>
+                  <select value={tableFilters.kyc} onChange={e => setTableFilters(p => ({...p, kyc: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)', color: 'var(--text-main)', cursor: 'pointer', outline: 'none' }}>
                     <option value="All">Tất cả trạng thái</option>
                     <option value="pending">Chờ xử lý (Pending)</option>
                     <option value="approved">Đã duyệt (Approved)</option>
@@ -583,7 +583,7 @@ const AdminDashboard = () => {
               <div className="data-table-container">
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px' }}>
                   <h3 className="text-lg font-bold">Quản lý Người Dùng</h3>
-                  <select value={tableFilters.users} onChange={e => setTableFilters(p => ({...p, users: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)' }}>
+                  <select value={tableFilters.users} onChange={e => setTableFilters(p => ({...p, users: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)', color: 'var(--text-main)', cursor: 'pointer', outline: 'none' }}>
                     <option value="All">Tất cả người dùng</option>
                     <option value="Active">Đang hoạt động</option>
                     <option value="Banned">Đã bị khóa (Banned)</option>
