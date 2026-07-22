@@ -110,7 +110,6 @@ export async function createPayosCheckout(req, res, next) {
       // Issue License
       const { issueLicense } = await import("../services/license.service.js");
       const { sendDecryptionKeyEmail } = await import("../services/email.service.js");
-      const { rewardCreditsForSale } = await import("../services/credit.service.js");
       const { createNotification } = await import("../socket.js");
       
       try {
@@ -121,15 +120,10 @@ export async function createPayosCheckout(req, res, next) {
           isV3: true,
         });
 
-        await rewardCreditsForSale(fileDoc.freelancerId, {
-          amountInVnd: fileDoc.price.amount,
-          fileId: fileDoc._id,
-        });
-
         createNotification(
           String(fileDoc.freelancerId),
           "Thanh toán (Giả lập) thành công! 🎉",
-          `Khách hàng đã thanh toán thành công cho "${fileDoc.title}".`,
+          `Khách hàng đã thanh toán (Escrow) thành công cho "${fileDoc.title}". Tiền đang được giữ trên nền tảng.`,
           { type: "payment", relatedFileId: fileDoc._id }
         );
       } catch (err) {
