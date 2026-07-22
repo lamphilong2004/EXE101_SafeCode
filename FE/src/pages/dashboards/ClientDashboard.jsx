@@ -94,7 +94,7 @@ const ClientDashboard = ({ files, updateFileStatus, pagination }) => {
           </Link>
         </div>
         {recentFiles.length > 0 ? (
-          <Table data={recentFiles} columns={columns} userRole="client" updateFileStatus={updateFileStatus} hideFilter={true} />
+          <Table data={recentFiles} columns={columns} userRole="client" updateFileStatus={updateFileStatus} />
         ) : (
           <div className="empty-state">
             <div className="empty-state-icon">

@@ -98,7 +98,7 @@ const FreelancerDashboard = ({ files, updateFileStatus, pagination }) => {
           </Link>
         </div>
         {recentFiles.length > 0 ? (
-          <Table data={recentFiles} columns={columns} userRole="freelancer" updateFileStatus={updateFileStatus} hideFilter={true} />
+          <Table data={recentFiles} columns={columns} userRole="freelancer" updateFileStatus={updateFileStatus} />
         ) : (
           <div className="empty-state">
             <div className="empty-state-icon">

@@ -31,6 +31,22 @@ const AdminDashboard = () => {
   const [creditAmount, setCreditAmount] = useState(0);
   const [creditReason, setCreditReason] = useState('');
 
+  const [tableFilters, setTableFilters] = useState({
+    transactions: 'All', disputes: 'All', credits: 'All', withdrawals: 'All', kyc: 'All', users: 'All'
+  });
+
+  const filteredTransactions = transactions.filter(t => tableFilters.transactions === 'All' || t.status === tableFilters.transactions);
+  const filteredDisputes = disputes.filter(t => tableFilters.disputes === 'All' || t.status === tableFilters.disputes);
+  const filteredCreditRequests = creditRequests.filter(t => tableFilters.credits === 'All' || t.status === tableFilters.credits);
+  const filteredWithdrawRequests = withdrawRequests.filter(t => tableFilters.withdrawals === 'All' || t.status === tableFilters.withdrawals);
+  const filteredKycRequests = kycRequests.filter(t => tableFilters.kyc === 'All' || t.status === tableFilters.kyc);
+  const filteredUsers = users.filter(t => {
+    if (tableFilters.users === 'All') return true;
+    if (tableFilters.users === 'Banned') return t.isBanned;
+    if (tableFilters.users === 'Active') return !t.isBanned;
+    return true;
+  });
+
   const fetchStats = async () => {
     try {
       const res = await api.get('/admin/stats');
@@ -277,9 +293,16 @@ const AdminDashboard = () => {
             {/* TRANSACTIONS TAB */}
             {activeTab === 'transactions' && (
               <div className="card-styled p-6" style={{ background: 'var(--background-color)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                <h3 className="text-xl font-bold mb-6" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
-                  <DollarSign className="text-primary" size={24} /> Lịch sử Giao dịch (Dòng tiền GMV)
-                </h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                  <h3 className="text-xl font-bold" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
+                    <DollarSign className="text-primary" size={24} /> Lịch sử Giao dịch (Dòng tiền GMV)
+                  </h3>
+                  <select value={tableFilters.transactions} onChange={e => setTableFilters(p => ({...p, transactions: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)' }}>
+                    <option value="All">Tất cả trạng thái</option>
+                    <option value="Succeeded">Thành công (Succeeded)</option>
+                    <option value="Failed">Thất bại (Failed)</option>
+                  </select>
+                </div>
                 <div className="table-responsive">
                   <table className="admin-table">
                     <thead>
@@ -293,9 +316,9 @@ const AdminDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {transactions.length === 0 ? (
+                      {filteredTransactions.length === 0 ? (
                         <tr><td colSpan="6" className="text-center">Chưa có giao dịch nào.</td></tr>
-                      ) : transactions.map(tx => (
+                      ) : filteredTransactions.map(tx => (
                         <tr key={tx._id}>
                           <td>{tx.fileId?.title || tx._id.toString().substring(0,8)}</td>
                           <td>{tx.clientEmail}</td>
@@ -321,6 +344,14 @@ const AdminDashboard = () => {
             {/* DISPUTES TAB */}
             {activeTab === 'disputes' && (
               <div className="data-table-container">
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px' }}>
+                  <h3 className="text-lg font-bold">Danh sách Tranh chấp</h3>
+                  <select value={tableFilters.disputes} onChange={e => setTableFilters(p => ({...p, disputes: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)' }}>
+                    <option value="All">Tất cả trạng thái</option>
+                    <option value="Disputed">Đang tranh chấp (Disputed)</option>
+                    <option value="AwaitingEvidence">Chờ bằng chứng (AwaitingEvidence)</option>
+                  </select>
+                </div>
                 <table className="admin-table">
                   <thead>
                     <tr>
@@ -332,10 +363,10 @@ const AdminDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {disputes.length === 0 ? (
+                    {filteredDisputes.length === 0 ? (
                       <tr><td colSpan="5" className="text-center">Không có tranh chấp cần xử lý.</td></tr>
                     ) : (
-                      disputes.map(d => (
+                      filteredDisputes.map(d => (
                         <tr key={d._id}>
                           <td>
                             <strong>{d.title}</strong>
@@ -358,6 +389,15 @@ const AdminDashboard = () => {
             {/* AI CREDIT REQUESTS TAB */}
             {activeTab === 'credits' && (
               <div className="data-table-container">
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px' }}>
+                  <h3 className="text-lg font-bold">Yêu cầu Nạp Credit</h3>
+                  <select value={tableFilters.credits} onChange={e => setTableFilters(p => ({...p, credits: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)' }}>
+                    <option value="All">Tất cả trạng thái</option>
+                    <option value="pending">Chờ xử lý (Pending)</option>
+                    <option value="approved">Đã duyệt (Approved)</option>
+                    <option value="rejected">Từ chối (Rejected)</option>
+                  </select>
+                </div>
                 <table className="admin-table">
                   <thead>
                     <tr>
@@ -369,10 +409,10 @@ const AdminDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {creditRequests.length === 0 ? (
+                    {filteredCreditRequests.length === 0 ? (
                       <tr><td colSpan="5" className="text-center">Chưa có yêu cầu Nạp Credit.</td></tr>
                     ) : (
-                      creditRequests.map(req => (
+                      filteredCreditRequests.map(req => (
                         <tr key={req._id}>
                           <td>
                             <div className="text-sm">
@@ -424,6 +464,15 @@ const AdminDashboard = () => {
             {/* WITHDRAW TAB */}
             {activeTab === 'withdraw' && (
               <div className="data-table-container">
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px' }}>
+                  <h3 className="text-lg font-bold">Yêu cầu Rút Tiền</h3>
+                  <select value={tableFilters.withdrawals} onChange={e => setTableFilters(p => ({...p, withdrawals: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)' }}>
+                    <option value="All">Tất cả trạng thái</option>
+                    <option value="pending">Chờ xử lý (Pending)</option>
+                    <option value="approved">Đã duyệt (Approved)</option>
+                    <option value="rejected">Từ chối (Rejected)</option>
+                  </select>
+                </div>
                 <table className="admin-table">
                   <thead>
                     <tr>
@@ -435,10 +484,10 @@ const AdminDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {withdrawRequests.length === 0 ? (
+                    {filteredWithdrawRequests.length === 0 ? (
                       <tr><td colSpan="5" className="text-center">Chưa có yêu cầu rút tiền.</td></tr>
                     ) : (
-                      withdrawRequests.map(req => (
+                      filteredWithdrawRequests.map(req => (
                         <tr key={req._id}>
                           <td>
                             <div className="text-sm">
@@ -482,6 +531,15 @@ const AdminDashboard = () => {
             {/* KYC TAB */}
             {activeTab === 'kyc' && (
               <div className="data-table-container">
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px' }}>
+                  <h3 className="text-lg font-bold">Hồ sơ KYC</h3>
+                  <select value={tableFilters.kyc} onChange={e => setTableFilters(p => ({...p, kyc: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)' }}>
+                    <option value="All">Tất cả trạng thái</option>
+                    <option value="pending">Chờ xử lý (Pending)</option>
+                    <option value="approved">Đã duyệt (Approved)</option>
+                    <option value="rejected">Từ chối (Rejected)</option>
+                  </select>
+                </div>
                 <table className="admin-table">
                   <thead>
                     <tr>
@@ -493,10 +551,10 @@ const AdminDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {kycRequests.length === 0 ? (
+                    {filteredKycRequests.length === 0 ? (
                       <tr><td colSpan="5" className="text-center">Không có hồ sơ KYC đang chờ duyệt.</td></tr>
                     ) : (
-                      kycRequests.map(u => (
+                      filteredKycRequests.map(u => (
                         <tr key={u._id}>
                           <td>
                             <strong>{u.name}</strong><br/>
@@ -523,6 +581,14 @@ const AdminDashboard = () => {
 
             {activeTab === 'users' && (
               <div className="data-table-container">
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px' }}>
+                  <h3 className="text-lg font-bold">Quản lý Người Dùng</h3>
+                  <select value={tableFilters.users} onChange={e => setTableFilters(p => ({...p, users: e.target.value}))} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-solid)' }}>
+                    <option value="All">Tất cả người dùng</option>
+                    <option value="Active">Đang hoạt động</option>
+                    <option value="Banned">Đã bị khóa (Banned)</option>
+                  </select>
+                </div>
                 <table className="admin-table">
                   <thead>
                     <tr>
@@ -533,7 +599,7 @@ const AdminDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map(u => (
+                    {filteredUsers.map(u => (
                       <tr key={u._id}>
                         <td>
                           <strong>{u.name}</strong><br/>
