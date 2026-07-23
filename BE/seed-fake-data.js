@@ -106,9 +106,9 @@ async function runSeed() {
     }
     console.log(`✅ Đã tạo 1 Admin và ${freelancers.length} Freelancers (Tất cả bắt đầu với 50 credits).`);
 
-    // 3. Tạo 30 Clients
+    // 3. Tạo 10 Clients
     console.log("2. Đang tạo các tài khoản Client giả...");
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 10; i++) {
       let name, email;
       if (i === 0) {
         name = 'Khách Hàng VIP';
@@ -182,7 +182,8 @@ async function runSeed() {
       });
 
       for (let i = 0; i < conf.numSales; i++) {
-        const client = clients[clientIndex++];
+        const client = clients[clientIndex % clients.length];
+        clientIndex++;
         
         const amount = Math.floor(Math.random() * 500) * 1000 + 100000;
         const creditEarned = amount / 1000;
@@ -258,7 +259,8 @@ async function runSeed() {
     }
     
     // Thêm 1 giao dịch bị FAILED (Khách quét mã xong rớt mạng, ko trả tiền)
-    const failedClient = clients[clientIndex++];
+    const failedClient = clients[clientIndex % clients.length];
+    clientIndex++;
     const failedFreelancer = freelancers[6];
     const failedFile = await File.create({
       freelancerId: failedFreelancer._id,
