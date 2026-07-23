@@ -17,7 +17,6 @@ const UserSchema = new mongoose.Schema(
     passwordHash: { type: String, required: true },
 
     name: { type: String, trim: true },
-    phone: { type: String, trim: true, default: null },
 
     credits: { type: Number, default: 50, min: 0 },
 

@@ -15,7 +15,6 @@ const UserSchema = new mongoose.Schema({
   email: { type: String, lowercase: true, trim: true, unique: true },
   passwordHash: { type: String },
   name: { type: String },
-  phone: { type: String, default: null },
   credits: { type: Number, default: 3 },
   payoutSettings: {
     bankName: { type: String, default: "" },

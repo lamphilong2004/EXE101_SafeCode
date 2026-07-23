@@ -149,7 +149,7 @@ export async function getAllDisputes(req, res, next) {
 
     const [disputes, total] = await Promise.all([
       File.find(filter)
-        .populate("freelancerId", "name email phone payoutSettings")
+        .populate("freelancerId", "name email payoutSettings")
         .sort({ updatedAt: -1 })
         .skip(skip)
         .limit(limit),

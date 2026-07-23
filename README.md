@@ -1,107 +1,95 @@
-# SafeCode - Secure Source Code Escrow Platform
+# SafeCode - Nền tảng Giao dịch & Bàn giao Mã nguồn An toàn
 
-SafeCode là nền tảng giao dịch mã nguồn (Source Code) an toàn dựa trên cơ chế Escrow (Giao dịch trung gian) và thanh toán VietQR tự động.
+SafeCode là nền tảng giao dịch trung gian (Escrow) giúp giải quyết vấn đề lòng tin giữa **Freelancer (Người viết code)** và **Client (Khách hàng)**. Hệ thống đảm bảo thanh toán an toàn và bàn giao mã nguồn tự động thông qua GitHub sau khi giao dịch hoàn tất.
 
-## 👥 Đội ngũ thực hiện (Team Members)
-- **Lâm Phi Long** (Nhóm trưởng / Developer)
-- *[Vui lòng điền tên các thành viên khác vào đây...]*
+---
+
+## 🚀 Tính năng cốt lõi (Core Features)
+
+1. **Bàn giao tự động qua GitHub:** Sau khi thanh toán thành công, người mua sẽ nhận được quyền truy cập hoặc link GitHub Repository chứa mã nguồn của dự án.
+2. **Thanh toán Escrow (Giao dịch trung gian):** Hệ thống giữ tiền an toàn cho đến khi cả 2 bên xác nhận giao dịch thành công. Hỗ trợ thanh toán tự động qua PayOS (VietQR) và Stripe.
+3. **Quản lý trạng thái giao dịch:** Quy trình rõ ràng từ lúc tạo thỏa thuận, chờ thanh toán, đến khi xác nhận bàn giao thành công.
+4. **Real-time Notifications:** Thông báo tức thời khi có biến động giao dịch hoặc cập nhật trạng thái đơn hàng qua Socket.io.
+
+---
 
 ## 🛠 Tech Stack (Công nghệ sử dụng)
-- **Frontend**: React.js (Vite), CSS3, Context API.
-- **Backend**: Node.js, Express.js, Socket.io (Real-time notifications).
-- **Database**: MongoDB (Mongoose).
-- **Thanh toán & Tích hợp**: PayOS (Tạo VietQR & Xử lý Webhook tự động).
 
-## 🚀 Hướng dẫn cài đặt và chạy dự án (How to run)
+- **Frontend:** React.js 19 (Vite), React Router v7, Vanilla CSS & CSS Modules.
+- **Backend:** Node.js, Express.js, MongoDB (Mongoose), Socket.io.
+- **Thanh toán & Tích hợp:** PayOS, Stripe.
 
-### Yêu cầu hệ thống:
-- Node.js (v16+)
-- MongoDB URI
-- Tài khoản PayOS (Client ID, API Key, Checksum Key)
+---
 
-### 1. Cài đặt Backend
+## 🗂 Cấu trúc dự án
+
+```text
+📦 safecode
+ ┣ 📂 BE (Backend - Node.js/Express)
+ ┃ ┣ 📂 src (Controllers, Models, Routes, Services, Middlewares)
+ ┃ ┣ 📜 package.json
+ ┃ ┗ 📜 .env.example
+ ┗ 📂 FE (Frontend - React/Vite)
+ ┃ ┣ 📂 src (Components, Pages, Services, Contexts)
+ ┃ ┣ 📜 package.json
+ ┃ ┗ 📜 .env.example
+```
+
+---
+
+## 💻 Hướng dẫn chạy dự án dưới Local (Local Development)
+
+### 1. Yêu cầu hệ thống
+- Node.js (v18+)
+- MongoDB đang chạy (Local hoặc Atlas)
+- Tài khoản Stripe, PayOS (để test thanh toán)
+
+### 2. Cài đặt Backend
 ```bash
 cd BE
 npm install
-# Tạo file .env và điền các biến môi trường (PORT, MONGODB_URI, PAYOS_*, JWT_SECRET...)
-npm start
-```
-
-### 2. Cài đặt Frontend
-```bash
-cd FE
-npm install
-# Tạo file .env và điền VITE_API_URL trỏ về Backend
+# Khởi tạo file .env (Copy từ mẫu hoặc tạo mới)
+# Điền các thông số: PORT, MONGO_URI, JWT_SECRET, STRIPE_*, PAYOS_*
 npm run dev
 ```
 
-## 🗄 Database Schema (ERD & Table Descriptions)
+### 3. Cài đặt Frontend
+```bash
+cd FE
+npm install
+# Khởi tạo file .env (Điền VITE_API_URL trỏ về backend)
+npm run dev
+```
 
-Dự án sử dụng MongoDB với các Collection chính sau:
+---
 
-### 1. `users` (Người dùng)
-| Trường | Kiểu dữ liệu | Mô tả |
-|---|---|---|
-| `_id` | ObjectId | ID người dùng |
-| `email` | String | Email đăng nhập |
-| `passwordHash`| String | Mật khẩu (đã hash) |
-| `name` / `phone`| String | Họ tên và Số điện thoại |
-| `role` | String | Vai trò (`freelancer`, `client`, `admin`) |
-| `credits` | Number | Số dư hiện tại (1 CR = 1000 VNĐ) |
-| `payoutSettings`| Object | Thông tin nhận tiền (Ngân hàng, STK, QR Code) |
-| `kyc` | Object | Trạng thái định danh KYC (CCCD, tên thật) |
+## ☁️ Hướng dẫn Deploy dự án (Sử dụng Git & Vercel)
 
-### 2. `files` (Mã nguồn & Giao dịch Escrow)
-| Trường | Kiểu dữ liệu | Mô tả |
-|---|---|---|
-| `_id` | ObjectId | ID File |
-| `freelancerId` | ObjectId | Ref to `users` |
-| `intendedClientEmail`| String | Email khách hàng dự kiến |
-| `title` | String | Tên File / Dự án |
-| `projectType` | String | Loại dự án (`web`, `code`) |
-| `price.amount` | Number | Giá bán |
-| `status` | String | Trạng thái (`Draft`, `Uploaded`, `Locked`, `Paid`, `Delivered`,...) |
-| `deliveryMethod` | String | Phương thức bàn giao (`zip_upload`, `github_repo`) |
-| `github.repoUrl` | String | Link kho lưu trữ GitHub |
-| `demo.url` | String | Link Demo trực tiếp (VD: Vercel) |
-| `payos.orderCode`| Number | Mã đơn hàng trên PayOS |
+### 1. Đẩy mã nguồn lên GitHub
+Khởi tạo Git repo và đẩy toàn bộ code lên GitHub:
+```bash
+git init
+git add .
+git commit -m "Initial commit"
+git branch -M main
+git remote add origin https://github.com/your-username/safecode.git
+git push -u origin main
+```
 
-### 3. `creditrequests` (Yêu cầu Nạp/Rút Credit)
-| Trường | Kiểu dữ liệu | Mô tả |
-|---|---|---|
-| `_id` | ObjectId | ID Yêu cầu |
-| `userId` | ObjectId | Ref to `users` |
-| `type` | String | Loại (`credit_purchase`, `file_payment`) |
-| `amount` | Number | Số lượng Credit |
-| `amountVND` | Number | Số tiền VNĐ tương ứng |
-| `status` | String | Trạng thái (`pending`, `approved`, `rejected`) |
-| `billImageUrl`| String | Link ảnh bill chuyển khoản |
-| `payosOrderCode`| Number| Mã đơn hàng PayOS |
-| `aiVerification`| Object | AI nhận diện bill tự động (Confidence, Detected) |
+### 2. Deploy Frontend (Vercel)
+Vercel là nền tảng tốt nhất để deploy ứng dụng React/Vite.
 
-### 4. `credithistories` (Lịch sử biến động số dư)
-| Trường | Kiểu dữ liệu | Mô tả |
-|---|---|---|
-| `userId` | ObjectId | Ref to `users` |
-| `type` | String | Loại (`upload`, `sale`, `deposit`, `refund`, `withdrawal`, `adjustment`) |
-| `amount` | Number | Số dư thay đổi (+ / -) |
-| `balanceAfter` | Number | Số dư còn lại sau giao dịch |
-| `description` | String | Mô tả giao dịch |
+1. Đăng nhập vào [Vercel](https://vercel.com) bằng tài khoản GitHub.
+2. Chọn **"Add New Project"** và chọn repository `safecode` từ GitHub.
+3. Trong phần cấu hình **Framework Preset**, chọn `Vite`.
+4. Cấu hình **Root Directory**: Chọn thư mục `FE`.
+5. Cấu hình **Environment Variables**:
+   - Thêm biến `VITE_API_URL` với giá trị là URL của Backend sau khi deploy (VD: `https://api.yourdomain.com`).
+6. Nhấn **Deploy**. Vercel sẽ tự động build và chạy Frontend. Mọi thay đổi đẩy lên branch `main` trên GitHub sẽ tự động được Vercel cập nhật (CI/CD).
 
-### 5. `notifications` (Thông báo Real-time)
-| Trường | Kiểu dữ liệu | Mô tả |
-|---|---|---|
-| `user` | ObjectId | Ref to `users` |
-| `type` | String | Loại TB (`file_update`, `payment`, `dispute`, `system`, `message`) |
-| `title` | String | Tiêu đề thông báo |
-| `message` | String | Nội dung thông báo |
-| `isRead` | Boolean | Trạng thái đọc |
-| `relatedFileId` | ObjectId| Ref to `files` (Nếu liên quan đến file) |
-
-## 📊 Tính năng cốt lõi (Core Features)
-1. **Quản lý danh tính**: Đăng nhập, Đăng ký, Phân quyền (Freelancer/Client).
-2. **Giao dịch Escrow**: Đóng băng mã nguồn, Thanh toán an toàn, Tự động mở khóa khi tiền về.
-3. **Thanh toán tự động**: Tích hợp PayOS tạo mã VietQR động, Webhook xác nhận tự động 24/7.
-4. **Admin Dashboard**: Thống kê số lượng user, doanh thu hệ thống, biến động dòng tiền.
-5. **Real-time Notifications**: Thông báo ngay lập tức qua Socket.io khi thanh toán thành công.
-
+### 3. Deploy Backend (Gợi ý)
+Backend Node.js yêu cầu môi trường chạy Server, bạn có thể deploy lên các dịch vụ như **Render, Railway, hoặc VPS**:
+- **Root Directory:** `BE`
+- **Build Command:** `npm install`
+- **Start Command:** `npm start`
+- Đừng quên thiết lập đầy đủ các **Environment Variables** (Stripe, PayOS, JWT...) trên môi trường deploy.

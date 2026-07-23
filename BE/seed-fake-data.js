@@ -51,90 +51,100 @@ async function runSeed() {
     await CreditHistory.deleteMany({});
     await WithdrawRequest.deleteMany({});
 
-    console.log("1. Đang tạo các tài khoản Freelancer...");
+    console.log("1. Đang tạo Admin và Người dùng...");
     const hashedPassword = await bcrypt.hash("123456", 10);
-    const users = [
-      { name: 'Admin User', email: 'admin@test.com', password: hashedPassword, role: 'admin', credits: 1000 },
-      { name: 'Demo Freelancer', email: 'demo_freelancer@test.com', password: hashedPassword, role: 'freelancer', credits: 500, kycStatus: 'approved' },
-      { name: 'Demo Client', email: 'demo_client@test.com', password: hashedPassword, role: 'client', credits: 0, kycStatus: 'pending' }
-    ];
-
-    // Generate freelancers (3-24)
-    for (let i = 1; i <= 24; i++) {
-      users.push({
-        name: `Freelancer ${i}`,
-        email: `freelancer${i}@test.com`,
-        password: hashedPassword,
-        role: 'freelancer',
-        credits: 50 + Math.floor(Math.random() * 200), // Random starting credits
-        kycStatus: i % 2 === 0 ? 'approved' : 'pending' // 50% approved KYC
-      });
-    }
-
-    // Generate clients (1-10)
-    for (let i = 1; i <= 10; i++) {
-      users.push({
-        name: `Client ${i}`,
-        email: `client${i}@test.com`,
-        password: hashedPassword,
-        role: 'client',
-        credits: 0,
-        kycStatus: 'pending'
-      });
-    }
     
+    // 1. Tạo Admin
+    await User.create({ name: 'SafeCode Admin', email: 'admin@safecode.vn', passwordHash: hashedPassword, role: 'admin', credits: 0 });
+
     const freelancers = [];
-    for (const userData of users) {
+    const clients = [];
+
+    // 2. Tạo đúng 12 Freelancers
+    for (let i = 0; i < 12; i++) {
+      let name, email;
+      if (i === 0) {
+        name = 'Lâm Phi Long';
+        email = 'freelancer_long@gmail.com';
+      } else {
+        name = getRandomName();
+        email = getRandomEmail(name);
+      }
+
       const user = await User.create({
-        role: userData.role,
-        email: userData.email,
-        passwordHash: userData.password,
-        name: userData.name,
+        role: 'freelancer',
+        email: email,
+        passwordHash: hashedPassword,
+        name: name,
         isVerified: true,
         createdAt: getRandomDate(),
-        credits: userData.credits,
+        credits: 50, // Bắt buộc 50 credits cho tất cả, KHÔNG cộng random
         payoutSettings: {
           bankName: "MBBANK",
           accountNumber: "0" + Math.floor(Math.random() * 1000000000),
-          accountName: userData.name.toUpperCase()
+          accountName: name.toUpperCase()
         },
         kyc: {
-          status: userData.kycStatus || 'pending',
-          fullName: userData.name.toUpperCase(),
+          status: i % 3 === 0 ? 'pending' : 'approved',
+          fullName: name.toUpperCase(),
           cccdNumber: "079099" + Math.floor(Math.random() * 1000000).toString().padStart(6, '0'),
           cccdFront: "https://cdn.tuoitre.vn/471584752817336320/2023/1/14/z4030616148386c913501a355606d0fa75908b8b0e895c-16736691459731057416954.jpg",
           cccdBack: "https://cdn.tuoitre.vn/471584752817336320/2023/1/14/z4030616148386c913501a355606d0fa75908b8b0e895c-16736691459731057416954.jpg",
           submittedAt: getRandomDate(2)
         }
       });
+      
+      await CreditHistory.create({
+        userId: user._id,
+        amount: 50,
+        balanceAfter: 50,
+        type: "adjustment",
+        description: "Tặng 50 credits chào mừng thành viên mới"
+      });
+      
       freelancers.push(user);
     }
-    console.log(`✅ Đã tạo ${freelancers.length} freelancers (Có 1 người bị reject KYC).`);
+    console.log(`✅ Đã tạo 1 Admin và ${freelancers.length} Freelancers (Tất cả bắt đầu với 50 credits).`);
 
+    // 3. Tạo 10 Clients
     console.log("2. Đang tạo các tài khoản Client giả...");
-    const clients = [];
-    for (let i = 0; i < 10; i++) { // Đã sửa thành 10 (Đúng bằng số người tham gia mua thật + 1 người Failed)
-      const name = getRandomName();
-      const email = getRandomEmail(name);
+    for (let i = 0; i < 10; i++) {
+      let name, email;
+      if (i === 0) {
+        name = 'Khách Hàng VIP';
+        email = 'client_vip@gmail.com';
+      } else {
+        name = getRandomName();
+        email = getRandomEmail(name);
+      }
+
       const user = await User.create({
-        role: "client",
-        email,
+        role: 'client',
+        email: email,
         passwordHash: hashedPassword,
-        name,
+        name: name,
         isVerified: true,
         createdAt: getRandomDate(),
         credits: 0
       });
       clients.push(user);
     }
-    console.log(`✅ Đã tạo ${clients.length} clients (Mỗi client đều có ít nhất 1 giao dịch).`);
+    console.log(`✅ Đã tạo ${clients.length} clients.`);
 
     console.log("3. Đang tạo Giao dịch bất đối xứng & Tranh chấp...");
     let txCount = 0;
-    const fileTitles = [
-      "Website bán hàng nội thất", "App quản lý kho bằng React Native", 
-      "Tool tự động lấy data web", "Kịch bản chatbot AI tư vấn",
-      "Clone giao diện Netflix", "Hệ thống điểm danh sinh viên QR"
+    
+    function toSlug(str) {
+      return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "-").toLowerCase();
+    }
+    
+    const projects = [
+      { title: "Website bán hàng nội thất (MERN Stack)", desc: "Source code website bán hàng nội thất đầy đủ chức năng giỏ hàng, thanh toán, quản lý admin, tối ưu SEO." },
+      { title: "App quản lý kho bằng React Native", desc: "Ứng dụng di động quản lý kho bãi, quét mã vạch QR/Barcode, tích hợp API realtime với Nodejs." },
+      { title: "Tool cào dữ liệu Shopee bằng Python", desc: "Script tự động lấy thông tin sản phẩm, giá cả, đánh giá từ Shopee sử dụng Selenium và BeautifulSoup." },
+      { title: "Landing Page Bất Động Sản", desc: "Mẫu landing page chuẩn UI/UX cho dự án bất động sản, tốc độ tải trang nhanh, tương thích di động." },
+      { title: "Hệ thống điểm danh sinh viên QR Code", desc: "Hệ thống điểm danh lớp học bằng mã QR, thống kê chuyên cần tự động, gửi email báo cáo hàng tuần." },
+      { title: "Website đặt lịch khám bệnh trực tuyến", desc: "Nền tảng đặt lịch khám tích hợp thanh toán, nhắc lịch tự động qua SMS, phân quyền chức năng bác sĩ và bệnh nhân." }
     ];
     
     // Cập nhật theo yêu cầu: Sinh viên mới ra mắt thì max 2 đơn/người là thực tế nhất
@@ -162,19 +172,37 @@ async function runSeed() {
         const isDisputed = (conf.fIndex === 5 && i === 0);
         const fileStatus = isDisputed ? "Disputed" : "Paid";
 
+        const proj = projects[Math.floor(Math.random() * projects.length)];
+        const slug = toSlug(proj.title);
+        const freelancerSlug = toSlug(freelancer.name).replace(/-/g, "");
+
         const file = await File.create({
           freelancerId: freelancer._id,
           intendedClientEmail: client.email,
-          title: fileTitles[Math.floor(Math.random() * fileTitles.length)],
-          description: "Mô tả dự án mẫu tự động sinh để phục vụ báo cáo doanh thu...",
+          title: proj.title,
+          description: proj.desc,
           projectType: "web",
           price: { amount, currency: "vnd" },
           status: fileStatus,
-          demo: { type: "url", url: "https://example.vercel.app" },
+          demo: { type: "url", url: `https://${slug}-${Math.floor(Math.random()*1000)}.vercel.app` },
           deliveryMethod: "github_repo",
-          githubRepoUrl: "https://github.com/example/repo",
+          githubRepoUrl: `https://github.com/${freelancerSlug}/${slug}`,
           paidAt: fileDate,
           createdAt: new Date(fileDate.getTime() - 86400000) 
+        });
+
+        // Trừ phí đăng file
+        freelancer.credits -= 10;
+        await freelancer.save();
+        await CreditHistory.create({
+          userId: freelancer._id,
+          amount: -10,
+          balanceAfter: freelancer.credits,
+          type: "upload",
+          description: `Phí tạo giao dịch Escrow: ${proj.title}`,
+          referenceId: file._id,
+          referenceModel: "File",
+          createdAt: file.createdAt
         });
 
         await Transaction.create({
@@ -199,7 +227,7 @@ async function runSeed() {
             amount: creditEarned,
             balanceAfter: freelancer.credits,
             type: "sale",
-            description: "Bán source code cho khách",
+            description: `Thanh toán thành công đơn hàng: ${file.title}`,
             referenceId: file._id,
             referenceModel: "File",
             createdAt: file.paidAt
@@ -215,15 +243,28 @@ async function runSeed() {
     const failedFile = await File.create({
       freelancerId: failedFreelancer._id,
       intendedClientEmail: failedClient.email,
-      title: "Ứng dụng Chat Socket.IO",
-      description: "Giao dịch thất bại do rớt mạng...",
+      title: "Ứng dụng Chat Realtime Socket.IO",
+      description: "Source code ứng dụng chat nhóm, tin nhắn trực tiếp với Socket.IO và React, có lưu trữ lịch sử chat.",
       projectType: "web",
       price: { amount: 150000, currency: "vnd" },
       status: "Draft",
-      demo: { type: "url", url: "https://example.vercel.app" },
+      demo: { type: "url", url: "https://chat-socket-demo.vercel.app" },
       deliveryMethod: "github_repo",
-      githubRepoUrl: "https://github.com/example/repo",
+      githubRepoUrl: "https://github.com/nguyenvanan/chat-socket-realtime",
       createdAt: getRandomDate(2)
+    });
+
+    failedFreelancer.credits -= 10;
+    await failedFreelancer.save();
+    await CreditHistory.create({
+      userId: failedFreelancer._id,
+      amount: -10,
+      balanceAfter: failedFreelancer.credits,
+      type: "upload",
+      description: `Phí tạo giao dịch Escrow: Ứng dụng Chat Realtime`,
+      referenceId: failedFile._id,
+      referenceModel: "File",
+      createdAt: failedFile.createdAt
     });
 
     await Transaction.create({
@@ -239,6 +280,34 @@ async function runSeed() {
     });
 
     console.log(`✅ Đã tạo ${txCount} giao dịch thành công (có 1 Dispute) và 1 giao dịch Failed.`);
+
+    console.log("3.5 Đang tạo lịch sử Nạp Tiền (Credit Requests)...");
+    for (let i = 0; i < 3; i++) {
+      const f = freelancers[i];
+      const depositDate = getRandomDate(14);
+      await CreditRequest.create({
+        userId: f._id,
+        amount: 100,
+        amountVND: 100000,
+        status: 'approved',
+        payosOrderCode: Math.floor(Math.random() * 1000000000),
+        type: 'credit_purchase',
+        createdAt: depositDate,
+        approvedAt: depositDate
+      });
+      f.credits += 100;
+      await f.save();
+      
+      await CreditHistory.create({
+        userId: f._id,
+        amount: 100,
+        balanceAfter: f.credits,
+        type: "deposit",
+        description: `Nạp 100 Credits qua VietQR (PayOS)`,
+        createdAt: depositDate
+      });
+    }
+    console.log(`✅ Đã tạo 3 giao dịch nạp tiền thành công.`);
 
     console.log("4. Đang tạo lịch sử Rút Tiền (Có 1 lệnh bị từ chối)...");
     let wdCount = 0;
@@ -259,6 +328,15 @@ async function runSeed() {
         });
         f.credits -= wdAmount;
         await f.save();
+        
+        await CreditHistory.create({
+          userId: f._id,
+          amount: -wdAmount,
+          balanceAfter: f.credits,
+          type: "withdrawal",
+          description: `Rút tiền về tài khoản ngân hàng`
+        });
+        
         wdCount++;
       }
     }
@@ -270,7 +348,7 @@ async function runSeed() {
       amountVND: 100000,
       status: 'rejected',
       bankDetails: freelancers[3].payoutSettings,
-      adminNote: "Tài khoản có dấu hiệu gian lận, tạm giữ tiền.",
+      adminNote: "Phát hiện giao dịch bất thường, tạm hoãn xử lý lệnh rút.",
       createdAt: getRandomDate(1),
     });
 
