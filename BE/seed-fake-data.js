@@ -147,18 +147,9 @@ async function runSeed() {
       { title: "Website đặt lịch khám bệnh trực tuyến", desc: "Nền tảng đặt lịch khám tích hợp thanh toán, nhắc lịch tự động qua SMS, phân quyền chức năng bác sĩ và bệnh nhân." }
     ];
     
-    // Cập nhật: 15 freelancer có giao dịch
-    const salesConfig = [];
+    // Cập nhật: 15 freelancer có nạp tiền để đủ WithdrawRequests
     for (let i = 0; i < 15; i++) {
-      salesConfig.push({ fIndex: i, numSales: Math.floor(Math.random() * 2) + 1 });
-    }
-
-    let clientIndex = 0; // Trỏ tới client để mua hàng (Mỗi client mua 1 đơn)
-
-    for (const conf of salesConfig) {
-      const freelancer = freelancers[conf.fIndex];
-      
-      // Bơm 100 credit cho những người này để họ có tiền đăng file (không bị tụt xuống 40)
+      const freelancer = freelancers[i];
       const depositDate = getRandomDate(14);
       await CreditRequest.create({
         userId: freelancer._id,
@@ -180,82 +171,83 @@ async function runSeed() {
         description: `Nạp 100 Credits qua VietQR (PayOS)`,
         createdAt: depositDate
       });
+    }
 
-      for (let i = 0; i < conf.numSales; i++) {
-        const client = clients[clientIndex % clients.length];
-        clientIndex++;
-        
-        const amount = Math.floor(Math.random() * 500) * 1000 + 100000;
-        const creditEarned = amount / 1000;
-        const fileDate = getRandomDate(10);
-        
-        // Giao dịch cuối cùng sẽ bị biến thành Tranh Chấp (Disputed)
-        const isDisputed = (conf.fIndex === 5 && i === 0);
-        const fileStatus = isDisputed ? "Disputed" : "Paid";
+    let clientIndex = 0;
+    const salesAmounts = [379000, 150000, 200000, 200000, 200000, 150000, 200000, 200000, 200000];
+    
+    for (let i = 0; i < salesAmounts.length; i++) {
+      const freelancer = freelancers[i];
+      const client = clients[clientIndex % clients.length];
+      clientIndex++;
+      
+      const amount = salesAmounts[i];
+      const creditEarned = amount / 1000;
+      const fileDate = getRandomDate(10);
+      
+      const isDisputed = (i === 4);
+      const fileStatus = isDisputed ? "Disputed" : "Paid";
 
-        const proj = projects[Math.floor(Math.random() * projects.length)];
-        const slug = toSlug(proj.title);
-        const freelancerSlug = toSlug(freelancer.name).replace(/-/g, "");
+      const proj = projects[Math.floor(Math.random() * projects.length)];
+      const slug = toSlug(proj.title);
+      const freelancerSlug = toSlug(freelancer.name).replace(/-/g, "");
 
-        const file = await File.create({
-          freelancerId: freelancer._id,
-          intendedClientEmail: client.email,
-          title: proj.title,
-          description: proj.desc,
-          projectType: "web",
-          price: { amount, currency: "vnd" },
-          status: fileStatus,
-          demo: { type: "url", url: `https://${slug}-${Math.floor(Math.random()*1000)}.vercel.app` },
-          deliveryMethod: "github_repo",
-          githubRepoUrl: `https://github.com/${freelancerSlug}/${slug}`,
-          paidAt: fileDate,
-          createdAt: new Date(fileDate.getTime() - 86400000) 
-        });
+      const file = await File.create({
+        freelancerId: freelancer._id,
+        intendedClientEmail: client.email,
+        title: proj.title,
+        description: proj.desc,
+        projectType: "web",
+        price: { amount, currency: "vnd" },
+        status: fileStatus,
+        demo: { type: "url", url: `https://${slug}-${Math.floor(Math.random()*1000)}.vercel.app` },
+        deliveryMethod: "github_repo",
+        githubRepoUrl: `https://github.com/${freelancerSlug}/${slug}`,
+        paidAt: fileDate,
+        createdAt: new Date(fileDate.getTime() - 86400000) 
+      });
 
-        // Trừ phí đăng file
-        freelancer.credits -= 10;
+      freelancer.credits -= 10;
+      await freelancer.save();
+      await CreditHistory.create({
+        userId: freelancer._id,
+        amount: -10,
+        balanceAfter: freelancer.credits,
+        type: "upload",
+        description: `Phí tạo giao dịch Escrow: ${proj.title}`,
+        referenceId: file._id,
+        referenceModel: "File",
+        createdAt: file.createdAt
+      });
+
+      await Transaction.create({
+        fileId: file._id,
+        freelancerId: freelancer._id,
+        clientEmail: client.email,
+        type: "checkout",
+        status: "Succeeded",
+        amount: amount,
+        currency: "vnd",
+        payos: { orderCode: Math.floor(Math.random() * 1000000000) },
+        createdAt: file.paidAt 
+      });
+
+      if (!isDisputed) {
+        freelancer.credits += creditEarned;
         await freelancer.save();
+
         await CreditHistory.create({
           userId: freelancer._id,
-          amount: -10,
+          amount: creditEarned,
           balanceAfter: freelancer.credits,
-          type: "upload",
-          description: `Phí tạo giao dịch Escrow: ${proj.title}`,
+          type: "sale",
+          description: `Thanh toán thành công đơn hàng: ${file.title}`,
           referenceId: file._id,
           referenceModel: "File",
-          createdAt: file.createdAt
+          createdAt: file.paidAt
         });
-
-        await Transaction.create({
-          fileId: file._id,
-          freelancerId: freelancer._id,
-          clientEmail: client.email,
-          type: "checkout",
-          status: "Succeeded",
-          amount: amount,
-          currency: "vnd",
-          payos: { orderCode: Math.floor(Math.random() * 1000000000) },
-          createdAt: file.paidAt 
-        });
-
-        // Chỉ cộng tiền nếu không bị tranh chấp
-        if (!isDisputed) {
-          freelancer.credits += creditEarned;
-          await freelancer.save();
-
-          await CreditHistory.create({
-            userId: freelancer._id,
-            amount: creditEarned,
-            balanceAfter: freelancer.credits,
-            type: "sale",
-            description: `Thanh toán thành công đơn hàng: ${file.title}`,
-            referenceId: file._id,
-            referenceModel: "File",
-            createdAt: file.paidAt
-          });
-        }
-        txCount++;
       }
+      txCount++;
     }
     
     // Thêm 1 giao dịch bị FAILED (Khách quét mã xong rớt mạng, ko trả tiền)
