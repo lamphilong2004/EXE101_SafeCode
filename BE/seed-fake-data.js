@@ -78,7 +78,7 @@ async function runSeed() {
         name: name,
         isVerified: true,
         createdAt: getRandomDate(),
-        credits: 100, // Bắt buộc 100 credits cho tất cả
+        credits: 50, // Khởi tạo đúng 50 credit
         payoutSettings: {
           bankName: "MBBANK",
           accountNumber: "0" + Math.floor(Math.random() * 1000000000),
@@ -96,15 +96,15 @@ async function runSeed() {
       
       await CreditHistory.create({
         userId: user._id,
-        amount: 100,
-        balanceAfter: 100,
+        amount: 50,
+        balanceAfter: 50,
         type: "adjustment",
-        description: "Tặng 100 credits chào mừng thành viên mới"
+        description: "Tặng 50 credits chào mừng thành viên mới"
       });
       
       freelancers.push(user);
     }
-    console.log(`✅ Đã tạo 1 Admin và ${freelancers.length} Freelancers (Tất cả bắt đầu với 100 credits).`);
+    console.log(`✅ Đã tạo 1 Admin và ${freelancers.length} Freelancers (Tất cả bắt đầu với 50 credits).`);
 
     // 3. Tạo 30 Clients
     console.log("2. Đang tạo các tài khoản Client giả...");
@@ -157,6 +157,30 @@ async function runSeed() {
 
     for (const conf of salesConfig) {
       const freelancer = freelancers[conf.fIndex];
+      
+      // Bơm 100 credit cho những người này để họ có tiền đăng file (không bị tụt xuống 40)
+      const depositDate = getRandomDate(14);
+      await CreditRequest.create({
+        userId: freelancer._id,
+        amount: 100,
+        amountVND: 100000,
+        status: 'approved',
+        payosOrderCode: Math.floor(Math.random() * 1000000000),
+        type: 'credit_purchase',
+        createdAt: depositDate,
+        approvedAt: depositDate
+      });
+      freelancer.credits += 100;
+      await freelancer.save();
+      await CreditHistory.create({
+        userId: freelancer._id,
+        amount: 100,
+        balanceAfter: freelancer.credits,
+        type: "deposit",
+        description: `Nạp 100 Credits qua VietQR (PayOS)`,
+        createdAt: depositDate
+      });
+
       for (let i = 0; i < conf.numSales; i++) {
         const client = clients[clientIndex++];
         
@@ -276,34 +300,6 @@ async function runSeed() {
     });
 
     console.log(`✅ Đã tạo ${txCount} giao dịch thành công (có 1 Dispute) và 1 giao dịch Failed.`);
-
-    console.log("3.5 Đang tạo lịch sử Nạp Tiền (Credit Requests)...");
-    for (let i = 0; i < 3; i++) {
-      const f = freelancers[i];
-      const depositDate = getRandomDate(14);
-      await CreditRequest.create({
-        userId: f._id,
-        amount: 100,
-        amountVND: 100000,
-        status: 'approved',
-        payosOrderCode: Math.floor(Math.random() * 1000000000),
-        type: 'credit_purchase',
-        createdAt: depositDate,
-        approvedAt: depositDate
-      });
-      f.credits += 100;
-      await f.save();
-      
-      await CreditHistory.create({
-        userId: f._id,
-        amount: 100,
-        balanceAfter: f.credits,
-        type: "deposit",
-        description: `Nạp 100 Credits qua VietQR (PayOS)`,
-        createdAt: depositDate
-      });
-    }
-    console.log(`✅ Đã tạo 3 giao dịch nạp tiền thành công.`);
 
     console.log("4. Đang tạo lịch sử Rút Tiền...");
     let wdCount = 0;
