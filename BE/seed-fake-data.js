@@ -30,7 +30,7 @@ function getRandomEmail(name) {
   return `${cleanName}${Math.floor(Math.random() * 1000)}@${domain}`;
 }
 
-function getRandomDate(daysBack = 15) {
+function getRandomDate(daysBack = 23) {
   return new Date(Date.now() - Math.floor(Math.random() * daysBack * 24 * 60 * 60 * 1000));
 }
 
@@ -60,8 +60,8 @@ async function runSeed() {
     const freelancers = [];
     const clients = [];
 
-    // 2. Tạo đúng 12 Freelancers
-    for (let i = 0; i < 12; i++) {
+    // 2. Tạo đúng 25 Freelancers
+    for (let i = 0; i < 25; i++) {
       let name, email;
       if (i === 0) {
         name = 'Lâm Phi Long';
