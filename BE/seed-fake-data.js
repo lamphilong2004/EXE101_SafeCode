@@ -78,7 +78,7 @@ async function runSeed() {
         name: name,
         isVerified: true,
         createdAt: getRandomDate(),
-        credits: 50, // Bắt buộc 50 credits cho tất cả, KHÔNG cộng random
+        credits: 100, // Bắt buộc 100 credits cho tất cả
         payoutSettings: {
           bankName: "MBBANK",
           accountNumber: "0" + Math.floor(Math.random() * 1000000000),
@@ -96,19 +96,19 @@ async function runSeed() {
       
       await CreditHistory.create({
         userId: user._id,
-        amount: 50,
-        balanceAfter: 50,
+        amount: 100,
+        balanceAfter: 100,
         type: "adjustment",
-        description: "Tặng 50 credits chào mừng thành viên mới"
+        description: "Tặng 100 credits chào mừng thành viên mới"
       });
       
       freelancers.push(user);
     }
-    console.log(`✅ Đã tạo 1 Admin và ${freelancers.length} Freelancers (Tất cả bắt đầu với 50 credits).`);
+    console.log(`✅ Đã tạo 1 Admin và ${freelancers.length} Freelancers (Tất cả bắt đầu với 100 credits).`);
 
-    // 3. Tạo 10 Clients
+    // 3. Tạo 30 Clients
     console.log("2. Đang tạo các tài khoản Client giả...");
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 30; i++) {
       let name, email;
       if (i === 0) {
         name = 'Khách Hàng VIP';
@@ -147,15 +147,11 @@ async function runSeed() {
       { title: "Website đặt lịch khám bệnh trực tuyến", desc: "Nền tảng đặt lịch khám tích hợp thanh toán, nhắc lịch tự động qua SMS, phân quyền chức năng bác sĩ và bệnh nhân." }
     ];
     
-    // Cập nhật theo yêu cầu: Sinh viên mới ra mắt thì max 2 đơn/người là thực tế nhất
-    const salesConfig = [
-      { fIndex: 0, numSales: 2 },
-      { fIndex: 1, numSales: 2 },
-      { fIndex: 2, numSales: 2 },
-      { fIndex: 3, numSales: 1 },
-      { fIndex: 4, numSales: 1 },
-      { fIndex: 5, numSales: 1 }
-    ];
+    // Cập nhật: 15 freelancer có giao dịch
+    const salesConfig = [];
+    for (let i = 0; i < 15; i++) {
+      salesConfig.push({ fIndex: i, numSales: Math.floor(Math.random() * 2) + 1 });
+    }
 
     let clientIndex = 0; // Trỏ tới client để mua hàng (Mỗi client mua 1 đơn)
 
@@ -309,50 +305,52 @@ async function runSeed() {
     }
     console.log(`✅ Đã tạo 3 giao dịch nạp tiền thành công.`);
 
-    console.log("4. Đang tạo lịch sử Rút Tiền (Có 1 lệnh bị từ chối)...");
+    console.log("4. Đang tạo lịch sử Rút Tiền...");
     let wdCount = 0;
-    // Cho Freelancer 0 và 1 rút tiền thành công
-    for (let i = 0; i < 2; i++) {
+    
+    // Freelancer từ index 0 đến 2 (3 người) CÓ TIỀN NHƯNG KHÔNG RÚT
+    // Freelancer từ index 3 đến 14 (12 người) CÓ RÚT TIỀN
+    for (let i = 3; i < 15; i++) {
       const f = freelancers[i];
-      if (f.credits > 150) {
-        const wdAmount = Math.floor(f.credits - 50); 
+      if (f.credits > 100) {
+        const wdAmount = Math.floor(f.credits - 50); // Giữ lại 50 credit
+        const isApproved = i % 4 !== 0; // Một vài lệnh pending/rejected
+        const wdStatus = isApproved ? 'approved' : (i === 4 ? 'rejected' : 'pending');
+        
         await WithdrawRequest.create({
           userId: f._id,
           amount: wdAmount,
           amountVND: wdAmount * 1000,
-          status: 'approved',
+          status: wdStatus,
           bankDetails: f.payoutSettings,
-          adminNote: "Đã chuyển khoản VietQR",
+          adminNote: wdStatus === 'rejected' ? "Phát hiện giao dịch bất thường" : (wdStatus === 'approved' ? "Đã chuyển khoản VietQR" : ""),
           createdAt: getRandomDate(7),
-          approvedAt: getRandomDate(5)
-        });
-        f.credits -= wdAmount;
-        await f.save();
-        
-        await CreditHistory.create({
-          userId: f._id,
-          amount: -wdAmount,
-          balanceAfter: f.credits,
-          type: "withdrawal",
-          description: `Rút tiền về tài khoản ngân hàng`
+          approvedAt: wdStatus === 'approved' ? getRandomDate(5) : null
         });
         
+        if (wdStatus === 'approved') {
+          f.credits -= wdAmount;
+          await f.save();
+          await CreditHistory.create({
+            userId: f._id,
+            amount: -wdAmount,
+            balanceAfter: f.credits,
+            type: "withdrawal",
+            description: `Rút tiền về tài khoản ngân hàng`
+          });
+        } else if (wdStatus === 'pending' || wdStatus === 'rejected') {
+          f.credits -= wdAmount; 
+          await f.save();
+          if (wdStatus === 'rejected') {
+            f.credits += wdAmount;
+            await f.save();
+          }
+        }
         wdCount++;
       }
     }
-    
-    // Cho Freelancer 3 tạo lệnh rút tiền nhưng bị REJECTED
-    await WithdrawRequest.create({
-      userId: freelancers[3]._id,
-      amount: 100, // Định rút 100k
-      amountVND: 100000,
-      status: 'rejected',
-      bankDetails: freelancers[3].payoutSettings,
-      adminNote: "Phát hiện giao dịch bất thường, tạm hoãn xử lý lệnh rút.",
-      createdAt: getRandomDate(1),
-    });
 
-    console.log(`✅ Đã tạo lệnh rút tiền (Có 1 lệnh bị Rejected).`);
+    console.log(`✅ Đã tạo lệnh rút tiền cho ${wdCount} người.`);
 
     console.log("🎉 Hoàn tất Fake Data chân thực!");
   } catch (err) {
